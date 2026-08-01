@@ -87,6 +87,17 @@ donne un second chemin vers les fusions sans retirer la décision à l'alambic.
 Deux réactifs sans recette commune ne peuvent pas être sélectionnés ensemble :
 l'interface le montre avant le clic, elle ne punit pas après.
 
+Trois règles pour lever toute ambiguïté :
+
+- **Une essence ne peut pas servir de composant.** Pas de fusion de fusion en
+  V1 ; c'est une explosion combinatoire qu'on n'a aucune raison de payer
+  maintenant.
+- **On peut quitter l'alambic sans fusionner.** Garder quatre réactifs modestes
+  est un choix légitime, et la salle ne doit jamais se transformer en péage.
+- **Tous les réactifs n'entrent pas dans une recette.** Fiole de vie n'en a
+  aucune : c'est un réactif purement défensif qu'on garde ou qu'on ignore. Le
+  joueur n'a pas à supposer que tout se combine.
+
 ### Structure de données
 
 Un réactif n'est pas du code. C'est une ressource contenant :
