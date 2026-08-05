@@ -90,6 +90,10 @@ func _ready() -> void:
 
 # En mode auto, une salle qui ne se termine pas est un blocage, pas une
 # difficulte. On veut le savoir avec l'etat de la salle, pas par un silence.
+func _physics_process(_delta: float) -> void:
+	if not _terminee and _panneau == null:
+		Jeu.images_de_jeu += 1
+
 func _process(delta: float) -> void:
 	if not Jeu.mode_auto or _terminee or _panneau != null:
 		return
@@ -204,6 +208,6 @@ func _sur_run_terminee(victoire: bool) -> void:
 	fin.process_mode = Node.PROCESS_MODE_ALWAYS
 	_couche.add_child(fin)
 	fin.afficher(victoire, Jeu.salle_courante)
-	print("run terminee : victoire=%s chapitre=%d salle atteinte=%d/%d graine=%d abattus=%d" % [
+	print("run terminee : victoire=%s chapitre=%d salle atteinte=%d/%d graine=%d abattus=%d duree=%d min %02d s" % [
 		victoire, Jeu.chapitre + 1, Jeu.salle_courante, Jeu.salles_du_chapitre(),
-		Jeu.graine, Jeu.ennemis_abattus])
+		Jeu.graine, Jeu.ennemis_abattus, int(Jeu.duree_run() / 60.0), int(Jeu.duree_run()) % 60])

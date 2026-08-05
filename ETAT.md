@@ -44,9 +44,13 @@ Mesurées, pas estimées. Machine de développement, Godot 4.7.1, headless.
 | Quoi | Valeur | Comment |
 |---|---|---|
 | Suites de tests | 15 suites, 522 assertions, 0 échec | `./verifier.sh` |
-| Vingt runs du bot | 0 échec / 20 ; 18 atteignent la page 10, 1 victoire | `./sondes/vingt_runs.sh` |
+| Runs du bot, chapitre 1 | 0 blocage ; une run atteint la page 50/50 | `CHAPITRE=1 ./sondes/vingt_runs.sh` |
+| Durée d'un chapitre | ~10 s par page, soit **8 à 9 min** pour 50 pages | compteur d'images de jeu, run graine 5 |
+| Écart meilleure main / médiane | 1,96 (2,35 avant correction) | `sondes/equilibrage.gd` |
+| Fusions perdantes | 0 sur 10 (3 avant correction) | `sondes/equilibrage.gd` |
+| Rapport héros / créatures, chapitre 1 | 1,0 page 1 → 2,5 page 40 → 2,0 page 50 | `sondes/equilibrage.gd` |
 | Taille de l'APK debug | 30 Mo (arm64-v8a seul, sprites inclus) | `ls -lh build/alambic.apk` |
-| Taille de l'APK release | 28 Mo, signé `CN=Alambic` | `apksigner verify --print-certs` |
+| Taille de l'APK release | 28 Mo (version 0.2), signé `CN=Alambic` | `apksigner verify --print-certs` |
 | Durée d'un export APK | 18,2 s | `/usr/bin/time` sur `--export-debug` |
 
 **Non mesuré à ce jour : tout ce qui demande l'appareil.** Images par seconde
@@ -126,8 +130,11 @@ qu'une page sur deux. Rapport héros/créatures sur le premier chapitre : entre
 ## Ce qui reste à faire
 
 - Brancher un téléphone et remplir les mesures manquantes.
-- Régler l'équilibrage une fois qu'un humain a joué : le bot meurt souvent au
-  boss, ce qui ne dit rien de la difficulté ressentie.
+- Régler l'équilibrage une fois qu'un humain a joué : le bot traverse un chapitre
+  et meurt au boss, ce qui est le profil recherché, mais ne dit rien de la
+  difficulté ressentie au pouce.
+- La spec annonce des sessions de cinq à sept minutes ; un chapitre de cinquante
+  pages en demande huit à neuf. Soit la spec change, soit le chapitre raccourcit.
 - La musique et les sons sont synthétisés au démarrage, volontairement discrets.
   Rien de définitif : hors périmètre V1.
 - Le nom « Alambic » n'a pas été vérifié sur les registres de marques.

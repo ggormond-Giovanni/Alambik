@@ -20,6 +20,9 @@ var tirs_touches := 0
 var tirs_dans_un_mur := 0
 var tirs_perdus := 0
 var debut_run := 0.0
+# Temps de jeu, compte en images : en headless le temps reel est compresse, et
+# c'est la duree qu'un joueur passerait manette en main qui nous interesse.
+var images_de_jeu := 0
 
 func chapitre_courant() -> Dictionary:
 	return Chapitres.par_index(chapitre)
@@ -42,6 +45,7 @@ func demarrer_run(graine_demandee: int = 0, salle_de_depart: int = 1, chapitre_d
 	tirs_dans_un_mur = 0
 	tirs_perdus = 0
 	debut_run = Time.get_ticks_msec() / 1000.0
+	images_de_jeu = 0
 
 func ajouter_reactif(id: String) -> void:
 	inventaire.append(id)
@@ -78,7 +82,7 @@ func mods() -> Array:
 	return Mods.depuis_l_inventaire(inventaire)
 
 func duree_run() -> float:
-	return Time.get_ticks_msec() / 1000.0 - debut_run
+	return float(images_de_jeu) / float(Engine.physics_ticks_per_second)
 
 func terminer_run(victoire: bool) -> void:
 	run_terminee.emit(victoire)
