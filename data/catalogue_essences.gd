@@ -31,11 +31,11 @@ static var TOUS := {
 		true, Color(0.82, 0.92, 0.40), "nuage"),
 	"piste_de_gel": Reactif.creer("piste_de_gel", "Piste de gel",
 		"La traînée laissée derrière soi gèle au lieu de ralentir.",
-		{"drapeaux": ["sillage", "sillage_gelant"]},
+		{"drapeaux": ["sillage", "sillage_gelant"], "effets": ["givre"], "cadence_mult": 1.15, "degats_mult": 1.25},
 		true, Color(0.62, 0.94, 1.00), "vague"),
 	"rafale_alambic": Reactif.creer("rafale_alambic", "Rafale d'alambic",
 		"Chaque tir part en rafale de trois.",
-		{"cadence_mult": 1.15, "drapeaux": ["rafale"], "degats_mult": 0.8},
+		{"cadence_mult": 1.35, "drapeaux": ["rafale"], "nb_projectiles_add": 1, "ecart_lateral_add": 26.0, "degats_mult": 0.9},
 		true, Color(1.00, 0.86, 0.50), "triple_barre"),
 	"aura_de_cristal": Reactif.creer("aura_de_cristal", "Aura de cristal",
 		"Le bouclier brisé explose en éclats gelants.",
@@ -43,7 +43,7 @@ static var TOUS := {
 		true, Color(0.78, 0.94, 1.00), "hexagone"),
 	"tir_en_course": Reactif.creer("tir_en_course", "Tir en course",
 		"On tire en se déplaçant, à cadence réduite.",
-		{"drapeaux": ["tir_en_course"], "cadence_mult": 0.7},
+		{"drapeaux": ["tir_en_course", "pas_de_chat"], "cadence_mult": 0.9, "vitesse_mult": 1.25, "portee_mult": 1.2},
 		true, Color(0.86, 1.00, 0.86), "patte"),
 }
 

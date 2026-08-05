@@ -18,7 +18,7 @@ func afficher(victoire: bool, salle_atteinte: int) -> void:
 	_victoire = victoire
 	_salle = salle_atteinte
 	_duree = Jeu.duree_run()
-	ReglagesJoueur.enregistrer_resultat(salle_atteinte, victoire)
+	ReglagesJoueur.enregistrer_resultat(salle_atteinte, victoire, Jeu.chapitre)
 
 	var marge := MarginContainer.new()
 	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -62,18 +62,20 @@ func _draw() -> void:
 	var teinte := Palette.OR if _victoire else Palette.DANGER
 	Dessin.halo(self, Vector2(size.x / 2.0, haut - 20.0), 220.0, Color(teinte, 0.5), 5)
 	draw_string(police, Vector2(0, haut), titre, HORIZONTAL_ALIGNMENT_CENTER, size.x, 62, teinte)
-	draw_string(police, Vector2(0, haut + 70.0), "Page atteinte : %d / %d" % [_salle, Reglages.SALLES_PAR_RUN],
+	draw_string(police, Vector2(0, haut + 70.0), "%s — page %d / %d" % [Jeu.chapitre_courant()["nom"], _salle, Jeu.salles_du_chapitre()],
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 34, Palette.TEXTE)
 	draw_string(police, Vector2(0, haut + 118.0), "Créatures d'encre effacées : %d" % Jeu.ennemis_abattus,
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
 	draw_string(police, Vector2(0, haut + 158.0), "Durée : %d min %02d s" % [int(_duree / 60.0), int(_duree) % 60],
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
-	draw_string(police, Vector2(0, haut + 206.0), "Meilleure descente : page %d" % ReglagesJoueur.meilleure_salle,
+	draw_string(police, Vector2(0, haut + 206.0), "Meilleure descente ici : page %d" % ReglagesJoueur.meilleure_du_chapitre(Jeu.chapitre),
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Color(Palette.OR, 0.8))
 
 	# Ce que la run a construit : la seule trace qui compte.
-	var x := size.x / 2.0 - float(Jeu.inventaire.size() - 1) * 34.0
-	for id in Jeu.inventaire:
+	var groupe := Jeu.inventaire_groupe()
+	var x := size.x / 2.0 - float(groupe.size() - 1) * 34.0
+	for entree in groupe:
+		var id: String = entree[0]
 		var r := Jeu.reactif(id)
 		if r == null:
 			continue
@@ -83,4 +85,7 @@ func _draw() -> void:
 		draw_circle(centre, 26.0, Color(0.10, 0.09, 0.14))
 		draw_arc(centre, 26.0, 0.0, TAU, 22, Color(r.teinte, 0.8), 2.0, true)
 		Dessin.glyphe(self, r.glyphe, centre, 14.0, r.teinte)
+		if int(entree[1]) > 1:
+			draw_string(police, centre + Vector2(14.0, 24.0), "x%d" % int(entree[1]),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.TEXTE)
 		x += 68.0

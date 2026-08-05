@@ -56,7 +56,7 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.10, 0.09, 0.13))
 
 	# Salle courante, en chiffres de page.
-	draw_string(police, Vector2(60.0, haut + 80.0), "PAGE  %02d / %02d" % [Jeu.salle_courante, Reglages.SALLES_PAR_RUN],
+	draw_string(police, Vector2(60.0, haut + 80.0), "%s  —  PAGE %02d / %02d" % [Jeu.chapitre_courant()["nom"], Jeu.salle_courante, Jeu.salles_du_chapitre()],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Palette.TEXTE)
 	if heros.bouclier > 0:
 		draw_string(police, Vector2(largeur - 260.0, haut + 74.0), "Bouclier",
@@ -66,7 +66,8 @@ func _draw() -> void:
 	# trace visible de ce que le joueur a construit pendant la run.
 	var x := 62.0
 	var y := haut + 122.0
-	for id in Jeu.inventaire:
+	for entree in Jeu.inventaire_groupe():
+		var id: String = entree[0]
 		var r := Jeu.reactif(id)
 		if r == null:
 			continue
@@ -78,6 +79,9 @@ func _draw() -> void:
 			draw_circle(centre, 24.0, Color(0.14, 0.12, 0.18))
 			draw_arc(centre, 24.0, 0.0, TAU, 20, Color(r.teinte, 0.7), 2.0, true)
 		Dessin.glyphe(self, r.glyphe, centre, 13.0, r.teinte)
+		if int(entree[1]) > 1:
+			draw_string(police, centre + Vector2(12.0, 22.0), "x%d" % int(entree[1]),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.OR)
 		x += 58.0
 		if x > get_viewport_rect().size.x - 60.0:
 			x = 62.0

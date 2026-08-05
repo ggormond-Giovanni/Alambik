@@ -12,9 +12,15 @@ func test_addition(v: Verif) -> void:
 	var t := Mods.appliquer(_base(), [{"nb_projectiles_add": 1}, {"nb_projectiles_add": 1}])
 	v.egal(t.nb_projectiles, 3, "deux ajouts sur une base de 1")
 
-func test_multiplication(v: Verif) -> void:
+func test_multiplicateurs_additifs(v: Verif) -> void:
+	# +100 % et +50 % font +150 %, pas +200 % : en produit, empiler quatre
+	# reactifs de degats fabriquait une main six fois au-dessus de la moyenne.
 	var t := Mods.appliquer(_base(), [{"degats_mult": 2.0}, {"degats_mult": 1.5}])
-	v.presque(t.degats, Reglages.TIR_DEGATS * 3.0, "les multiplicateurs se composent")
+	v.presque(t.degats, Reglages.TIR_DEGATS * 2.5, "les multiplicateurs s'additionnent")
+
+func test_malus_ne_peut_pas_annuler_le_tir(v: Verif) -> void:
+	var t := Mods.appliquer(_base(), [{"degats_mult": 0.5}, {"degats_mult": 0.5}, {"degats_mult": 0.5}])
+	v.vrai(t.degats > 0.0, "un empilement de malus laisse toujours un tir")
 
 func test_effets_reunis_sans_doublon(v: Verif) -> void:
 	var t := Mods.appliquer(_base(), [{"effets": ["braise"]}, {"effets": ["braise", "givre"]}])

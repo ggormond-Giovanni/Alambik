@@ -27,23 +27,40 @@ func _construire() -> void:
 	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
 	marge.add_theme_constant_override("margin_left", 90)
 	marge.add_theme_constant_override("margin_right", 90)
-	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 110)
+	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 70)
 	add_child(marge)
 
 	var colonne := VBoxContainer.new()
 	colonne.alignment = BoxContainer.ALIGNMENT_END
-	colonne.add_theme_constant_override("separation", 24)
+	colonne.add_theme_constant_override("separation", 16)
 	marge.add_child(colonne)
 
-	var descendre := Button.new()
-	descendre.text = "Descendre"
-	descendre.custom_minimum_size = Vector2(0, 140)
-	descendre.add_theme_font_size_override("font_size", 44)
-	descendre.add_theme_color_override("font_color", Palette.OR)
-	descendre.pressed.connect(func() -> void:
-		Sons.jouer("choix", -10.0)
-		get_tree().change_scene_to_file("res://scenes/run.tscn"))
-	colonne.add_child(descendre)
+	# Un bouton par chapitre : ceux qu'on n'a pas encore ouverts restent lisibles
+	# mais inertes, sinon on ne sait pas ce qu'il reste a faire.
+	for index in Chapitres.nombre():
+		var chapitre := Chapitres.par_index(index)
+		var ouvert := ReglagesJoueur.chapitre_debloque(index)
+		var atteinte := ReglagesJoueur.meilleure_du_chapitre(index)
+		var bouton := Button.new()
+		bouton.text = chapitre["nom"] if ouvert else "%s — verrouillé" % chapitre["nom"]
+		if ouvert and atteinte > 0:
+			bouton.text += "   (page %d / %d)" % [atteinte, chapitre["salles"]]
+		bouton.custom_minimum_size = Vector2(0, 118)
+		bouton.add_theme_font_size_override("font_size", 36)
+		bouton.add_theme_color_override("font_color", chapitre["teinte"] if ouvert else Palette.TEXTE_ATTENUE)
+		bouton.disabled = not ouvert
+		bouton.pressed.connect(func() -> void:
+			Sons.jouer("choix", -10.0)
+			ReglagesJoueur.choisir_chapitre(index)
+			get_tree().change_scene_to_file("res://scenes/run.tscn"))
+		colonne.add_child(bouton)
+
+func _chapitres_ouverts() -> int:
+	var total := 0
+	for index in Chapitres.nombre():
+		if ReglagesJoueur.chapitre_debloque(index):
+			total += 1
+	return total
 
 func _process(delta: float) -> void:
 	_anim += delta
@@ -115,7 +132,7 @@ func _draw() -> void:
 
 	if ReglagesJoueur.meilleure_salle > 0:
 		draw_string(police, Vector2(0, titre_y + 148.0),
-			"Meilleure descente : page %d / %d" % [ReglagesJoueur.meilleure_salle, Reglages.SALLES_PAR_RUN],
+			"%d chapitre(s) ouvert(s) sur %d" % [_chapitres_ouverts(), Chapitres.nombre()],
 			HORIZONTAL_ALIGNMENT_CENTER, taille.x, 30, Color(Palette.OR, 0.85))
 
 	# Trois lignes de regles : sur telephone, personne ne lit un didacticiel,
@@ -123,7 +140,7 @@ func _draw() -> void:
 	var regles := [
 		"Le pouce se pose n'importe où en bas de l'écran.",
 		"On tire tout seul, dès qu'on s'arrête.",
-		"Pages 5 et 9 : deux réactifs fusionnent en une essence.",
+		"Aux alambics, deux réactifs se perdent pour une essence plus forte.",
 	]
 	for i in regles.size():
 		draw_string(police, Vector2(0, titre_y + 212.0 + float(i) * 42.0), regles[i],

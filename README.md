@@ -5,16 +5,21 @@ par sessions de cinq à sept minutes.
 
 Une alchimiste descend dans un grimoire vivant. Chaque page est une salle, les
 créatures sont d'encre, de plume et de verre brisé. Les compétences sont des
-**réactifs** ; aux pages 5 et 9, un **alambic** permet d'en fondre deux en une
-**essence** qu'aucun tirage ne donne. Sacrifier deux effets connus contre un
-effet plus fort, c'est la décision qui porte le jeu.
+**réactifs** ; quatre fois par chapitre, un **alambic** en fond deux en une
+**essence** qu'aucun tirage ne donne — les deux composants sont consommés, et
+l'essence vaut toujours mieux que ce qu'elle coûte. Sacrifier deux effets
+connus contre un effet plus fort, c'est la décision qui porte le jeu.
+
+Trois chapitres de cinquante pages, chacun avec son boss, son mi-chapitre et sa
+propre montée en difficulté. Un chapitre s'ouvre quand le précédent est terminé.
 
 *Alambic est un nom de travail, pas encore vérifié sur les registres de marques.*
 
 ## État
 
-V1 jouable de bout en bout : dix pages, deux alambics, un boss, quinze réactifs,
-dix fusions. Voir `ETAT.md` pour ce qui est mesuré et ce qui ne l'est pas.
+Jouable de bout en bout : trois chapitres de cinquante pages, quatre alambics et
+un mi-chapitre par chapitre, quinze réactifs, dix fusions. L'équilibrage est
+mesuré, pas estimé — voir `ETAT.md` et `sondes/equilibrage.gd`.
 
 ## Commandes
 
@@ -23,7 +28,7 @@ dix fusions. Voir `ETAT.md` pour ce qui est mesuré et ce qui ne l'est pas.
 ./deploy.sh              # installer sur le téléphone branché (voir MOBILE.md)
 ./publier.sh             # produire dist/alambic.apk, signé pour distribution
 ./verifier.sh            # tests, SCRIPT ERROR, cohérence des données
-./sondes/vingt_runs.sh   # vingt runs headless pilotées par un bot
+./sondes/vingt_runs.sh   # vingt runs headless pilotées par un bot (CHAPITRE=2 pour changer)
 ```
 
 Un raccourci **Alambic** est posé sur le bureau et dans le menu des
@@ -37,7 +42,8 @@ télécharger ce fichier suffit à installer le jeu. Voir `MOBILE.md`.
 Arguments de développement, après `--` :
 
 ```sh
-./lancer.sh -- --salle=10 --dote=7      # aller voir le boss avec sept réactifs
+./lancer.sh -- --salle=50 --dote=12     # aller voir le boss avec douze réactifs
+./lancer.sh -- --chapitre=3             # commencer au troisième chapitre
 ./lancer.sh -- --graine=42              # rejouer exactement la même run
 ./lancer.sh -- --auto --bavard          # laisser le bot jouer, en commentant
 ```
@@ -62,6 +68,13 @@ ui/          interface, entièrement dessinée
 sondes/      bot headless, cohérence des données, vingt runs
 tests/       harnais maison, une suite par unité testable
 docs/        spécification de conception et plan d'implémentation
+```
+
+Pour voir l'équilibrage chiffré — fusions contre leurs composants, écart entre
+mains, course entre le héros et les créatures sur un chapitre :
+
+```sh
+~/Téléchargements/Godot_v4.7.1-stable_linux.x86_64 --headless --path . --script sondes/equilibrage.gd
 ```
 
 `ETAT.md` dit où chercher quoi. `CLAUDE.md` liste les conventions.

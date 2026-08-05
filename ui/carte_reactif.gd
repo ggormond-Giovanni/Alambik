@@ -77,7 +77,13 @@ func _draw() -> void:
 	Dessin.glyphe(self, reactif.glyphe, centre, 24.0, Color(teinte, alpha))
 
 	var x := 150.0
-	draw_string(police, Vector2(x, 66.0), reactif.nom, HORIZONTAL_ALIGNMENT_LEFT,
+	var titre := reactif.nom
+	var possedees := Jeu.copies(reactif.id)
+	if possedees > 0:
+		# Reprendre un reactif l'empile : on annonce ou on en est, sinon le
+		# joueur ne sait pas ce qu'il renforce.
+		titre += "  (déjà x%d)" % possedees
+	draw_string(police, Vector2(x, 66.0), titre, HORIZONTAL_ALIGNMENT_LEFT,
 		r.size.x - x - 24.0, 40, Color(Palette.TEXTE, alpha))
 	draw_multiline_string(police, Vector2(x, 112.0), reactif.description, HORIZONTAL_ALIGNMENT_LEFT,
 		r.size.x - x - 24.0, 28, 3, Color(Palette.TEXTE_ATTENUE, alpha))
@@ -88,5 +94,6 @@ func _draw() -> void:
 			var a := CatalogueReactifs.par_id(composants[0])
 			var b := CatalogueReactifs.par_id(composants[1])
 			if a != null and b != null:
-				draw_string(police, Vector2(x, r.size.y - 24.0), "%s + %s" % [a.nom, b.nom],
+				# On annonce ce qu'on perd avant le clic, jamais apres.
+				draw_string(police, Vector2(x, r.size.y - 24.0), "consomme %s + %s" % [a.nom, b.nom],
 					HORIZONTAL_ALIGNMENT_LEFT, r.size.x - x - 24.0, 24, Color(Palette.ESSENCE, 0.8 * alpha))

@@ -37,7 +37,7 @@ func demarrer(numero_: int, limites_: Rect2) -> void:
 	numero = numero_
 	limites = limites_
 	_porte_position = Vector2((limites.position.x + limites.end.x) / 2.0, limites.position.y - 70.0)
-	_vagues = Vagues.pour_salle(numero)
+	_vagues = Vagues.pour_salle(numero, Jeu.chapitre, Jeu.graine)
 	_vague_courante = -1
 	_porte_ouverte = false
 	_finie = false
@@ -61,7 +61,7 @@ func _construire_obstacles() -> void:
 	alea.seed = Jeu.graine * 31 + numero
 	# Les blocs restent dans la bande mediane : trop bas, ils bouchent la ligne de
 	# tir des le depart et le joueur ne comprend pas pourquoi rien ne touche.
-	var nombre := 0 if numero == Reglages.SALLE_BOSS else alea.randi_range(0, 2)
+	var nombre := 0 if Chapitres.est_boss(Jeu.chapitre, numero) else alea.randi_range(0, 2)
 	for i in nombre:
 		var taille := Vector2(alea.randf_range(90.0, 200.0), alea.randf_range(50.0, 110.0))
 		var centre := Vector2(
@@ -114,6 +114,7 @@ func faire_apparaitre(id: String, position: Vector2) -> void:
 	if donnees.is_empty():
 		push_error("Ennemi inconnu : " + id)
 		return
+	donnees = _mis_a_l_echelle(donnees, id)
 	var noeud: Node2D
 	if donnees["cerveau"] == "boss":
 		noeud = BOSS.instantiate()
@@ -129,6 +130,19 @@ func faire_apparaitre(id: String, position: Vector2) -> void:
 	add_child(noeud)
 	if effets != null:
 		effets.onde(position, donnees["rayon"] * 2.5, donnees["couleur"], 0.5)
+
+# La creature d'une page 45 est plus lourde que celle d'une page 5, et celle du
+# troisieme chapitre plus que celle du premier. Le catalogue reste la reference :
+# on n'y touche pas, on met a l'echelle une copie.
+func _mis_a_l_echelle(donnees: Dictionary, id: String) -> Dictionary:
+	var copie := donnees.duplicate(true)
+	copie["pv"] = float(donnees["pv"]) * Chapitres.facteur_pv(Jeu.chapitre, numero)
+	copie["degats"] = float(donnees["degats"]) * Chapitres.facteur_degats(Jeu.chapitre, numero)
+	if Chapitres.est_mi_boss(Jeu.chapitre, numero) and id == Jeu.chapitre_courant()["boss"]:
+		# Le mi-chapitre montre le boss avant de le faire affronter pour de bon.
+		copie["pv"] = float(copie["pv"]) * Vagues.facteur_mi_boss()
+		copie["nom"] = "%s (esquisse)" % donnees["nom"]
+	return copie
 
 func _sur_ennemi_touche(position: Vector2, couleur: Color) -> void:
 	if effets != null:

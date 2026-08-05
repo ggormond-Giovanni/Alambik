@@ -27,8 +27,15 @@ const ACIDE_VULNERABILITE := 1.35   # multiplicateur de degats subis
 const ACIDE_DUREE := 4.0
 const FOUDRE_PORTEE_CHAINE := 260.0
 const FOUDRE_PART_DEGATS := 0.6     # la chaine frappe moins fort que l'impact
-const FRAGMENT_PART_DEGATS := 0.45
+# Un eclat qui frappe presque aussi fort que le tir d'origine transforme
+# Eclat de verre en multiplicateur : c'etait la moitie des mains cassees.
+const FRAGMENT_PART_DEGATS := 0.28
 const FRAGMENT_PORTEE := 260.0
+# Un trait qui traverse quatre ennemis en frappant chacun a pleine puissance
+# est un multiplicateur deguise : il perd de la force a chaque cible, et a
+# chaque rebond. C'est ce qui separe une bonne main d'une main cassee.
+const PERFORATION_PERTE := 0.35
+const REBOND_PERTE := 0.25
 
 const PAS_DE_CHAT_FACTEUR := 1.25
 const FIOLE_PV := 40.0
@@ -48,10 +55,27 @@ const ARENE_MARGE_LATERALE := 40.0
 const ARENE_HAUT := 260.0            # sous le HUD
 const ARENE_BAS := 220.0             # au-dessus de la zone du pouce
 
-const SALLES_PAR_RUN := 10
-const SALLE_ALAMBIC_A := 5
-const SALLE_ALAMBIC_B := 9
-const SALLE_BOSS := 10
+# La longueur d'un chapitre et la place de ses alambics vivent dans
+# data/chapitres.gd : ces constantes ne servent plus qu'au repli, quand aucun
+# chapitre n'est charge.
+const SALLES_PAR_RUN := 50
+
+# Montee en puissance sur la longueur d'un chapitre. Cinquante pages a
+# difficulte plate seraient cinquante fois la meme page.
+# Facteurs atteints a la derniere page d'un chapitre : les PV sont multiplies
+# par 1 + MONTEE_PV, les degats par 1 + MONTEE_DEGATS, suivant une courbe
+# geometrique. Cales sur la puissance mesuree du heros au meme endroit.
+const MONTEE_PV := 15.0
+const MONTEE_DEGATS := 1.00
+const MI_BOSS_PART_PV := 0.45
+
+# Un reactif se reprend, mais pas indefiniment : sans plafond, une descente de
+# cinquante pages se termine en empilant quinze fois le meme.
+# Une recompense a chaque page rendait chaque draft insignifiant et le heros
+# intouchable des la page 30 : une page sur deux, et le choix reprend du poids.
+const DRAFT_TOUTES_LES := 2
+const COPIES_MAX := 3
+const SOIN_REPOS := 0.30     # part des PV max rendue par une page de repos
 
 const DELAI_ENTRE_VAGUES := 0.7
 # Un invocateur qui produit plus vite qu'on ne tue rend la salle infinie : la

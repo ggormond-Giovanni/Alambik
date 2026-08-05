@@ -17,6 +17,7 @@ var direction := Vector2.RIGHT
 var hostile := false
 var couleur := Palette.TIR_HALO
 
+var _facteur_degats := 1.0
 var _distance_parcourue := 0.0
 var _rebonds_restants := 0
 var _perforations_restantes := 0
@@ -62,7 +63,9 @@ func _sur_contact(corps: Node) -> void:
 
 	if not hostile:
 		Jeu.tirs_touches += 1
-	corps.recevoir_degats(tir.degats, tir.effets)
+	# Le Tir est partage entre tous les projectiles d'une salve : on ne le mute
+	# jamais, la perte de puissance vit dans le projectile.
+	corps.recevoir_degats(tir.degats * _facteur_degats, tir.effets)
 	impact_visuel.emit(global_position, couleur, 1.0)
 	Sons.jouer("impact", -18.0, randf_range(0.9, 1.2))
 
@@ -73,9 +76,11 @@ func _sur_contact(corps: Node) -> void:
 
 	if _perforations_restantes > 0:
 		_perforations_restantes -= 1
+		_facteur_degats *= 1.0 - Reglages.PERFORATION_PERTE
 		return
 	if _rebonds_restants > 0:
 		_rebonds_restants -= 1
+		_facteur_degats *= 1.0 - Reglages.REBOND_PERTE
 		if "flaque_au_rebond" in tir.drapeaux:
 			zone_demandee.emit(global_position, "flaque")
 		_rebondir_vers_une_autre_cible()
@@ -87,6 +92,7 @@ func _heurter_un_mur(_mur: Node) -> void:
 		Jeu.tirs_dans_un_mur += 1
 	if _rebonds_restants > 0:
 		_rebonds_restants -= 1
+		_facteur_degats *= 1.0 - Reglages.REBOND_PERTE
 		if "flaque_au_rebond" in tir.drapeaux:
 			zone_demandee.emit(global_position, "flaque")
 		# Sans normale de contact fiable sur une Area2D, on repart vers la cible

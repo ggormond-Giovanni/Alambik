@@ -37,6 +37,10 @@ func _construire() -> void:
 
 	for id in DraftLogique.proposer_avec_essence(Jeu.inventaire, Jeu.rng):
 		var reactif := Jeu.reactif(id)
+		if id == DraftLogique.REPOS:
+			reactif = Reactif.creer(DraftLogique.REPOS, "Page de repos",
+				"Le grimoire vous laisse souffler : %d %% des points de vie rendus." % roundi(Reglages.SOIN_REPOS * 100.0),
+				{}, false, Color(0.55, 0.92, 0.62), "fiole")
 		if reactif == null:
 			continue
 		var carte := CarteReactif.new()
@@ -49,6 +53,17 @@ func _sur_choix(id: String) -> void:
 	if _choisi:
 		return
 	_choisi = true
+	if id == DraftLogique.REPOS:
+		var heros := get_tree().get_first_node_in_group("heros")
+		if heros != null:
+			heros.stats.soigner(heros.stats.pv_max * Reglages.SOIN_REPOS)
+		termine.emit()
+		return
+	# Une essence prise au draft consomme ses deux composants, exactement comme
+	# a l'alambic : sinon fusionner serait un cadeau, et le choix disparaitrait.
+	var essence := CatalogueEssences.par_id(id)
+	if essence != null:
+		Jeu.retirer_reactifs(Recettes.composants_de(id))
 	Jeu.ajouter_reactif(id)
 	termine.emit()
 
@@ -65,7 +80,8 @@ func _draw() -> void:
 	var haut := Ecran.marge_haute() + 90.0
 	draw_string(police, Vector2(0, haut), "Un réactif vous attend",
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 46, Palette.TEXTE)
-	draw_string(police, Vector2(0, haut + 46.0), "Page %d" % Jeu.salle_courante,
+	draw_string(police, Vector2(0, haut + 46.0), "%s — page %d / %d" % [
+		Jeu.chapitre_courant()["nom"], Jeu.salle_courante, Jeu.salles_du_chapitre()],
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
 	# Un filet d'encre anime en haut de page : la pause reste vivante.
 	var y := haut + 76.0

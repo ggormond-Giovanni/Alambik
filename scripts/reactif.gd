@@ -8,9 +8,13 @@ var mods: Dictionary
 var est_essence := false
 var teinte := Color(0.9, 0.8, 0.5)   # sert au cadre et a l'icone dessinee
 var glyphe := "goutte"               # forme dessinee dans l'icone
+# Combien de fois on peut le reprendre. Un reactif qui ne fait qu'ajouter un
+# effet n'apporte rien la seconde fois : les effets ne s'empilent pas.
+var copies_max := 0                  # 0 : valeur par defaut des reglages
 
 static func creer(id_: String, nom_: String, description_: String, mods_: Dictionary,
-		essence := false, teinte_ := Color(0.9, 0.8, 0.5), glyphe_ := "goutte") -> Reactif:
+		essence := false, teinte_ := Color(0.9, 0.8, 0.5), glyphe_ := "goutte",
+		copies := 0) -> Reactif:
 	var r := Reactif.new()
 	r.id = id_
 	r.nom = nom_
@@ -19,4 +23,8 @@ static func creer(id_: String, nom_: String, description_: String, mods_: Dictio
 	r.est_essence = essence
 	r.teinte = teinte_
 	r.glyphe = glyphe_
+	r.copies_max = copies
 	return r
+
+func copies_permises() -> int:
+	return copies_max if copies_max > 0 else Reglages.COPIES_MAX

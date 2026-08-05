@@ -30,6 +30,18 @@ static var TOUS := {
 		"cerveau": "essaimeur", "couleur": Color(0.44, 0.94, 0.74), "rayon": 38.0,
 		"forme": "masque", "recharge": 3.5, "invoque": "encrier_rampant", "nb_invoques": 2, "max_invocations": 6,
 	},
+	"la_rature": {
+		"nom": "La Rature",
+		"pv": 1500.0, "vitesse": 260.0, "degats": 18.0, "portee": 1200.0,
+		"cerveau": "boss", "couleur": Color(0.95, 0.55, 0.30), "rayon": 104.0,
+		"forme": "correcteur", "recharge": 1.2, "vitesse_projectile": 430.0,
+	},
+	"l_errata": {
+		"nom": "L'Errata",
+		"pv": 2400.0, "vitesse": 300.0, "degats": 22.0, "portee": 1300.0,
+		"cerveau": "boss", "couleur": Color(0.98, 0.34, 0.46), "rayon": 112.0,
+		"forme": "correcteur", "recharge": 1.0, "vitesse_projectile": 480.0,
+	},
 	"le_correcteur": {
 		"nom": "Le Correcteur",
 		"pv": 900.0, "vitesse": 220.0, "degats": 14.0, "portee": 1200.0,

@@ -87,7 +87,10 @@ func _construire_cartes() -> void:
 		enfant.queue_free()
 	_cartes.clear()
 	var fusionnables := _ids_fusionnables()
-	for id in Jeu.inventaire:
+	# Une carte par reactif, pas par exemplaire : avec des copies empilees, la
+	# liste affichait trois fois Main leste sans dire que c'etait le meme.
+	for entree in Jeu.inventaire_groupe():
+		var id: String = entree[0]
 		var reactif := Jeu.reactif(id)
 		if reactif == null:
 			continue

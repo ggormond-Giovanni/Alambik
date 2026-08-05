@@ -63,7 +63,56 @@ pas celle du jeu — c'est un mauvais instrument, et il a d'abord fait croire à
 - `Reglages` est une classe de constantes et non un autoload : les suites
   headless doivent lire l'équilibrage sans monter de SceneTree.
 - Le héros appartient à `Run` et non à `Salle` : ses PV traversent les pages.
-- Prendre une essence au draft ne consomme pas ses composants.
+- Prendre une essence au draft consomme ses composants, comme a l'alambic
+  (corrige le 2026-08-05 au soir).
+
+## 2026-08-05 (soir) — Retours de jeu : fusions, combos, cinquante pages
+
+Trois reproches, trois corrections. Chacune a commencé par une mesure, parce que
+« trop fort » et « plus faible que ses composants » ne se règlent pas à vue.
+L'instrument est `scripts/puissance.gd`, la sonde `sondes/equilibrage.gd`.
+
+**Une fusion doit battre ses composants.** Mesure d'avant : trois essences sur
+dix étaient perdantes, Rafale d'alambic à 0,56. Elles coûtaient deux réactifs
+pour rendre moins que ce qu'on abandonnait. Réécrites, puis figées par un test
+qui exige au moins 15 % de mieux que le couple, et mieux que chacun pris seul.
+
+**Et elle doit consommer ce qu'elle consomme.** L'alambic retirait bien les deux
+composants, mais l'essence proposée au draft, elle, était offerte : on gardait
+tout. C'était le « trop bête » du retour. Le draft consomme désormais, et la
+carte l'annonce avant le clic.
+
+**Les combinaisons cassées.** Écart mesuré entre la meilleure main de cinq
+réactifs et la médiane : 2,35, avec près de 6 entre la meilleure et la pire.
+Trois causes trouvées, toutes structurelles :
+
+- les multiplicateurs se composaient en produit — ils s'additionnent maintenant,
+  ce qui reste indifférent à l'ordre d'acquisition ;
+- un éclat de verre frappait à 45 % du tir d'origine, ce qui faisait d'Éclat de
+  verre un multiplicateur déguisé — 28 % ;
+- un projectile perforant traversait quatre ennemis à pleine puissance — il perd
+  35 % par traversée et 25 % par rebond.
+
+Écart final : 1,96, plafonné par un test à 2,2.
+
+**Cinquante pages par chapitre, trois chapitres.** Conséquences qu'il a fallu
+traiter, dans l'ordre où elles sont apparues :
+
+1. Quarante drafts pour quinze réactifs : il faut pouvoir reprendre un réactif.
+   D'où les plafonds de copies (3, 2 pour ceux qui ajoutent des projectiles, 1
+   pour ceux qui ne posent qu'un effet) et la page de repos quand tout est plein.
+2. Écrire cinquante compositions de vagues à la main par chapitre serait
+   illisible : `data/vagues.gd` décrit des paliers, la page en découle, et le
+   tirage reste reproductible à graine égale.
+3. La difficulté s'effondrait. Mesure : à la page 50, le héros valait 16 fois ce
+   que la page lui opposait. La montée des créatures était une droite quand la
+   puissance du joueur est une exponentielle. Courbe géométrique (×16 en PV sur
+   un chapitre), rendement décroissant sur les copies, draft une page sur deux :
+   rapport ramené entre 1,0 et 2,5 sur le premier chapitre.
+
+Session de 5 à 7 minutes annoncée par la spec : une descente de cinquante pages
+en demande nettement plus. C'est un choix assumé du projet, pas un oubli — mais
+la spec dit encore le contraire.
 
 ### Travail parallèle
 

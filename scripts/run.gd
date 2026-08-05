@@ -29,7 +29,8 @@ var _temps_dans_la_salle := 0.0
 func _ready() -> void:
 	var arguments := OS.get_cmdline_user_args()
 	Jeu.mode_auto = "--auto" in arguments
-	Jeu.demarrer_run(_valeur_argument(arguments, "--graine="), maxi(1, _valeur_argument(arguments, "--salle=")))
+	Jeu.demarrer_run(_valeur_argument(arguments, "--graine="), maxi(1, _valeur_argument(arguments, "--salle=")),
+		maxi(0, _valeur_argument(arguments, "--chapitre=") - 1) if _valeur_argument(arguments, "--chapitre=") > 0 else ReglagesJoueur.chapitre_choisi)
 	# --dote=N remplit l'inventaire : c'est ce qui permet d'aller regarder
 	# l'alambic ou le boss sans rejouer huit salles a chaque essai.
 	var dote := _valeur_argument(arguments, "--dote=")
@@ -137,17 +138,18 @@ func _entrer_dans_la_salle() -> void:
 	_hud.rafraichir()
 	_temps_dans_la_salle = 0.0
 	if Jeu.mode_auto:
-		print("salle %d : inventaire=%s pv=%d" % [Jeu.salle_courante, str(Jeu.inventaire), roundi(_heros.stats.pv)])
+		print("salle %d/%d (%s) : inventaire=%d pv=%d" % [Jeu.salle_courante, Jeu.salles_du_chapitre(),
+			Jeu.chapitre_courant()["nom"], Jeu.inventaire.size(), roundi(_heros.stats.pv)])
 	_salle.demarrer(Jeu.salle_courante, _limites)
 
 func _sur_salle_terminee() -> void:
 	if _terminee:
 		return
-	if Jeu.salle_courante >= Reglages.SALLES_PAR_RUN:
+	if Jeu.salle_courante >= Jeu.salles_du_chapitre():
 		Jeu.terminer_run(true)
 		return
 	Jeu.salle_courante += 1
-	if Jeu.salle_courante in [Reglages.SALLE_ALAMBIC_A, Reglages.SALLE_ALAMBIC_B]:
+	if Chapitres.est_alambic(Jeu.chapitre, Jeu.salle_courante):
 		_ouvrir(ALAMBIC)
 	else:
 		_ouvrir(DRAFT)
@@ -202,5 +204,6 @@ func _sur_run_terminee(victoire: bool) -> void:
 	fin.process_mode = Node.PROCESS_MODE_ALWAYS
 	_couche.add_child(fin)
 	fin.afficher(victoire, Jeu.salle_courante)
-	print("run terminee : victoire=%s salle atteinte=%d graine=%d abattus=%d" % [
-		victoire, Jeu.salle_courante, Jeu.graine, Jeu.ennemis_abattus])
+	print("run terminee : victoire=%s chapitre=%d salle atteinte=%d/%d graine=%d abattus=%d" % [
+		victoire, Jeu.chapitre + 1, Jeu.salle_courante, Jeu.salles_du_chapitre(),
+		Jeu.graine, Jeu.ennemis_abattus])
