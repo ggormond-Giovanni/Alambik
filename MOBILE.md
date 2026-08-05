@@ -61,19 +61,46 @@ Pour ne pas rester dans les logs :
 ./deploy.sh --sans-logs
 ```
 
-## 4. Installer sans le PC (envoi du fichier)
+## 4. Installer sans le PC (télécharger l'APK)
 
-L'APK est autonome. Tu peux l'envoyer par mail, le déposer sur un cloud ou le
-copier par câble :
+`dist/alambic.apk` est suivi par git : une fois le dépôt poussé, il se télécharge
+depuis le téléphone. Sur GitHub, le bouton **Download** de la page du fichier
+(ou l'adresse `raw`) donne directement l'APK.
+
+Sans PC du tout : ouvrir le dépôt dans le navigateur du téléphone, télécharger
+`dist/alambic.apk`, puis l'ouvrir depuis *Fichiers ▸ Téléchargements*. Android
+demande d'autoriser l'installation d'applications de cette source : c'est normal
+pour un APK qui ne vient pas du Play Store.
+
+Par câble, si le téléphone est branché :
 
 ```sh
-~/Android/Sdk/platform-tools/adb push build/alambic.apk /sdcard/Download/
+~/Android/Sdk/platform-tools/adb push dist/alambic.apk /sdcard/Download/
 ```
 
-Sur le téléphone, ouvrir le fichier depuis *Fichiers ▸ Téléchargements*.
-Android demandera d'autoriser l'installation d'applications de cette source :
-c'est normal pour un APK qui ne vient pas du Play Store. L'APK est signé avec
-une clé de debug, donc utilisable pour tester, mais pas publiable en l'état.
+### Produire une nouvelle version
+
+```sh
+./publier.sh          # vérifie, exporte, écrit dist/alambic-<version>.apk
+./publier.sh 0.2      # en forçant le numéro
+```
+
+Le script lance `./verifier.sh` avant d'exporter : on ne publie pas un APK dont
+les tests n'ont pas été passés. Le numéro de version se change dans
+`export_presets.cfg` (`version/name` et `version/code`).
+
+### La clé de signature
+
+L'APK de `dist/` est signé avec une clé de release, pas la clé de debug. Elle
+vit dans `~/alambic-release.keystore`, et ses identifiants dans
+`~/.config/alambic/release.env` — **jamais dans le dépôt**.
+
+Deux conséquences à garder en tête :
+
+- **Sauvegarde ce keystore ailleurs.** Le perdre, c'est perdre la possibilité de
+  publier une mise à jour que les appareils déjà équipés accepteront.
+- Un téléphone qui a d'abord reçu l'APK de `deploy.sh` (signé debug) refusera
+  celui de `dist/` : `adb uninstall com.giovanni.alambic` avant, ou l'inverse.
 
 ## 5. Ce qu'il faut regarder sur l'appareil
 

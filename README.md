@@ -21,9 +21,18 @@ dix fusions. Voir `ETAT.md` pour ce qui est mesuré et ce qui ne l'est pas.
 ```sh
 ./lancer.sh              # jouer sur PC, fenêtre au ratio d'un téléphone
 ./deploy.sh              # installer sur le téléphone branché (voir MOBILE.md)
+./publier.sh             # produire dist/alambic.apk, signé pour distribution
 ./verifier.sh            # tests, SCRIPT ERROR, cohérence des données
 ./sondes/vingt_runs.sh   # vingt runs headless pilotées par un bot
 ```
+
+Un raccourci **Alambic** est posé sur le bureau et dans le menu des
+applications ; il lance `lancer.sh`.
+
+## Télécharger l'APK
+
+`dist/alambic.apk` est suivi par git : depuis le téléphone, ouvrir le dépôt et
+télécharger ce fichier suffit à installer le jeu. Voir `MOBILE.md`.
 
 Arguments de développement, après `--` :
 

@@ -25,6 +25,7 @@ listé plus bas, sans arrondi.
 | toucher à l'interface | `ui/` : `hud.gd`, `draft.gd`, `alambic.gd`, `carte_reactif.gd`, `joystick.gd`, `fin_de_run.gd` |
 | lancer sur PC | `./lancer.sh` |
 | installer sur le téléphone | `./deploy.sh` (voir `MOBILE.md`) |
+| produire l'APK à télécharger | `./publier.sh` → `dist/alambic.apk` |
 | vérifier | `./verifier.sh` puis `./sondes/vingt_runs.sh` |
 
 Arguments de développement (après `--`) : `--graine=N` (run rejouable),
@@ -40,6 +41,7 @@ Mesurées, pas estimées. Machine de développement, Godot 4.7.1, headless.
 | Suites de tests | 15 suites, 522 assertions, 0 échec | `./verifier.sh` |
 | Vingt runs du bot | 0 échec / 20 ; 18 atteignent la page 10, 1 victoire | `./sondes/vingt_runs.sh` |
 | Taille de l'APK debug | 30 Mo (arm64-v8a seul, sprites inclus) | `ls -lh build/alambic.apk` |
+| Taille de l'APK release | 28 Mo, signé `CN=Alambic` | `apksigner verify --print-certs` |
 | Durée d'un export APK | 18,2 s | `/usr/bin/time` sur `--export-debug` |
 
 **Non mesuré à ce jour : tout ce qui demande l'appareil.** Images par seconde
