@@ -44,7 +44,10 @@ Mesurées, pas estimées. Machine de développement, Godot 4.7.1, headless.
 | Quoi | Valeur | Comment |
 |---|---|---|
 | Suites de tests | 15 suites, 522 assertions, 0 échec | `./verifier.sh` |
-| Runs du bot, chapitre 1 | 0 blocage ; une run atteint la page 50/50 | `CHAPITRE=1 ./sondes/vingt_runs.sh` |
+| Runs du bot, six descentes | **0 blocage sur 6**, deux par chapitre | `CHAPITRE=n ./sondes/vingt_runs.sh` |
+| Pages atteintes, chapitre 1 | 50/50 et 14/50 | idem |
+| Pages atteintes, chapitre 2 | 25/50 et 9/50 | idem |
+| Pages atteintes, chapitre 3 | 25/50 et 13/50 | idem |
 | Durée d'un chapitre | ~10 s par page, soit **8 à 9 min** pour 50 pages | compteur d'images de jeu, run graine 5 |
 | Écart meilleure main / médiane | 1,96 (2,35 avant correction) | `sondes/equilibrage.gd` |
 | Fusions perdantes | 0 sur 10 (3 avant correction) | `sondes/equilibrage.gd` |
@@ -67,7 +70,12 @@ vide). Ces lignes restent vides tant que le téléphone n'a pas parlé.
 3. **Quinze réactifs, dix recettes, essences observables** — vérifié par les
    tests et par `sondes/selftest.gd`, qui échoue si un drapeau d'essence n'est
    lu par aucun script.
-4. **Vingt runs headless sans crash ni blocage** — vérifié : 0 échec sur 20.
+4. **Vingt runs headless sans crash ni blocage** — *partiellement rejoué* : les
+   vingt runs dataient des chapitres à dix pages. Depuis le passage à cinquante,
+   seules **six** descentes ont été relancées (deux par chapitre), sans aucun
+   blocage. Une descente prenant huit à neuf minutes de jeu, vingt runs
+   demandent près d'une heure de sonde : à relancer avant de considérer le
+   critère tenu.
 5. **`verifier.sh` vert, aucun `SCRIPT ERROR`** — vérifié.
 6. **Performances mesurées** — *non fait*, faute d'appareil.
 
@@ -130,6 +138,11 @@ qu'une page sur deux. Rapport héros/créatures sur le premier chapitre : entre
 ## Ce qui reste à faire
 
 - Brancher un téléphone et remplir les mesures manquantes.
+- Relancer les vingt runs complètes par chapitre (voir critère 4).
+- Le bot bute deux fois sur six au mi-chapitre (page 25) dans les chapitres 2
+  et 3. C'est peut-être un mur, c'est peut-être un bot qui ne sait pas lire les
+  motifs d'un boss — il ne les a jamais appris. À trancher en jouant, pas en
+  regardant la sonde.
 - Régler l'équilibrage une fois qu'un humain a joué : le bot traverse un chapitre
   et meurt au boss, ce qui est le profil recherché, mais ne dit rien de la
   difficulté ressentie au pouce.
