@@ -1,0 +1,46 @@
+; Alambic — roguelite de tir vue de dessus, portrait, Android.
+; Toute valeur d'equilibrage vit dans data/reglages.gd, pas ici.
+
+config_version=5
+
+[application]
+
+config/name="Alambic"
+run/main_scene="res://scenes/menu.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icone.svg"
+
+[autoload]
+
+Jeu="*res://autoload/jeu.gd"
+Sons="*res://autoload/sons.gd"
+ReglagesJoueur="*res://autoload/reglages_joueur.gd"
+Ecran="*res://autoload/ecran.gd"
+
+[display]
+
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/handheld/orientation=1
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep_width"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[layer_names]
+
+2d_physics/layer_1="heros"
+2d_physics/layer_2="ennemis"
+2d_physics/layer_3="murs"
+2d_physics/layer_4="tirs_heros"
+2d_physics/layer_5="tirs_ennemis"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_2d=1
+environment/defaults/default_clear_color=Color(0.055, 0.047, 0.075, 1)

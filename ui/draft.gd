@@ -1,0 +1,76 @@
+extends Control
+
+# Trois propositions apres chaque salle de combat. Si le joueur possede deja
+# les deux composants d'une recette, l'une d'elles peut etre l'essence
+# elle-meme : c'est le second chemin vers les fusions.
+
+signal termine
+
+var _colonne: VBoxContainer
+var _anim := 0.0
+var _choisi := false
+
+func _ready() -> void:
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	_construire()
+	if Jeu.mode_auto:
+		_choisir_automatiquement()
+
+func _process(delta: float) -> void:
+	_anim += delta
+	queue_redraw()
+
+func _construire() -> void:
+	var marge := MarginContainer.new()
+	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
+	marge.add_theme_constant_override("margin_left", 50)
+	marge.add_theme_constant_override("margin_right", 50)
+	marge.add_theme_constant_override("margin_top", int(Ecran.marge_haute()) + 200)
+	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 60)
+	add_child(marge)
+
+	_colonne = VBoxContainer.new()
+	_colonne.add_theme_constant_override("separation", 26)
+	_colonne.alignment = BoxContainer.ALIGNMENT_CENTER
+	marge.add_child(_colonne)
+
+	for id in DraftLogique.proposer_avec_essence(Jeu.inventaire, Jeu.rng):
+		var reactif := Jeu.reactif(id)
+		if reactif == null:
+			continue
+		var carte := CarteReactif.new()
+		carte.configurer(reactif)
+		carte.montrer_composants = true
+		carte.choisie.connect(_sur_choix)
+		_colonne.add_child(carte)
+
+func _sur_choix(id: String) -> void:
+	if _choisi:
+		return
+	_choisi = true
+	Jeu.ajouter_reactif(id)
+	termine.emit()
+
+func _choisir_automatiquement() -> void:
+	# Le bot prend la premiere proposition : il ne joue pas bien, il traverse.
+	await get_tree().create_timer(0.2).timeout
+	if _choisi or _colonne.get_child_count() == 0:
+		return
+	_sur_choix(_colonne.get_child(0).reactif.id)
+
+func _draw() -> void:
+	var police := ThemeDB.fallback_font
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.035, 0.06, 0.88))
+	var haut := Ecran.marge_haute() + 90.0
+	draw_string(police, Vector2(0, haut), "Un réactif vous attend",
+		HORIZONTAL_ALIGNMENT_CENTER, size.x, 46, Palette.TEXTE)
+	draw_string(police, Vector2(0, haut + 46.0), "Page %d" % Jeu.salle_courante,
+		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
+	# Un filet d'encre anime en haut de page : la pause reste vivante.
+	var y := haut + 76.0
+	var trace := PackedVector2Array()
+	for i in 41:
+		var t := float(i) / 40.0
+		trace.append(Vector2(lerpf(60.0, size.x - 60.0, t), y + sin(t * 8.0 + _anim * 1.5) * 5.0))
+	draw_polyline(trace, Color(Palette.OR, 0.35), 2.0, true)
