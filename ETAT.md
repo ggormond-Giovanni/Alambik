@@ -38,9 +38,9 @@ Mesurées, pas estimées. Machine de développement, Godot 4.7.1, headless.
 | Quoi | Valeur | Comment |
 |---|---|---|
 | Suites de tests | 15 suites, 522 assertions, 0 échec | `./verifier.sh` |
-| Vingt runs du bot | voir `JOURNAL.md` (2026-08-05) | `./sondes/vingt_runs.sh` |
-| Taille de l'APK debug | 28,6 Mo (arm64-v8a seul) | `ls -l build/alambic.apk` |
-| Durée d'un export APK | ~40 s | `time ./deploy.sh` |
+| Vingt runs du bot | 0 échec / 20 ; 18 atteignent la page 10, 1 victoire | `./sondes/vingt_runs.sh` |
+| Taille de l'APK debug | 30 Mo (arm64-v8a seul, sprites inclus) | `ls -lh build/alambic.apk` |
+| Durée d'un export APK | 18,2 s | `/usr/bin/time` sur `--export-debug` |
 
 **Non mesuré à ce jour : tout ce qui demande l'appareil.** Images par seconde
 réelles, confort du pouce, lisibilité, durée d'une run jouée à la main, durée
@@ -56,7 +56,7 @@ vide). Ces lignes restent vides tant que le téléphone n'a pas parlé.
 3. **Quinze réactifs, dix recettes, essences observables** — vérifié par les
    tests et par `sondes/selftest.gd`, qui échoue si un drapeau d'essence n'est
    lu par aucun script.
-4. **Vingt runs headless sans crash ni blocage** — voir `JOURNAL.md`.
+4. **Vingt runs headless sans crash ni blocage** — vérifié : 0 échec sur 20.
 5. **`verifier.sh` vert, aucun `SCRIPT ERROR`** — vérifié.
 6. **Performances mesurées** — *non fait*, faute d'appareil.
 
