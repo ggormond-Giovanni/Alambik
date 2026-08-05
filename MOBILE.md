@@ -1,8 +1,9 @@
 # Mettre Alambic sur le téléphone
 
 Tout est déjà installé et configuré sur cette machine : templates d'export
-Godot 4.7.1, SDK Android, JDK 17, keystore de debug. L'APK a déjà été produit
-une fois (`build/alambic.apk`, 28,6 Mo). Il ne reste que le téléphone.
+Godot 4.7.1, SDK Android, JDK 17, keystore de debug et keystore de release.
+L'APK à distribuer est prêt : `dist/alambic.apk` (version 0.2, 28 Mo). Il ne
+reste que le téléphone.
 
 ## 1. Préparer le téléphone (une fois)
 
