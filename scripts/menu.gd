@@ -1,5 +1,7 @@
 extends Control
 
+const TEXTURE_HEROS := preload("res://assets/characters/hero_alchemist.png")
+
 # Titre, bouton, meilleur resultat. Aucun sprite : le grimoire est dessine.
 
 var _anim := 0.0
@@ -91,12 +93,17 @@ func _draw() -> void:
 			var x1 := centre.x + cote * 40.0
 			var x2 := centre.x + cote * (largeur - 50.0)
 			draw_line(Vector2(x1, y), Vector2(x2, y), Color(Palette.PARCHEMIN_VEINE, 0.55), 3.0)
+	# Le personnage est la promesse visuelle du jeu des le premier ecran.
+	var taille_heros := 360.0 + sin(_anim * 2.0) * 5.0
+	draw_texture_rect(TEXTURE_HEROS,
+		Rect2(centre - Vector2(taille_heros, taille_heros) * 0.5 + Vector2(0, 8), Vector2.ONE * taille_heros),
+		false)
 	var chute := fmod(_anim * 0.5, 1.0)
 	var goutte := centre + Vector2(largeur * 0.45, lerpf(-hauteur, hauteur * 0.3, chute))
 	draw_colored_polygon(Dessin.goutte(goutte, 12.0, PI / 2.0, 1.4), Color(Palette.ESSENCE, 1.0 - chute * 0.3))
 	Dessin.halo(self, goutte, 40.0, Color(Palette.ESSENCE, 0.6), 3)
 
-	var titre_y := taille.y * 0.56
+	var titre_y := taille.y * 0.57
 	draw_string(police, Vector2(0, titre_y), "ALAMBIC", HORIZONTAL_ALIGNMENT_CENTER, taille.x, 96, Palette.TEXTE)
 	draw_string(police, Vector2(0, titre_y + 54.0), "descente dans un grimoire vivant",
 		HORIZONTAL_ALIGNMENT_CENTER, taille.x, 30, Palette.TEXTE_ATTENUE)

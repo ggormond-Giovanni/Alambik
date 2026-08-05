@@ -1,5 +1,10 @@
 extends CharacterBody2D
 
+const TEXTURE_RAMPANT := preload("res://assets/characters/enemy_crawler.png")
+const TEXTURE_SENTINELLE := preload("res://assets/characters/enemy_sentinel.png")
+const TEXTURE_VELOCE := preload("res://assets/characters/enemy_charger.png")
+const TEXTURE_ESSAIMEUR := preload("res://assets/characters/enemy_summoner.png")
+
 # Base commune des quatre archetypes. Les decisions viennent de Cerveaux, qui
 # est pur et testable ; ce fichier ne fait que les traduire en mouvement, en
 # tir ou en invocation.
@@ -221,15 +226,14 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, r * 0.9, Color(0, 0, 0, 0.3))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-	# La menace est plus claire et plus saturee que le fond : contrainte de
-	# lisibilite de la spec, tenue par le halo autant que par la couleur.
+	# La menace est plus claire et plus saturee que le fond. Les telegraphes
+	# restent proceduraux, mais les silhouettes sont maintenant peintes.
 	Dessin.halo(self, Vector2.ZERO, r * 2.2, couleur, 4)
-	match donnees.get("forme", "goutte"):
-		"goutte": _dessiner_rampant(r, couleur)
-		"plume": _dessiner_sentinelle(r, couleur)
-		"dard": _dessiner_veloce(r, couleur)
-		"masque": _dessiner_essaimeur(r, couleur)
-		_: draw_circle(Vector2.ZERO, r, couleur)
+	_dessiner_telegraphe(r)
+	var texture := _texture_pour_forme(donnees.get("forme", "goutte"))
+	var taille := r * (6.8 if donnees.get("forme", "goutte") == "masque" else 6.25)
+	var modulation := Color.WHITE.lerp(couleur, 0.18)
+	draw_texture_rect(texture, Rect2(Vector2.ONE * -taille * 0.5, Vector2.ONE * taille), false, modulation)
 
 	if _braise > 0.0:
 		for i in 3:
@@ -239,6 +243,24 @@ func _draw() -> void:
 	if _gel > 0.0:
 		Dessin.contour(self, Dessin.etoile(Vector2.ZERO, r * 1.5, r * 0.7, 6, _anim * 0.4), Palette.GIVRE, 2.5)
 	_dessiner_barre_de_vie(r)
+
+func _texture_pour_forme(forme: String) -> Texture2D:
+	match forme:
+		"plume": return TEXTURE_SENTINELLE
+		"dard": return TEXTURE_VELOCE
+		"masque": return TEXTURE_ESSAIMEUR
+		_: return TEXTURE_RAMPANT
+
+func _dessiner_telegraphe(r: float) -> void:
+	if _cible == null:
+		return
+	var vers := global_position.direction_to(_cible.global_position)
+	if donnees.get("forme", "") == "plume" and _etat == "vise":
+		draw_line(vers * r, vers * float(donnees["portee"]), Color(Palette.DANGER, 0.35 + 0.25 * sin(_anim * 30.0)), 3.0, true)
+	elif donnees.get("forme", "") == "dard" and _etat == "preparer":
+		var intensite := 0.4 + 0.6 * sin(_anim * 24.0)
+		draw_line(vers * r, vers * 620.0, Color(Palette.DANGER, 0.25 * intensite), 8.0, true)
+		Dessin.contour(self, Dessin.polygone_regulier(Vector2.ZERO, r * (1.6 + 0.3 * intensite), 3, vers.angle()), Palette.DANGER, 3.0)
 
 func _dessiner_barre_de_vie(r: float) -> void:
 	if pv >= pv_max:

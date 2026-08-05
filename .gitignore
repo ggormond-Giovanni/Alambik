@@ -1,6 +1,11 @@
 .godot/
 android/
 build/
+tmp/
 *.apk
 *.aab
-debug.keystore
+*.keystore
+
+# Exception : l'APK a telecharger est suivi, c'est tout l'interet de dist/.
+!dist/*.apk
+*.idsig

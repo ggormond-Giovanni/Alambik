@@ -38,21 +38,25 @@ func _draw() -> void:
 		return
 
 	# Barre de vie : large, lisible d'un coup d'oeil au pouce.
-	var barre := Rect2(Vector2(60.0, haut) + tremble, Vector2(largeur - 120.0, 34.0))
-	draw_rect(barre.grow(4.0), Color(0, 0, 0, 0.45))
-	draw_rect(barre, Color(0.16, 0.13, 0.20))
+	var barre := Rect2(Vector2(82.0, haut) + tremble, Vector2(largeur - 142.0, 38.0))
+	draw_rect(barre.grow(8.0), Color(0.025, 0.016, 0.045, 0.92))
+	draw_rect(barre.grow(4.0), Color(Palette.BORD_PAGE, 0.75), false, 3.0)
+	draw_rect(barre, Color(0.13, 0.085, 0.17))
 	var remplie := barre
 	remplie.size.x *= _pv_affiches
 	var teinte := Palette.DANGER.lerp(Color(0.55, 0.92, 0.62), _pv_affiches)
 	draw_rect(remplie, teinte)
-	draw_rect(Rect2(remplie.position, Vector2(remplie.size.x, 8.0)), Color(1, 1, 1, 0.18))
-	draw_rect(barre, Palette.BORD_PAGE, false, 2.0)
+	draw_rect(Rect2(remplie.position, Vector2(remplie.size.x, 9.0)), Color(1, 1, 1, 0.24))
+	draw_rect(barre, Color(Palette.OR, 0.55), false, 2.0)
+	var coeur := barre.position + Vector2(-25.0, 19.0)
+	Dessin.halo(self, coeur, 30.0, Color(Palette.DANGER, 0.48), 3)
+	draw_colored_polygon(Dessin.goutte(coeur, 15.0, PI, 1.1), Palette.DANGER)
 	draw_string(police, barre.position + Vector2(14.0, 26.0),
 		"%d / %d" % [roundi(heros.stats.pv), roundi(heros.stats.pv_max)],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.10, 0.09, 0.13))
 
 	# Salle courante, en chiffres de page.
-	draw_string(police, Vector2(60.0, haut + 74.0), "Page %d / %d" % [Jeu.salle_courante, Reglages.SALLES_PAR_RUN],
+	draw_string(police, Vector2(60.0, haut + 80.0), "PAGE  %02d / %02d" % [Jeu.salle_courante, Reglages.SALLES_PAR_RUN],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Palette.TEXTE)
 	if heros.bouclier > 0:
 		draw_string(police, Vector2(largeur - 260.0, haut + 74.0), "Bouclier",

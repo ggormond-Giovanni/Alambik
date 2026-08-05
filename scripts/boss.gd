@@ -1,6 +1,8 @@
 class_name Boss
 extends CharacterBody2D
 
+const TEXTURE_CORRECTEUR := preload("res://assets/characters/boss_corrector.png")
+
 # Le Correcteur. Il n'introduit aucune mecanique que le joueur n'a pas deja
 # rencontree : les barrages reutilisent le projectile des ennemis, l'invocation
 # celle du scribe, la charge la preparation telegraphiee de la tache veloce.
@@ -209,22 +211,8 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	Dessin.halo(self, Vector2.ZERO, r * 2.4, couleur, 5)
-	# Un correcteur : une masse d'encre coiffee d'une couronne de plumes, et
-	# une grande rature rouge qui bat au rythme de ses motifs.
-	for i in 7:
-		var a := TAU * float(i) / 7.0 + _anim * 0.5
-		var p := Vector2(cos(a), sin(a)) * r * 1.15
-		draw_set_transform(p, a + PI / 2.0, Vector2.ONE)
-		draw_colored_polygon(Dessin.plume(r * 0.9, r * 0.22), couleur.lightened(0.25))
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	var corps := Dessin.blob(Vector2.ZERO, r, 3, 0.09, _anim * 1.1)
-	draw_colored_polygon(corps, couleur.darkened(0.15))
-	Dessin.contour(self, corps, couleur.lightened(0.45), 3.5)
-	var oeil := r * (0.34 + 0.04 * sin(_anim * 2.0))
-	draw_circle(Vector2.ZERO, oeil, Color(0.96, 0.94, 0.90))
-	var regard := Vector2.DOWN if _cible == null else global_position.direction_to(_cible.global_position)
-	draw_circle(regard * oeil * 0.35, oeil * 0.5, Color(0.10, 0.08, 0.14))
-	var rature := 0.35 + 0.3 * sin(_anim * 3.0)
-	draw_line(Vector2(-r * 0.9, r * 0.25), Vector2(r * 0.9, -r * 0.25), Color(Palette.DANGER, rature), 8.0, true)
 	if _phase == 2:
 		Dessin.contour(self, Dessin.etoile(Vector2.ZERO, r * 1.6, r * 1.25, 9, _anim * 0.9), Color(Palette.DANGER, 0.5), 3.0)
+	var taille := r * 4.5
+	var modulation := Color.WHITE.lerp(couleur, 0.12)
+	draw_texture_rect(TEXTURE_CORRECTEUR, Rect2(Vector2.ONE * -taille * 0.5, Vector2.ONE * taille), false, modulation)

@@ -242,19 +242,24 @@ func _draw() -> void:
 	# ici on ne dessine que ce qui doit passer par-dessus.
 	for rect in _obstacles:
 		var centre := rect.position + rect.size / 2.0
-		# Un pate d'encre : masse noire debordante, reflets, et ratures dessus.
+		# Des grimoires fermes, massifs mais colores : ils restent des obstacles
+		# evidents sans se confondre avec des trous noirs dans la page.
 		draw_circle(centre + Vector2(0, 10.0), rect.size.x * 0.52, Color(0, 0, 0, 0.35))
 		draw_colored_polygon(Dessin.blob(centre, maxf(rect.size.x, rect.size.y) * 0.56, numero * 7 + int(centre.x), 0.20),
-			Color(0.055, 0.045, 0.085))
-		draw_rect(rect, Color(0.075, 0.062, 0.105))
-		draw_rect(rect, Color(0.30, 0.24, 0.40), false, 3.0)
+			Color(0.045, 0.025, 0.075))
+		draw_rect(rect.grow(5.0), Color(0.035, 0.018, 0.060))
+		draw_rect(rect, Color(0.19, 0.10, 0.28))
+		draw_rect(rect, Color(Palette.BORD_PAGE, 0.95), false, 4.0)
+		draw_rect(Rect2(rect.position, Vector2(14.0, rect.size.y)), Color(0.52, 0.27, 0.65))
 		for i in 4:
 			var t := float(i) / 3.0
 			var y := lerpf(rect.position.y + 10.0, rect.end.y - 10.0, t)
 			draw_line(Vector2(rect.position.x + 12.0, y), Vector2(rect.end.x - 12.0, y),
-				Color(0.20, 0.16, 0.28), 4.0)
+				Color(0.50, 0.35, 0.60, 0.72), 3.0)
 		draw_line(rect.position + Vector2(8, 6), Vector2(rect.end.x - 8, rect.position.y + 6),
-			Color(1, 1, 1, 0.10), 3.0)
+			Color(Palette.OR, 0.55), 3.0)
+		for coin in [rect.position + Vector2(7, 7), rect.end - Vector2(7, 7)]:
+			draw_circle(coin, 5.0, Palette.OR)
 
 	if _porte_ouverte and not _finie:
 		var pulsation := 0.6 + 0.4 * sin(_anim * 3.0)

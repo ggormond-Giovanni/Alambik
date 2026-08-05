@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+const TEXTURE_HEROS := preload("res://assets/characters/hero_alchemist.png")
+
 # L'alchimiste. Elle ne lit jamais Input : joystick et bot headless passent par
 # la meme porte, definir_intention(). Piloter des entrees simulees a deja fait
 # rapporter des succes faux ailleurs.
@@ -183,26 +185,20 @@ func _draw() -> void:
 	# Lueur du reactif en main : c'est la couleur de ce que le joueur a construit.
 	Dessin.halo(self, centre + vers * r * 0.5, r * 2.4, Color(teinte, 0.9), 5)
 
-	# Robe : large aux epaules, effilee dans le dos. La pointe derriere donne la
-	# direction d'un coup d'oeil, sans fleche ni indicateur ajoute.
-	var robe := Dessin.goutte(centre, r * 0.98, vers.angle() + PI, 1.5)
-	draw_colored_polygon(robe, Palette.HEROS_ROBE)
-	Dessin.contour(self, robe, Palette.HEROS_OMBRE, 3.0)
-	# Ourlet dore le long du bas de la robe.
-	draw_arc(centre, r * 0.86, vers.angle() - 2.2, vers.angle() + 2.2, 18, Palette.HEROS_ACCENT, 3.0, true)
+	# Le sprite peint remplace la silhouette primitive. Sa taille depasse un peu
+	# la collision pour rester lisible sur un ecran de telephone.
+	var taille := r * 6.2
+	var rect := Rect2(centre - Vector2.ONE * taille * 0.5, Vector2.ONE * taille)
+	var modulation := Color.WHITE
+	if _invulnerable > 0.0:
+		modulation = Color(1.0, 0.72, 0.76) if fmod(_invulnerable, 0.16) < 0.08 else Color.WHITE
+	draw_texture_rect(TEXTURE_HEROS, rect, false, modulation)
 
-	# Capuche : demi-lune claire, visage d'encre, et une lueur au creux.
-	var tete := centre + vers * r * 0.34
-	draw_circle(tete, r * 0.56, Palette.HEROS_ROBE)
-	Dessin.contour(self, Dessin.polygone_regulier(tete, r * 0.56, 20), Palette.HEROS_OMBRE, 2.5)
-	draw_circle(tete + vers * r * 0.14, r * 0.36, Color(0.10, 0.08, 0.14))
-	draw_circle(tete + vers * r * 0.22, r * 0.11, Color(teinte, 0.95))
-
-	# La fiole tenue devant, du cote de la visee.
-	var main := centre + vers.rotated(0.95) * r * 0.82
-	draw_circle(main, r * 0.24, Color(0.10, 0.09, 0.13))
-	draw_circle(main, r * 0.17, teinte)
-	draw_circle(main - vers * r * 0.04, r * 0.07, Color(1, 1, 1, 0.9))
+	# La couleur du tir reste visible au niveau de la fiole, meme si le sprite
+	# est fixe : le joueur lit immediatement l'element equipe.
+	var fiole := centre + Vector2(r * 0.72, -r * 0.08)
+	Dessin.halo(self, fiole, r * 0.48, Color(teinte, 0.65), 3)
+	draw_circle(fiole, r * 0.10, Color(teinte, 0.92))
 
 	if bouclier > 0:
 		var anneau := Dessin.polygone_regulier(centre, r * 1.65, 6, _flottement * 0.8)

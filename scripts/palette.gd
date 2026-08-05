@@ -5,10 +5,10 @@ extends RefCounted
 # toujours plus clair et plus sature que le fond. Toutes les couleurs du jeu
 # passent par ici, sinon la contrainte se perd fichier par fichier.
 
-const FOND = Color(0.035, 0.030, 0.052)
-const PARCHEMIN_SOMBRE = Color(0.135, 0.115, 0.180)
-const PARCHEMIN_VEINE = Color(0.205, 0.175, 0.265)
-const BORD_PAGE = Color(0.330, 0.270, 0.420)
+const FOND = Color(0.030, 0.022, 0.052)
+const PARCHEMIN_SOMBRE = Color(0.105, 0.075, 0.155)
+const PARCHEMIN_VEINE = Color(0.245, 0.175, 0.330)
+const BORD_PAGE = Color(0.455, 0.315, 0.590)
 
 const HEROS_ROBE = Color(0.925, 0.880, 0.745)
 const HEROS_OMBRE = Color(0.72, 0.66, 0.55)
@@ -25,8 +25,8 @@ const FOUDRE = Color(0.98, 0.94, 0.45)
 const ACIDE = Color(0.62, 0.98, 0.42)
 
 const TEXTE = Color(0.94, 0.91, 0.84)
-const TEXTE_ATTENUE = Color(0.64, 0.60, 0.56)
-const OR = Color(0.98, 0.82, 0.42)
+const TEXTE_ATTENUE = Color(0.72, 0.67, 0.70)
+const OR = Color(1.00, 0.74, 0.24)
 const ESSENCE = Color(0.78, 0.58, 1.00)
 const DANGER = Color(0.98, 0.36, 0.42)
 

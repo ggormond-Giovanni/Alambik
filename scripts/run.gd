@@ -34,9 +34,13 @@ func _ready() -> void:
 	# l'alambic ou le boss sans rejouer huit salles a chaque essai.
 	var dote := _valeur_argument(arguments, "--dote=")
 	if dote > 0:
+		# Sans remise : l'inventaire d'une vraie run ne contient jamais deux fois
+		# le meme reactif, et un outil qui ment sur l'etat teste ne sert a rien.
 		var candidats := CatalogueReactifs.ids()
 		for i in mini(dote, candidats.size()):
-			Jeu.ajouter_reactif(candidats[Jeu.rng.randi_range(0, candidats.size() - 1)])
+			var index := Jeu.rng.randi_range(0, candidats.size() - 1)
+			Jeu.ajouter_reactif(candidats[index])
+			candidats.remove_at(index)
 	Jeu.run_terminee.connect(_sur_run_terminee)
 
 	_calculer_limites()

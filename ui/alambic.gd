@@ -32,7 +32,7 @@ func _construire() -> void:
 	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
 	marge.add_theme_constant_override("margin_left", 44)
 	marge.add_theme_constant_override("margin_right", 44)
-	marge.add_theme_constant_override("margin_top", int(Ecran.marge_haute()) + 330)
+	marge.add_theme_constant_override("margin_top", int(Ecran.marge_haute()) + 430)
 	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 30)
 	add_child(marge)
 
@@ -176,7 +176,7 @@ func _draw() -> void:
 	draw_string(police, Vector2(0, haut), "L'alambic", HORIZONTAL_ALIGNMENT_CENTER, size.x, 52, Palette.ESSENCE)
 	draw_string(police, Vector2(0, haut + 44.0), "Deux réactifs entrent, une essence sort.",
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 26, Palette.TEXTE_ATTENUE)
-	_dessiner_alambic(Vector2(size.x / 2.0, haut + 160.0))
+	_dessiner_alambic(Vector2(size.x / 2.0, haut + 210.0))
 
 func _dessiner_alambic(centre: Vector2) -> void:
 	var teintes: Array[Color] = []
@@ -192,28 +192,29 @@ func _dessiner_alambic(centre: Vector2) -> void:
 
 	# Cornue : un ballon, un col, un bec. Le liquide prend la couleur de ce
 	# qu'on a selectionne, donc l'ecran reagit avant meme la fusion.
-	var ballon := centre + Vector2(0, 30.0)
-	Dessin.halo(self, ballon, 110.0, Color(teinte, 0.55), 5)
+	var ballon := centre + Vector2(0, 40.0)
+	Dessin.halo(self, ballon, 170.0, Color(teinte, 0.6), 5)
 	var verre := Color(0.72, 0.80, 0.92, 0.22)
-	draw_circle(ballon, 66.0, verre)
-	draw_arc(ballon, 66.0, 0.0, TAU, 40, Color(0.85, 0.92, 1.0, 0.55), 3.0, true)
+	draw_circle(ballon, 92.0, verre)
+	draw_arc(ballon, 92.0, 0.0, TAU, 40, Color(0.85, 0.92, 1.0, 0.6), 3.5, true)
 	var niveau := 0.35 + 0.25 * float(_selection.size())
 	var liquide := PackedVector2Array()
-	var haut_liquide := ballon.y + 66.0 - 132.0 * niveau
+	var haut_liquide := ballon.y + 92.0 - 184.0 * niveau
 	for i in 33:
 		var t := float(i) / 32.0
-		var x := lerpf(ballon.x - 62.0, ballon.x + 62.0, t)
-		liquide.append(Vector2(x, haut_liquide + sin(t * 9.0 + _anim * 3.0) * 4.0))
+		var x := lerpf(ballon.x - 86.0, ballon.x + 86.0, t)
+		liquide.append(Vector2(x, haut_liquide + sin(t * 9.0 + _anim * 3.0) * 5.0))
 	for i in range(32, -1, -1):
 		var t := float(i) / 32.0
-		liquide.append(Vector2(lerpf(ballon.x - 62.0, ballon.x + 62.0, t), ballon.y + 64.0))
+		liquide.append(Vector2(lerpf(ballon.x - 86.0, ballon.x + 86.0, t), ballon.y + 88.0))
 	draw_colored_polygon(liquide, Color(teinte, 0.75))
 	# Col et bec.
-	draw_rect(Rect2(centre.x - 16.0, centre.y - 66.0, 32.0, 66.0), verre)
-	draw_line(Vector2(centre.x + 14.0, centre.y - 40.0), Vector2(centre.x + 96.0, centre.y - 6.0),
-		Color(0.85, 0.92, 1.0, 0.5), 6.0, true)
+	draw_rect(Rect2(centre.x - 22.0, centre.y - 92.0, 44.0, 96.0), verre)
+	draw_rect(Rect2(centre.x - 30.0, centre.y - 104.0, 60.0, 18.0), Color(0.85, 0.92, 1.0, 0.45))
+	draw_line(Vector2(centre.x + 20.0, centre.y - 56.0), Vector2(centre.x + 132.0, centre.y - 8.0),
+		Color(0.85, 0.92, 1.0, 0.5), 7.0, true)
 	# Bulles.
 	for i in 5:
 		var phase := fmod(_anim * 0.6 + float(i) * 0.2, 1.0)
-		var p := Vector2(ballon.x + sin(float(i) * 2.4 + _anim) * 34.0, ballon.y + 56.0 - 110.0 * phase)
-		draw_circle(p, 4.0 + 3.0 * (1.0 - phase), Color(1, 1, 1, 0.35 * (1.0 - phase)))
+		var p := Vector2(ballon.x + sin(float(i) * 2.4 + _anim) * 46.0, ballon.y + 78.0 - 150.0 * phase)
+		draw_circle(p, 5.0 + 4.0 * (1.0 - phase), Color(1, 1, 1, 0.35 * (1.0 - phase)))

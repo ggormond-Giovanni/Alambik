@@ -34,14 +34,17 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var page := Rect2(limites.position - Vector2(30, 30), limites.size + Vector2(60, 60))
 	draw_rect(Rect2(Vector2(-200, -200), get_viewport_rect().size + Vector2(400, 400)), Palette.FOND)
+	# Trois couches donnent plus de profondeur que l'ancien aplat uniforme.
+	draw_rect(page.grow(12.0), Color(0.035, 0.020, 0.060))
 	draw_rect(page, Palette.PARCHEMIN_SOMBRE)
+	draw_rect(page.grow(-18.0), Color(0.16, 0.105, 0.215, 0.34), false, 2.0)
 
 	# Lignes reglees de la page, plus pales au centre : le regard va au jeu.
 	for i in 15:
 		var y := page.position.y + page.size.y * float(i + 1) / 16.0
 		var pale := 0.35 + 0.30 * absf(float(i) / 14.0 - 0.5) * 2.0
 		draw_line(Vector2(page.position.x + 24.0, y), Vector2(page.end.x - 24.0, y),
-			Color(Palette.PARCHEMIN_VEINE, pale), 2.0)
+			Color(Palette.PARCHEMIN_VEINE, pale * 0.72), 2.0)
 	# Marge d'annotation, comme sur une page de garde.
 	draw_line(Vector2(page.position.x + 66.0, page.position.y + 20.0),
 		Vector2(page.position.x + 66.0, page.end.y - 20.0), Color(0.55, 0.30, 0.34, 0.30), 2.0)
@@ -62,8 +65,9 @@ func _draw() -> void:
 
 	# Bord de page : double filet, coins marques. C'est ce qui donne l'impression
 	# de jouer dans un livre plutot que dans un rectangle.
+	draw_rect(page, Color(0.05, 0.025, 0.08), false, 10.0)
 	draw_rect(page, Palette.BORD_PAGE, false, 4.0)
-	draw_rect(page.grow(-10.0), Color(Palette.BORD_PAGE, 0.45), false, 1.5)
+	draw_rect(page.grow(-10.0), Color(Palette.OR, 0.28), false, 1.5)
 	for coin in [page.position, Vector2(page.end.x, page.position.y), page.end, Vector2(page.position.x, page.end.y)]:
 		draw_circle(coin, 9.0, Palette.BORD_PAGE)
 		draw_circle(coin, 4.0, Palette.OR)
