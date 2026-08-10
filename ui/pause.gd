@@ -29,7 +29,7 @@ func _construire() -> void:
 	marge.add_child(colonne)
 
 	var inventaire_titre := Label.new()
-	inventaire_titre.text = "DEV — appuyez pour ajouter un augment à tester" if ReglagesJoueur.mode_dev else "VOS AUGMENTS — appuyez pour voir les bonus"
+	inventaire_titre.text = "DEV — touchez pour ajouter un augment à tester" if ReglagesJoueur.mode_dev else "VOS AUGMENTS — touchez pour voir les bonus"
 	inventaire_titre.add_theme_font_size_override("font_size", 24)
 	inventaire_titre.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
 	colonne.add_child(inventaire_titre)
@@ -87,7 +87,7 @@ func _construire() -> void:
 
 	var bouton_reglages := Button.new()
 	bouton_reglages.text = "RÉGLAGES"
-	bouton_reglages.custom_minimum_size = Vector2(0, 96)
+	bouton_reglages.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
 	bouton_reglages.add_theme_font_size_override("font_size", 29)
 	StyleInterface.styliser_bouton(bouton_reglages, Palette.OR, true)
 	bouton_reglages.pressed.connect(_ouvrir_reglages)
@@ -102,7 +102,7 @@ func _construire() -> void:
 	colonne.add_child(continuer)
 	var quitter := Button.new()
 	quitter.text = "Refermer le grimoire"
-	quitter.custom_minimum_size = Vector2(0, 104)
+	quitter.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
 	quitter.add_theme_font_size_override("font_size", 29)
 	StyleInterface.styliser_bouton(quitter, Palette.TEXTE_ATTENUE, true)
 	quitter.pressed.connect(func() -> void:
@@ -124,7 +124,7 @@ func _ajouter_bouton_reactif(grille: GridContainer, id: String, copies: int) -> 
 	var bouton := Button.new()
 	bouton.text = "%s%s\n%s" % ["✦ " if reactif.est_essence else "", reactif.nom, "x%d" % copies if copies > 1 else "Détails"]
 	bouton.toggle_mode = true
-	bouton.custom_minimum_size = Vector2(0, 104)
+	bouton.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
 	bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bouton.add_theme_font_size_override("font_size", 21)
 	StyleInterface.styliser_bouton(bouton, Palette.ESSENCE if reactif.est_essence else reactif.teinte, true)
@@ -161,5 +161,5 @@ func _draw() -> void:
 	var centre := Vector2(size.x * 0.5, Ecran.marge_haute() + 170.0)
 	Dessin.halo(self, centre, 260.0, Color(Palette.ESSENCE, 0.22), 7)
 	draw_string(police, Vector2(0, centre.y - 34.0), "PAUSE", HORIZONTAL_ALIGNMENT_CENTER, size.x, 66, Palette.TEXTE)
-	draw_string(police, Vector2(0, centre.y + 30.0), "%s — niveau %d — page %d" % [Jeu.chapitre_courant()["nom"], Jeu.niveau, Jeu.salle_courante],
+	draw_string(police, Vector2(0, centre.y + 30.0), "%s — page %d / %d" % [Jeu.nom_run(), Jeu.salle_courante, Jeu.salles_du_chapitre()],
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)

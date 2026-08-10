@@ -30,6 +30,13 @@ const VALEUR_DRAPEAUX := {
 	"rafale": 2.40,
 	"bouclier_explosif": 1.18,
 	"tir_en_course": 1.45,   # tirer en marchant change la facon de jouer
+	"perfore_tout": 1.45,
+	"rebond_murs_infini": 1.30,
+	"fusion_predatrice": 1.28,
+	"fusion_surcharge": 1.35,
+	"fusion_instable": 0.82,
+	"fusion_fragile": 1.16,
+	"fusion_capricieuse": 0.68,
 }
 
 # Ce qu'un drapeau vaut en survie, pas en degats. Sans cette moitie, une main

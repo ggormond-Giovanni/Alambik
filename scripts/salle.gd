@@ -40,7 +40,7 @@ func demarrer(numero_: int, limites_: Rect2) -> void:
 	numero = numero_
 	limites = limites_
 	_porte_position = Vector2((limites.position.x + limites.end.x) / 2.0, limites.position.y - 70.0)
-	_vagues = Vagues.pour_salle(numero, Jeu.chapitre, Jeu.graine)
+	_vagues = Vagues.pour_salle(numero, Jeu.chapitre, Jeu.graine, Jeu.mode_run)
 	_vague_courante = -1
 	_porte_ouverte = false
 	_finie = false
@@ -66,8 +66,9 @@ func _construire_obstacles() -> void:
 	# tir des le depart et le joueur ne comprend pas pourquoi rien ne touche.
 	# Les motifs du boss supposent une arene ouverte. Un bloc protegerait le boss
 	# de nos tirs tout en laissant le heros se cacher de ses barrages, ce qui
-	# neutraliserait le combat ; la regle vaut aussi pour son apparition a mi-run.
-	var combat_de_boss := Chapitres.est_boss(Jeu.chapitre, numero) or Chapitres.est_mi_boss(Jeu.chapitre, numero)
+	# neutraliserait le combat ; la regle vaut pour chacun des trois boss.
+	var combat_de_boss := Jeu.mode_run == "grimoire" and Chapitres.est_boss(Jeu.chapitre, numero) \
+		or (Jeu.mode_run == "epreuve_sorts" and numero % 4 == 0)
 	var nombre := 0 if combat_de_boss else alea.randi_range(0, 2)
 	for i in nombre:
 		var taille := Vector2(alea.randf_range(90.0, 200.0), alea.randf_range(50.0, 110.0))
@@ -112,7 +113,9 @@ func _unhandled_input(evenement: InputEvent) -> void:
 		var souris := evenement as InputEventMouseButton
 		appui = souris.pressed and souris.button_index == MOUSE_BUTTON_LEFT
 		position_appui = souris.position
-	if appui and position_appui.distance_to(_porte_position) <= PORTE_DISTANCE_APPUI:
+	var fleche := Vector2(_porte_position.x, limites.position.y + 118.0)
+	if appui and (position_appui.distance_to(_porte_position) <= PORTE_DISTANCE_APPUI \
+			or position_appui.distance_to(fleche) <= PORTE_DISTANCE_APPUI):
 		get_viewport().set_input_as_handled()
 		_franchir_porte()
 
@@ -162,14 +165,15 @@ func faire_apparaitre(id: String, position: Vector2) -> void:
 # La creature d'une page 45 est plus lourde que celle d'une page 5, et celle du
 # troisieme chapitre plus que celle du premier. Le catalogue reste la reference :
 # on n'y touche pas, on met a l'echelle une copie.
-func _mis_a_l_echelle(donnees: Dictionary, id: String) -> Dictionary:
+func _mis_a_l_echelle(donnees: Dictionary, _id: String) -> Dictionary:
 	var copie := donnees.duplicate(true)
-	copie["pv"] = float(donnees["pv"]) * Chapitres.facteur_pv(Jeu.chapitre, numero)
-	copie["degats"] = float(donnees["degats"]) * Chapitres.facteur_degats(Jeu.chapitre, numero)
-	if Chapitres.est_mi_boss(Jeu.chapitre, numero) and id == Jeu.chapitre_courant()["boss"]:
-		# Le mi-chapitre montre le boss avant de le faire affronter pour de bon.
-		copie["pv"] = float(copie["pv"]) * Vagues.facteur_mi_boss()
-		copie["nom"] = "%s (esquisse)" % donnees["nom"]
+	if Jeu.mode_run == "epreuve_sorts":
+		var progression_defi := clampf(float(numero - 1) / 11.0, 0.0, 1.0)
+		copie["pv"] = float(donnees["pv"]) * Reglages.DEFI_PV_BASE * pow(1.0 + Reglages.DEFI_MONTEE_PV, progression_defi)
+		copie["degats"] = float(donnees["degats"]) * Reglages.DEFI_DEGATS_BASE * pow(1.0 + Reglages.DEFI_MONTEE_DEGATS, progression_defi)
+	else:
+		copie["pv"] = float(donnees["pv"]) * Chapitres.facteur_pv(Jeu.chapitre, numero)
+		copie["degats"] = float(donnees["degats"]) * Chapitres.facteur_degats(Jeu.chapitre, numero)
 	return copie
 
 func _sur_ennemi_touche(position: Vector2, couleur: Color) -> void:
@@ -178,12 +182,8 @@ func _sur_ennemi_touche(position: Vector2, couleur: Color) -> void:
 
 func _sur_mort_ennemi(qui: Node, position: Vector2, couleur: Color) -> void:
 	Jeu.ennemis_abattus += 1
-	var donnees_ennemi: Dictionary = qui.donnees
-	var experience_gagnee := int(donnees_ennemi.get("experience", 1))
-	Jeu.ajouter_experience(experience_gagnee)
-	ReglagesJoueur.ajouter_experience_heros(experience_gagnee)
-	# Aucun objet au sol : les deux compteurs progressent des la mort.
-	ReglagesJoueur.ajouter_points_maitrise(maxi(1, int(donnees_ennemi.get("points_garantis", 0))))
+	# Les éliminations ne sont plus une monnaie ni une jauge cachée : la
+	# récompense arrive une fois, clairement, à la fin de chaque étage.
 	ennemi_abattu.emit()
 	if effets != null:
 		effets.mort(position, couleur)
@@ -296,34 +296,77 @@ func _sur_chaine(depuis: Vector2, cible: Node, tir_source: Tir) -> void:
 func _draw() -> void:
 	# Le fond de page est dessine par le noeud Fond, sous les zones au sol ;
 	# ici on ne dessine que ce qui doit passer par-dessus.
-	for rect in _obstacles:
-		var centre := rect.position + rect.size / 2.0
-		# Des grimoires fermes, massifs mais colores : ils restent des obstacles
-		# evidents sans se confondre avec des trous noirs dans la page.
-		draw_circle(centre + Vector2(0, 10.0), rect.size.x * 0.52, Color(0, 0, 0, 0.35))
-		draw_colored_polygon(Dessin.blob(centre, maxf(rect.size.x, rect.size.y) * 0.56, numero * 7 + int(centre.x), 0.20),
-			Color(0.045, 0.025, 0.075))
-		draw_rect(rect.grow(5.0), Color(0.035, 0.018, 0.060))
-		draw_rect(rect, Color(0.19, 0.10, 0.28))
-		draw_rect(rect, Color(Palette.BORD_PAGE, 0.95), false, 4.0)
-		draw_rect(Rect2(rect.position, Vector2(14.0, rect.size.y)), Color(0.52, 0.27, 0.65))
-		for i in 4:
-			var t := float(i) / 3.0
-			var y := lerpf(rect.position.y + 10.0, rect.end.y - 10.0, t)
-			draw_line(Vector2(rect.position.x + 12.0, y), Vector2(rect.end.x - 12.0, y),
-				Color(0.50, 0.35, 0.60, 0.72), 3.0)
-		draw_line(rect.position + Vector2(8, 6), Vector2(rect.end.x - 8, rect.position.y + 6),
-			Color(Palette.OR, 0.55), 3.0)
-		for coin in [rect.position + Vector2(7, 7), rect.end - Vector2(7, 7)]:
-			draw_circle(coin, 5.0, Palette.OR)
+	for index in _obstacles.size():
+		var rect: Rect2 = _obstacles[index]
+		match (numero + index) % 3:
+			0: _dessiner_muret(rect)
+			1: _dessiner_bosquet(rect, index)
+			_: _dessiner_rochers(rect, index)
 
 	if _porte_ouverte and not _finie:
 		var pulsation := 0.6 + 0.4 * sin(_anim * 3.0)
-		Dessin.halo(self, _porte_position, 150.0 * pulsation, Palette.OR, 5)
-		var arc := Dessin.polygone_regulier(_porte_position, 74.0, 8, _anim * 0.5)
+		var fleche := Vector2(_porte_position.x, limites.position.y + 118.0)
+		Dessin.halo(self, fleche, 150.0 * pulsation, Palette.OR, 5)
+		var arc := Dessin.polygone_regulier(fleche, 74.0, 8, _anim * 0.5)
 		Dessin.contour(self, arc, Color(Palette.OR, 0.9), 4.0)
-		draw_colored_polygon(Dessin.polygone_regulier(_porte_position, 52.0, 8, -_anim * 0.7),
+		draw_colored_polygon(Dessin.polygone_regulier(fleche, 52.0, 8, -_anim * 0.7),
 			Color(Palette.OR, 0.25))
+		# Flèche vers le haut : toute la forme et son halo constituent la cible
+		# tactile, pas seulement quelques pixels du glyphe.
+		var pointe := PackedVector2Array([
+			fleche + Vector2(0.0, -48.0), fleche + Vector2(42.0, -4.0),
+			fleche + Vector2(18.0, -4.0), fleche + Vector2(18.0, 42.0),
+			fleche + Vector2(-18.0, 42.0), fleche + Vector2(-18.0, -4.0),
+			fleche + Vector2(-42.0, -4.0)])
+		draw_colored_polygon(pointe, Color(Palette.OR, 0.92))
 		var police := ThemeDB.fallback_font
-		draw_string(police, _porte_position + Vector2(-120, 130), "Page suivante",
-			HORIZONTAL_ALIGNMENT_CENTER, 240, 32, Color(Palette.TEXTE, 0.75))
+		draw_string(police, fleche + Vector2(-180, 120), "TOUCHER — PAGE SUIVANTE",
+			HORIZONTAL_ALIGNMENT_CENTER, 360, 29, Color(Palette.TEXTE, 0.90))
+
+func _dessiner_muret(rect: Rect2) -> void:
+	draw_rect(rect.grow(7.0), Color(0.05, 0.07, 0.08, 0.24))
+	var hauteur_pierre := maxf(22.0, rect.size.y / 3.0)
+	var lignes := ceili(rect.size.y / hauteur_pierre)
+	for ligne in lignes:
+		var decalage := 22.0 if ligne % 2 == 1 else 0.0
+		var largeur_pierre := 52.0
+		var colonnes := ceili((rect.size.x + decalage) / largeur_pierre)
+		for colonne in colonnes:
+			var pierre := Rect2(rect.position + Vector2(float(colonne) * largeur_pierre - decalage,
+				float(ligne) * hauteur_pierre), Vector2(largeur_pierre - 3.0, hauteur_pierre - 3.0)).intersection(rect)
+			var variation := float((colonne + ligne * 3 + numero) % 4) * 0.025
+			draw_rect(pierre, Color(0.38 + variation, 0.43 + variation, 0.40 + variation))
+			draw_rect(pierre, Color(0.68, 0.76, 0.68, 0.72), false, 2.0)
+	draw_line(rect.position + Vector2(0.0, 3.0), Vector2(rect.end.x, rect.position.y + 3.0),
+		Color(Palette.MOUSSE_MAGIQUE, 0.85), 5.0)
+
+func _dessiner_bosquet(rect: Rect2, graine: int) -> void:
+	var centre := rect.get_center()
+	draw_colored_polygon(Dessin.blob(centre, maxf(rect.size.x, rect.size.y) * 0.53,
+		numero * 41 + graine, 0.18), Color(Palette.MOUSSE_MAGIQUE, 0.30))
+	var arbres := maxi(3, ceili(rect.size.x / 54.0))
+	for i in arbres:
+		var part := (float(i) + 0.5) / float(arbres)
+		var x := lerpf(rect.position.x + 18.0, rect.end.x - 18.0, part)
+		var y := rect.get_center().y + sin(float(i * 5 + graine)) * rect.size.y * 0.16
+		var tronc := Rect2(Vector2(x - 7.0, y - 2.0), Vector2(14.0, rect.end.y - y + 4.0))
+		draw_rect(tronc, Color(0.38, 0.24, 0.16))
+		draw_circle(Vector2(x + 3.0, y + 2.0), 30.0, Color(0.16, 0.42, 0.25))
+		draw_circle(Vector2(x - 9.0, y - 10.0), 24.0, Color(0.25, 0.58, 0.32))
+		draw_circle(Vector2(x + 10.0, y - 12.0), 19.0, Color(0.42, 0.72, 0.38))
+		draw_circle(Vector2(x + 13.0, y - 17.0), 4.0, Color(Palette.OR, 0.82))
+
+func _dessiner_rochers(rect: Rect2, graine: int) -> void:
+	draw_colored_polygon(Dessin.blob(rect.get_center() + Vector2(0.0, 8.0), rect.size.x * 0.52,
+		numero * 59 + graine, 0.16), Color(0.08, 0.10, 0.12, 0.24))
+	var rochers := maxi(3, ceili(rect.size.x / 58.0))
+	for i in rochers:
+		var part := (float(i) + 0.5) / float(rochers)
+		var position := Vector2(lerpf(rect.position.x + 16.0, rect.end.x - 16.0, part),
+			rect.get_center().y + sin(float(i * 7 + graine)) * rect.size.y * 0.12)
+		var rayon := minf(rect.size.y * 0.48, 31.0 + float((i + graine) % 3) * 7.0)
+		var roche := Dessin.blob(position, rayon, numero * 73 + i + graine, 0.14)
+		draw_colored_polygon(roche, Color(0.34, 0.40, 0.46))
+		Dessin.contour(self, roche, Color(0.62, 0.70, 0.76), 2.5)
+		var cristal := Dessin.polygone_regulier(position + Vector2(rayon * 0.28, -rayon * 0.35), rayon * 0.22, 5, -PI / 2.0)
+		draw_colored_polygon(cristal, Color(Palette.ESSENCE, 0.82))

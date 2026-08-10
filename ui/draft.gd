@@ -1,14 +1,16 @@
 extends Control
 
-# Trois propositions a chaque niveau gagne. Si le joueur possede deja
-# les deux composants d'une recette, l'une d'elles peut etre l'essence
-# elle-meme : c'est le second chemin vers les fusions.
+# Les multiples de trois offrent un reactif capable d'entrer dans une fusion.
+# Les autres pages donnent de petits bonus de run qui ne polluent pas l'alambic.
 
 signal termine
 
 var _colonne: VBoxContainer
 var _anim := 0.0
 var _choisi := false
+var etage_recompense := 1
+var forcer_reactif := false
+var forcer_basique := false
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -38,9 +40,11 @@ func _construire() -> void:
 
 	var heros := get_tree().get_first_node_in_group("heros")
 	var est_blesse: bool = heros != null and heros.stats.pv < heros.stats.pv_max
-	var propositions := DraftLogique.avec_repos(DraftLogique.proposer(Jeu.inventaire, Jeu.rng), Jeu.niveau, est_blesse)
+	var page_reactif := forcer_reactif or (not forcer_basique and DraftLogique.est_page_de_reactif(etage_recompense))
+	var propositions := DraftLogique.avec_repos(DraftLogique.proposer(Jeu.inventaire, Jeu.rng), etage_recompense, est_blesse) \
+		if page_reactif else DraftLogique.proposer_basiques(Jeu.rng)
 	for id in propositions:
-		var reactif := Jeu.reactif(id)
+		var reactif := Jeu.reactif(id) if page_reactif else DraftLogique.bonus_basique(id)
 		if id == DraftLogique.REPOS:
 			reactif = Reactif.creer(DraftLogique.REPOS, "Page de repos",
 				"Le grimoire vous laisse souffler : %d %% des points de vie rendus." % roundi(Reglages.SOIN_REPOS * 100.0),
@@ -64,6 +68,10 @@ func _sur_choix(id: String) -> void:
 				* ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
 		termine.emit()
 		return
+	if DraftLogique.BONUS_BASIQUES.has(id):
+		_appliquer_bonus_basique(id)
+		termine.emit()
+		return
 	# Une essence prise au draft consomme ses deux composants, exactement comme
 	# a l'alambic : sinon fusionner serait un cadeau, et le choix disparaitrait.
 	var essence := CatalogueEssences.par_id(id)
@@ -71,6 +79,22 @@ func _sur_choix(id: String) -> void:
 		Jeu.retirer_reactifs(Recettes.composants_de(id))
 	Jeu.ajouter_reactif(id)
 	termine.emit()
+
+func _appliquer_bonus_basique(id: String) -> void:
+	var heros := get_tree().get_first_node_in_group("heros")
+	match id:
+		"bonus_attaque":
+			Jeu.bonus_run["degats"] = float(Jeu.bonus_run["degats"]) + Reglages.BONUS_SIMPLE_DEGATS
+		"bonus_defense":
+			Jeu.bonus_run["reduction"] = float(Jeu.bonus_run["reduction"]) + Reglages.BONUS_SIMPLE_REDUCTION
+		"bonus_vitalite":
+			if heros != null:
+				heros.stats.pv_max += Reglages.BONUS_SIMPLE_PV
+				heros.stats.soigner(Reglages.BONUS_SIMPLE_PV)
+		"bonus_soin":
+			if heros != null:
+				heros.stats.soigner(heros.stats.pv_max * Reglages.BONUS_SIMPLE_SOIN \
+					* ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
 
 func _choisir_automatiquement() -> void:
 	# Le bot prend la premiere proposition : il ne joue pas bien, il traverse.
@@ -84,9 +108,11 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.018, 0.014, 0.034, 0.94))
 	Dessin.halo(self, Vector2(size.x * 0.5, 0.0), 430.0, Color(Palette.ESSENCE, 0.18), 7)
 	var haut := Ecran.marge_haute() + 90.0
-	draw_string(police, Vector2(58.0, haut - 38.0), "NIVEAU %d — NOUVEL AUGMENT" % Jeu.niveau,
+	draw_string(police, Vector2(58.0, haut - 38.0), "ÉTAGE %d TERMINÉ — RÉCOMPENSE" % etage_recompense,
 		HORIZONTAL_ALIGNMENT_LEFT, size.x - 116.0, 22, Color(Palette.OR, 0.9))
-	draw_string(police, Vector2(58.0, haut + 16.0), "Choisissez votre évolution",
+	var reactif := forcer_reactif or (not forcer_basique and DraftLogique.est_page_de_reactif(etage_recompense))
+	var titre := "Choisissez un réactif" if reactif else "Choisissez un petit renfort"
+	draw_string(police, Vector2(58.0, haut + 16.0), titre,
 		HORIZONTAL_ALIGNMENT_LEFT, size.x - 116.0, 46, Palette.TEXTE)
 	draw_string(police, Vector2(0, haut + 70.0), "%s — page %d / %d" % [
 		Jeu.chapitre_courant()["nom"], Jeu.salle_courante, Jeu.salles_du_chapitre()],

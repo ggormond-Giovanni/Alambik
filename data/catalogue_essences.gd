@@ -45,6 +45,11 @@ static var TOUS := {
 		"On tire en se déplaçant, à cadence réduite.",
 		{"drapeaux": ["tir_en_course", "pas_de_chat"], "cadence_mult": 0.9, "vitesse_mult": 1.25, "portee_mult": 1.2},
 		true, Color(0.86, 1.00, 0.86), "patte"),
+	"paradoxe_balistique": Reactif.creer("paradoxe_balistique", "Paradoxe balistique",
+		"Traverse tous les ennemis. Sur un mur, le trait repart sans perdre de puissance et peut rebondir indéfiniment.",
+		{"perforations_add": 999, "degats_mult": 0.82,
+			"drapeaux": ["perfore_tout", "rebond_murs_infini"]},
+		true, Color(0.76, 0.92, 1.00), "zigzag"),
 }
 
 static func par_id(id: String) -> Reactif:

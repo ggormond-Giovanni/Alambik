@@ -18,6 +18,18 @@ func test_trois_propositions(v: Verif) -> void:
 	var propositions := DraftLogique.proposer([], _rng())
 	v.egal(propositions.size(), 3, "le draft propose trois reactifs")
 
+func test_un_reactif_fusionnable_tous_les_trois_paliers(v: Verif) -> void:
+	for niveau in range(1, 30):
+		v.egal(DraftLogique.est_page_de_reactif(niveau), niveau % 3 == 0,
+			"le palier %d suit le rythme des reactifs" % niveau)
+
+func test_les_autres_paliers_proposent_des_bonus_simples(v: Verif) -> void:
+	var propositions := DraftLogique.proposer_basiques(_rng())
+	v.egal(propositions.size(), 3, "trois petits renforts sont proposes")
+	for id in propositions:
+		v.vrai(DraftLogique.BONUS_BASIQUES.has(id), "%s est bien un bonus simple" % id)
+		v.vrai(CatalogueReactifs.par_id(id) == null, "un bonus simple ne pollue pas les fusions")
+
 func test_copies_comptees(v: Verif) -> void:
 	v.egal(DraftLogique.copies(["braise", "main_leste", "braise"], "braise"), 2, "deux exemplaires comptes")
 	v.egal(DraftLogique.copies([], "braise"), 0, "aucun exemplaire dans un inventaire vide")

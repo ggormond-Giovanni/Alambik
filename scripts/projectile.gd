@@ -42,7 +42,10 @@ func _ready() -> void:
 	body_entered.connect(_sur_contact)
 
 func _physics_process(delta: float) -> void:
+	_appliquer_trajectoire_fusion(delta)
 	var pas := direction * tir.vitesse * delta
+	if "fusion_surcharge" in tir.drapeaux:
+		pas *= 0.48 + minf(1.85, _age * 1.15)
 	position += pas
 	_distance_parcourue += pas.length()
 	_age += delta
@@ -68,7 +71,10 @@ func _sur_contact(corps: Node) -> void:
 		Jeu.tirs_touches += 1
 	# Le Tir est partage entre tous les projectiles d'une salve : on ne le mute
 	# jamais, la perte de puissance vit dans le projectile.
-	corps.recevoir_degats(tir.degats * _facteur_degats, tir.effets)
+	var facteur_fusion := 1.0
+	if "fusion_surcharge" in tir.drapeaux:
+		facteur_fusion = 0.55 + minf(1.75, _age * 1.20)
+	corps.recevoir_degats(tir.degats * _facteur_degats * facteur_fusion, tir.effets)
 	impact_visuel.emit(global_position, couleur, 1.0)
 	Sons.jouer("impact", -18.0, randf_range(0.9, 1.2))
 
@@ -77,6 +83,11 @@ func _sur_contact(corps: Node) -> void:
 	if "foudre" in tir.effets:
 		chaine_demandee.emit(global_position, corps, tir)
 
+	if "perfore_tout" in tir.drapeaux:
+		return
+	if "fusion_fragile" in tir.drapeaux:
+		_finir()
+		return
 	match PrioriteProjectile.apres_impact(_rebonds_restants, _perforations_restantes):
 		"rebond":
 			_rebonds_restants -= 1
@@ -93,6 +104,12 @@ func _sur_contact(corps: Node) -> void:
 func _heurter_un_mur(_mur: Node) -> void:
 	if not hostile:
 		Jeu.tirs_dans_un_mur += 1
+	if "rebond_murs_infini" in tir.drapeaux:
+		_distance_parcourue = 0.0
+		_rebondir_vers_une_autre_cible()
+		global_position += direction * RAYON * 2.2
+		impact_visuel.emit(global_position, couleur, 0.8)
+		return
 	if _rebonds_restants > 0:
 		_rebonds_restants -= 1
 		_facteur_degats *= 1.0 - Reglages.REBOND_PERTE
@@ -120,6 +137,26 @@ func _rebondir_vers_une_autre_cible() -> void:
 	else:
 		direction = global_position.direction_to(positions[index])
 	_distance_parcourue = 0.0
+
+func _appliquer_trajectoire_fusion(delta: float) -> void:
+	if hostile:
+		return
+	if "fusion_predatrice" in tir.drapeaux:
+		var positions: Array[Vector2] = []
+		for cible in get_tree().get_nodes_in_group("ennemis"):
+			if is_instance_valid(cible) and not cible.get_instance_id() in _deja_touches:
+				positions.append(cible.global_position)
+		var index := Ciblage.plus_proche(global_position, positions)
+		if index != -1:
+			direction = direction.lerp(global_position.direction_to(positions[index]), minf(1.0, delta * 4.5)).normalized()
+	elif "fusion_instable" in tir.drapeaux:
+		direction = direction.rotated(sin(_age * 17.0) * delta * 2.8).normalized()
+	elif "fusion_capricieuse" in tir.drapeaux:
+		# Changements brusques mais espacés : mauvais à viser, jamais illisible.
+		var avant := int(_age / 0.22)
+		var apres := int((_age + delta) / 0.22)
+		if apres != avant:
+			direction = direction.rotated(randf_range(-0.62, 0.62)).normalized()
 
 func _finir() -> void:
 	if tir.fragments > 0:

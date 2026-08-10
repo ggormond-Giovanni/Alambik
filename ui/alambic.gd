@@ -62,7 +62,7 @@ func _construire() -> void:
 	boutons.add_theme_constant_override("separation", 18)
 	colonne.add_child(boutons)
 
-	_bouton_fusionner = _creer_bouton("Fusionner", Palette.ESSENCE)
+	_bouton_fusionner = _creer_bouton("FUSIONNER LES 2", Palette.ESSENCE)
 	_bouton_fusionner.pressed.connect(_sur_fusionner)
 	boutons.add_child(_bouton_fusionner)
 
@@ -77,7 +77,7 @@ func _construire() -> void:
 func _creer_bouton(texte: String, teinte: Color) -> Button:
 	var bouton := Button.new()
 	bouton.text = texte
-	bouton.custom_minimum_size = Vector2(0, 108)   # cible tactile confortable
+	bouton.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
 	bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bouton.add_theme_font_size_override("font_size", 30)
 	bouton.add_theme_color_override("font_color", teinte)
@@ -144,7 +144,7 @@ func _rafraichir_boutons() -> void:
 		_apercu.text = "Aucun de ces réactifs ne se combine."
 		_apercu.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
 	else:
-		_apercu.text = "Choisissez deux augments. Toutes les paires sont possibles."
+		_apercu.text = "Touchez deux cartes, puis FUSIONNER.\nTouchez à nouveau une carte pour la retirer."
 		_apercu.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
 
 func _sur_choix(id: String) -> void:

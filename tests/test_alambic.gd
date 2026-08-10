@@ -3,6 +3,11 @@ extends RefCounted
 func test_aucune_paire_dans_un_inventaire_vide(v: Verif) -> void:
 	v.egal(AlambicLogique.paires_possibles([]).size(), 0, "rien a fusionner sans reactif")
 
+func test_une_carte_est_un_vrai_bouton_tactile(v: Verif) -> void:
+	var carte := CarteReactif.new()
+	v.vrai(carte is Button, "le choix ne depend d'aucun bouton secondaire de souris")
+	carte.free()
+
 func test_paire_detectee(v: Verif) -> void:
 	var paires := AlambicLogique.paires_possibles(["braise", "ricochet", "perforation"])
 	v.egal(paires.size(), 3, "toutes les paires sont fusionnables")

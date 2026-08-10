@@ -15,6 +15,7 @@ var _zone: ScrollContainer
 var _carte: Control
 var _branche := "Offensif"
 var _message := ""
+var integre_menu := false
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -29,7 +30,7 @@ func _construire() -> void:
 	marge.add_theme_constant_override("margin_left", 34)
 	marge.add_theme_constant_override("margin_right", 34)
 	marge.add_theme_constant_override("margin_top", int(Ecran.marge_haute()) + 185)
-	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 30)
+	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + (170 if integre_menu else 30))
 	add_child(marge)
 	var colonne := VBoxContainer.new()
 	colonne.add_theme_constant_override("separation", 12)
@@ -49,7 +50,7 @@ func _construire() -> void:
 		var bouton := Button.new()
 		bouton.text = branche.to_upper()
 		bouton.toggle_mode = true
-		bouton.custom_minimum_size = Vector2(0, 92)
+		bouton.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
 		bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bouton.add_theme_font_size_override("font_size", 20)
 		StyleInterface.styliser_bouton(bouton, COULEURS[branche], true)
@@ -65,25 +66,26 @@ func _construire() -> void:
 	colonne.add_child(actions)
 	var reset := Button.new()
 	reset.text = "RÉINITIALISER"
-	reset.custom_minimum_size = Vector2(0, 96)
+	reset.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
 	reset.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	reset.add_theme_font_size_override("font_size", 22)
 	StyleInterface.styliser_bouton(reset, Palette.DANGER, true)
 	reset.pressed.connect(_reinitialiser)
 	actions.add_child(reset)
-	var fermer := Button.new()
-	fermer.text = "RETOUR AU GRIMOIRE"
-	fermer.custom_minimum_size = Vector2(0, 96)
-	fermer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	fermer.add_theme_font_size_override("font_size", 27)
-	StyleInterface.styliser_bouton(fermer, Palette.TEXTE_ATTENUE, true)
-	fermer.pressed.connect(func() -> void: ferme.emit())
-	actions.add_child(fermer)
+	if not integre_menu:
+		var fermer := Button.new()
+		fermer.text = "RETOUR AU GRIMOIRE"
+		fermer.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
+		fermer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		fermer.add_theme_font_size_override("font_size", 27)
+		StyleInterface.styliser_bouton(fermer, Palette.TEXTE_ATTENUE, true)
+		fermer.pressed.connect(func() -> void: ferme.emit())
+		actions.add_child(fermer)
 
 func _reinitialiser() -> void:
 	var rembourses := ReglagesJoueur.reinitialiser_arbre()
 	_afficher_branche(_branche)
-	_message = "Réinitialisation gratuite : ✦ %d remboursés." % rembourses
+	_message = "Réinitialisation gratuite : %d gouttes remboursées." % rembourses
 	_rafraichir()
 
 func _afficher_branche(branche: String) -> void:
@@ -128,17 +130,20 @@ func _sur_noeud(id: String) -> void:
 	elif not ReglagesJoueur.mode_dev and not ArbreCompetences.prerequis_atteint(id, ReglagesJoueur.rangs_competences):
 		var requis: Dictionary = ArbreCompetences.NOEUDS[noeud["requis"]]
 		_message = "Terminez d’abord %s (%d/%d)." % [requis["nom"], ReglagesJoueur.rang_competence(noeud["requis"]), ArbreCompetences.MAX_RANG]
-	elif not ReglagesJoueur.mode_dev and ReglagesJoueur.points_maitrise < ReglagesJoueur.cout_competence(id):
-		_message = "Il manque %d points pour %s." % [ReglagesJoueur.cout_competence(id) - ReglagesJoueur.points_maitrise, noeud["nom"]]
+	elif not ReglagesJoueur.mode_dev and ReglagesJoueur.gouttes < ReglagesJoueur.cout_competence(id):
+		_message = "Il manque %d gouttes pour %s." % [ReglagesJoueur.cout_competence(id) - ReglagesJoueur.gouttes, noeud["nom"]]
 	elif ReglagesJoueur.acheter_competence(id):
 		_message = "%s maîtrisé : bonus permanent actif." % noeud["nom"]
 		Sons.jouer("choix", -12.0)
 	_rafraichir()
 
 func _rafraichir() -> void:
-	var xp := "%d/%d" % [ReglagesJoueur.experience_heros, ReglagesJoueur.experience_heros_requise()]
-	var base := "HÉROS %d • XP %s • POINTS ✦ %s" % [ReglagesJoueur.niveau_heros_effectif(), xp,
-		ReglagesJoueur.points_maitrise_affiches()]
+	var base := "%s %d • PRESTIGE • GOUTTES %s" % [ReglagesJoueur.titre_heros(),
+		ReglagesJoueur.niveau_heros_effectif(), ReglagesJoueur.gouttes_affichees()]
+	if not ReglagesJoueur.est_prestigieux():
+		var xp := "%d/%d" % [ReglagesJoueur.experience_heros, ReglagesJoueur.experience_heros_requise()]
+		base = "%s %d • XP %s • GOUTTES %s" % [ReglagesJoueur.titre_heros(),
+			ReglagesJoueur.niveau_heros_effectif(), xp, ReglagesJoueur.gouttes_affichees()]
 	_statut.text = _message if not _message.is_empty() else base
 	_statut.add_theme_color_override("font_color", Palette.OR if not _message.is_empty() else Palette.TEXTE_ATTENUE)
 	for id in ArbreCompetences.BRANCHES[_branche]:
@@ -148,10 +153,10 @@ func _rafraichir() -> void:
 		var noeud: Dictionary = ArbreCompetences.NOEUDS[id]
 		var rang := ReglagesJoueur.rang_competence(id)
 		var disponible := ReglagesJoueur.mode_dev or ArbreCompetences.prerequis_atteint(id, ReglagesJoueur.rangs_competences)
-		var prix := "MAÎTRISÉ" if rang >= 1 else "DÉBLOQUER  ✦ %d" % ReglagesJoueur.cout_competence(id)
+		var prix := "MAÎTRISÉ" if rang >= 1 else "DÉBLOQUER  %d GOUTTES" % ReglagesJoueur.cout_competence(id)
 		if not disponible:
 			prix = "VERROUILLÉ — terminez %s" % ArbreCompetences.NOEUDS[noeud["requis"]]["nom"]
-		bouton.text = "%s\n%s\n%s" % [noeud["nom"], noeud["description"], prix]
+		bouton.text = "%s\n%s\n%s" % [noeud["nom"], ArbreCompetences.description_effective(id), prix]
 		# Toujours appuyable : le message explique verrou ou manque de points.
 		bouton.disabled = false
 		bouton.modulate = Color.WHITE if disponible else Color(0.62, 0.62, 0.68)

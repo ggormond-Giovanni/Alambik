@@ -1,5 +1,5 @@
 class_name CarteReactif
-extends Control
+extends Button
 
 # Une carte de reactif, entierement dessinee : cadre, glyphe, nom, description.
 # Le cadre distingue une essence d'un reactif, comme le demande la spec, et la
@@ -11,7 +11,11 @@ const HAUTEUR := 216.0
 
 var reactif: Reactif
 var selectionnee := false
-var desactivee := false
+var desactivee := false:
+	set(valeur):
+		desactivee = valeur
+		disabled = valeur
+		queue_redraw()
 var montrer_composants := false
 
 var _survol := 0.0
@@ -31,6 +35,10 @@ func configurer(reactif_: Reactif) -> void:
 func _ready() -> void:
 	custom_minimum_size = Vector2(0, HAUTEUR)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	flat = true
+	focus_mode = Control.FOCUS_NONE
+	action_mode = BaseButton.ACTION_MODE_BUTTON_RELEASE
+	pressed.connect(_sur_appui)
 	mouse_entered.connect(func() -> void: _pointeur = true)
 	mouse_exited.connect(func() -> void: _pointeur = false)
 
@@ -41,19 +49,12 @@ func _process(delta: float) -> void:
 	_pulsation = maxf(0.0, _pulsation - delta * 3.0)
 	queue_redraw()
 
-func _gui_input(evenement: InputEvent) -> void:
+func _sur_appui() -> void:
 	if desactivee:
 		return
-	var appui := false
-	if evenement is InputEventScreenTouch:
-		appui = (evenement as InputEventScreenTouch).pressed
-	elif evenement is InputEventMouseButton:
-		appui = (evenement as InputEventMouseButton).pressed
-	if appui:
-		_pulsation = 1.0
-		Sons.jouer("choix", -14.0)
-		choisie.emit(reactif.id)
-		accept_event()
+	_pulsation = 1.0
+	Sons.jouer("choix", -14.0)
+	choisie.emit(reactif.id)
 
 func _draw() -> void:
 	if reactif == null:

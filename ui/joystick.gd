@@ -23,6 +23,12 @@ func _zone_valide(position: Vector2) -> bool:
 	var taille := get_viewport_rect().size
 	return position.y > taille.y * 0.42 and position.x < taille.x * 0.78
 
+func annuler() -> void:
+	_doigt = -1
+	_logique.relacher()
+	intention_changee.emit(Vector2.ZERO, 0.0)
+	queue_redraw()
+
 func _input(evenement: InputEvent) -> void:
 	if evenement is InputEventScreenTouch:
 		if evenement.pressed and _doigt == -1:

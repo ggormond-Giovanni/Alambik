@@ -66,7 +66,8 @@ func _ajouter_volume(parent: VBoxContainer, titre: String, valeur: float, change
 	curseur.max_value = 1.0
 	curseur.step = 0.05
 	curseur.value = valeur
-	curseur.custom_minimum_size = Vector2(0, 72)
+	curseur.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
+	curseur.focus_mode = Control.FOCUS_NONE
 	curseur.value_changed.connect(func(v: float) -> void:
 		etiquette.text = "%s  %d%%" % [titre, roundi(v * 100.0)]
 		changement.call(v))
@@ -76,7 +77,9 @@ func _ajouter_option(parent: VBoxContainer, titre: String, valeur: bool, changem
 	var bouton := CheckButton.new()
 	bouton.text = titre
 	bouton.button_pressed = valeur
-	bouton.custom_minimum_size = Vector2(0, 86)
+	bouton.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
+	bouton.focus_mode = Control.FOCUS_NONE
+	bouton.action_mode = BaseButton.ACTION_MODE_BUTTON_RELEASE
 	bouton.add_theme_font_size_override("font_size", 27)
 	bouton.toggled.connect(func(v: bool) -> void: changement.call(v))
 	parent.add_child(bouton)

@@ -12,6 +12,7 @@ const FIN := preload("res://ui/fin_de_run.tscn")
 const HUD := preload("res://ui/hud.tscn")
 const JOYSTICK := preload("res://ui/joystick.tscn")
 const PAUSE := preload("res://ui/pause.tscn")
+const RECOMPENSE_SORTS := preload("res://ui/recompense_sorts.tscn")
 const BOT := preload("res://sondes/bot.gd")
 
 var _fond: Node2D
@@ -27,17 +28,19 @@ var _limites := Rect2()
 var _terminee := false
 var _temps_dans_la_salle := 0.0
 var _musique_minuterie := 0.0
-var _niveaux_en_attente := 0
 var _recharge_sort_actif := 0.0
 var _charge_ultime := 0
 var _compteur_moisson := 0
 var _compteur_sang_froid := 0
 
 func _ready() -> void:
+	if OS.get_name() == "Android":
+		get_tree().set_auto_accept_quit(false)
 	var arguments := OS.get_cmdline_user_args()
 	Jeu.mode_auto = "--auto" in arguments
 	Jeu.demarrer_run(_valeur_argument(arguments, "--graine="), maxi(1, _valeur_argument(arguments, "--salle=")),
-		maxi(0, _valeur_argument(arguments, "--chapitre=") - 1) if _valeur_argument(arguments, "--chapitre=") > 0 else ReglagesJoueur.chapitre_choisi)
+		maxi(0, _valeur_argument(arguments, "--chapitre=") - 1) if _valeur_argument(arguments, "--chapitre=") > 0 else ReglagesJoueur.chapitre_choisi,
+		ReglagesJoueur.mode_run_choisi)
 	# --dote=N remplit l'inventaire : c'est ce qui permet d'aller regarder
 	# l'alambic ou le boss sans rejouer huit salles a chaque essai.
 	var dote := _valeur_argument(arguments, "--dote=")
@@ -54,7 +57,6 @@ func _ready() -> void:
 		if not heritage.is_empty():
 			Jeu.ajouter_reactif(heritage[Jeu.rng.randi_range(0, heritage.size() - 1)])
 	Jeu.run_terminee.connect(_sur_run_terminee)
-	Jeu.niveau_gagne.connect(_sur_niveau_gagne)
 
 	_calculer_limites()
 	get_tree().get_root().size_changed.connect(_calculer_limites)
@@ -105,6 +107,8 @@ func _ready() -> void:
 		add_child(bot)
 
 	_entrer_dans_la_salle()
+	if Jeu.mode_run == "epreuve_sorts" and Jeu.salle_courante == 1:
+		_ouvrir_serie_reactifs(3, func() -> void: pass)
 	Capture.programmer(self)
 
 # En mode auto, une salle qui ne se termine pas est un blocage, pas une
@@ -120,7 +124,7 @@ func _process(delta: float) -> void:
 	_musique_minuterie -= delta
 	if _musique_minuterie <= 0.0 and not _terminee and _panneau == null:
 		_musique_minuterie = 0.35
-		if Chapitres.est_boss(Jeu.chapitre, Jeu.salle_courante):
+		if Jeu.est_boss_courant():
 			Sons.musique_boss()
 		else:
 			var menaces := get_tree().get_nodes_in_group("ennemis").size()
@@ -170,7 +174,7 @@ func _entrer_dans_la_salle() -> void:
 	_heros.global_position = Vector2((_limites.position.x + _limites.end.x) / 2.0, _limites.end.y - 120.0)
 	_heros.preparer_nouvelle_page()
 	if ReglagesJoueur.passifs_equipes_effectifs().has("reserve_ultime"):
-		_charge_ultime += 5
+		_charge_ultime += maxi(1, roundi(5.0 * float(ReglagesJoueur.passifs_equipes_effectifs()["reserve_ultime"])))
 	_hud.rafraichir()
 	_temps_dans_la_salle = 0.0
 	if Jeu.mode_auto:
@@ -181,33 +185,30 @@ func _entrer_dans_la_salle() -> void:
 func _sur_salle_terminee() -> void:
 	if _terminee:
 		return
+	_heros.definir_intention(Vector2.ZERO, 0.0)
+	_joystick.annuler()
+	if Jeu.mode_run == "epreuve_sorts":
+		_sur_palier_defi_termine()
+		return
 	if Jeu.salle_courante >= Jeu.salles_du_chapitre():
 		Jeu.terminer_run(true)
 		return
+	_ouvrir_recompense_etage()
+
+func _avancer_page() -> void:
 	Jeu.salle_courante += 1
-	if _niveaux_en_attente > 0:
-		_ouvrir_draft_niveau()
-		return
 	_continuer_apres_porte()
 
 func _continuer_apres_porte() -> void:
-	if Chapitres.est_alambic(Jeu.chapitre, Jeu.salle_courante):
-		_heros.stats.soigner(_heros.stats.pv_max * Reglages.SOIN_ALAMBIC \
-			* ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
-		_ouvrir(ALAMBIC)
-	else:
-		_entrer_dans_la_salle()
+	_entrer_dans_la_salle()
 
-func _sur_niveau_gagne(_nouveau_niveau: int) -> void:
-	_niveaux_en_attente += 1
-
-func _ouvrir_draft_niveau() -> void:
-	if _terminee or _panneau != null or _niveaux_en_attente <= 0:
+func _ouvrir_recompense_etage() -> void:
+	if _terminee or _panneau != null:
 		return
-	_niveaux_en_attente -= 1
 	get_tree().paused = true
 	Sons.musique_calme()
 	_panneau = DRAFT.instantiate()
+	_panneau.etage_recompense = Jeu.salle_courante
 	_panneau.process_mode = Node.PROCESS_MODE_ALWAYS
 	_couche.add_child(_panneau)
 	_panneau.termine.connect(func() -> void:
@@ -215,16 +216,80 @@ func _ouvrir_draft_niveau() -> void:
 		_panneau = null
 		_heros.recalculer()
 		_hud.rafraichir()
-		if _niveaux_en_attente > 0:
-			call_deferred("_ouvrir_draft_niveau")
-			return
 		get_tree().paused = false
-		_continuer_apres_porte())
+		if Chapitres.est_alambic(Jeu.chapitre, Jeu.salle_courante):
+			_ouvrir_alambic_apres_page()
+		else:
+			_avancer_page())
 
-func _ouvrir(scene: PackedScene) -> void:
+func _sur_palier_defi_termine() -> void:
+	var boss := Jeu.est_boss_courant()
+	var dernier := Jeu.salle_courante >= Jeu.salles_du_chapitre()
+	if boss:
+		if dernier:
+			_ouvrir_recompense_sorts(true)
+		else:
+			# Le boss ouvre immediatement trois choix capables d'alimenter la
+			# prochaine fusion, puis livre sa recompense permanente.
+			_ouvrir_serie_reactifs(3, func() -> void: _ouvrir_recompense_sorts(false))
+		return
+	_ouvrir_bonus_defi()
+
+func _ouvrir_bonus_defi() -> void:
+	_ouvrir_draft_force(false, func() -> void:
+		if Jeu.salle_courante in [3, 7, 11]:
+			_ouvrir_alambic_apres_page()
+		else:
+			_avancer_page())
+
+func _ouvrir_serie_reactifs(nombre: int, suite: Callable) -> void:
+	if nombre <= 0:
+		suite.call()
+		return
+	_ouvrir_draft_force(true, func() -> void:
+		_ouvrir_serie_reactifs(nombre - 1, suite))
+
+func _ouvrir_draft_force(reactif: bool, suite: Callable) -> void:
+	if _terminee or _panneau != null:
+		return
 	get_tree().paused = true
 	Sons.musique_calme()
-	_panneau = scene.instantiate()
+	_panneau = DRAFT.instantiate()
+	_panneau.etage_recompense = Jeu.salle_courante
+	_panneau.forcer_reactif = reactif
+	_panneau.forcer_basique = not reactif
+	_panneau.process_mode = Node.PROCESS_MODE_ALWAYS
+	_couche.add_child(_panneau)
+	_panneau.termine.connect(func() -> void:
+		_panneau.queue_free()
+		_panneau = null
+		_heros.recalculer()
+		_hud.rafraichir()
+		get_tree().paused = false
+		suite.call())
+
+func _ouvrir_recompense_sorts(derniere: bool) -> void:
+	get_tree().paused = true
+	Sons.musique_calme()
+	_panneau = RECOMPENSE_SORTS.instantiate()
+	_panneau.etage_recompense = Jeu.salle_courante
+	_panneau.process_mode = Node.PROCESS_MODE_ALWAYS
+	_couche.add_child(_panneau)
+	_panneau.termine.connect(func() -> void:
+		_panneau.queue_free()
+		_panneau = null
+		get_tree().paused = false
+		if derniere:
+			Jeu.terminer_run(true)
+		else:
+			_avancer_page())
+
+func _ouvrir_alambic_apres_page() -> void:
+	get_tree().paused = true
+	Sons.musique_calme()
+	_heros.stats.soigner(_heros.stats.pv_max * Reglages.SOIN_ALAMBIC \
+		* ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
+	_panneau = ALAMBIC.instantiate()
 	_panneau.process_mode = Node.PROCESS_MODE_ALWAYS
 	_couche.add_child(_panneau)
 	_panneau.termine.connect(func() -> void:
@@ -232,7 +297,7 @@ func _ouvrir(scene: PackedScene) -> void:
 		_panneau = null
 		get_tree().paused = false
 		Sons.musique_combat(0.35)
-		_entrer_dans_la_salle())
+		_avancer_page())
 
 func _ouvrir_pause() -> void:
 	get_tree().paused = true
@@ -240,14 +305,26 @@ func _ouvrir_pause() -> void:
 	_panneau = PAUSE.instantiate()
 	_panneau.process_mode = Node.PROCESS_MODE_ALWAYS
 	_couche.add_child(_panneau)
-	_panneau.termine.connect(func() -> void:
-		_panneau.queue_free()
-		_panneau = null
-		get_tree().paused = false
-		if Chapitres.est_boss(Jeu.chapitre, Jeu.salle_courante):
-			Sons.musique_boss()
-		else:
-			Sons.musique_combat(0.5))
+	_panneau.termine.connect(_fermer_pause)
+
+func _fermer_pause() -> void:
+	if _panneau == null:
+		return
+	_panneau.queue_free()
+	_panneau = null
+	get_tree().paused = false
+	if Jeu.est_boss_courant():
+		Sons.musique_boss()
+	else:
+		Sons.musique_combat(0.5)
+
+func _notification(quoi: int) -> void:
+	if quoi != NOTIFICATION_WM_GO_BACK_REQUEST or _terminee:
+		return
+	if _panneau != null and _panneau.scene_file_path == "res://ui/pause.tscn":
+		_fermer_pause()
+	elif _panneau == null:
+		_ouvrir_pause()
 
 func _sur_intention(direction: Vector2, intensite: float) -> void:
 	if _heros != null and not Jeu.mode_auto:
@@ -260,12 +337,13 @@ func _sur_tir_heros(tir_courant: Tir, origine: Vector2, direction: Vector2) -> v
 
 func _sur_heros_touche(position: Vector2) -> void:
 	_effets.impact(position, Palette.DANGER, 1.6)
-	_hud.secouer()
+	_hud.impact_degats()
 	if ReglagesJoueur.passifs_equipes_effectifs().has("riposte_alchimique"):
 		_effets.onde(position, 270.0, Palette.OR, 0.45)
 		for ennemi in get_tree().get_nodes_in_group("ennemis"):
 			if is_instance_valid(ennemi) and ennemi.global_position.distance_to(position) <= 270.0:
-				ennemi.recevoir_degats(_heros.tir_courant.degats * 1.5, [])
+				ennemi.recevoir_degats(_heros.tir_courant.degats * 1.5 \
+					* float(ReglagesJoueur.passifs_equipes_effectifs()["riposte_alchimique"]), [])
 
 func _sur_bouclier_brise(position: Vector2, explosif: bool) -> void:
 	_effets.onde(position, 200.0, Color(0.85, 0.92, 1.0), 0.5)
@@ -293,11 +371,11 @@ func _sur_ennemi_abattu() -> void:
 		_compteur_moisson += 1
 		if _compteur_moisson >= 10:
 			_compteur_moisson = 0
-			_heros.stats.soigner(_heros.stats.pv_max * 0.08)
+			_heros.stats.soigner(_heros.stats.pv_max * 0.08 * float(passifs["moisson_vitale"]))
 			_effets.onde(_heros.global_position, 150.0, Color(0.35, 1.0, 0.58), 0.5)
 	if passifs.has("sang_froid"):
 		_compteur_sang_froid += 1
-		if _compteur_sang_froid >= 12:
+		if _compteur_sang_froid >= ceili(12.0 / maxf(0.25, float(passifs["sang_froid"]))):
 			_compteur_sang_froid = 0
 			_recharge_sort_actif = 0.0
 
@@ -306,10 +384,12 @@ func _lancer_sort_actif() -> void:
 	if _recharge_sort_actif > 0.0 or not Sorts.ACTIFS.has(id):
 		return
 	var sort: Dictionary = Sorts.ACTIFS[id]
+	var efficacite := ReglagesJoueur.efficacite_sort(id)
 	_recharge_sort_actif = float(sort["recharge"]) * Sorts.multiplicateur_recharge_active(ReglagesJoueur.passifs_equipes_effectifs())
-	_appliquer_sort(float(sort["rayon"]), float(sort["degats"]), str(sort["effet"]), false)
-	if ReglagesJoueur.passifs_equipes_effectifs().has("echo_alchimique") and Jeu.rng.randf() < 0.30:
-		_appliquer_sort(float(sort["rayon"]), float(sort["degats"]) * 0.50, str(sort["effet"]), false)
+	_appliquer_sort(float(sort["rayon"]), float(sort["degats"]) * efficacite, str(sort["effet"]), false)
+	var passifs := ReglagesJoueur.passifs_equipes_effectifs()
+	if passifs.has("echo_alchimique") and Jeu.rng.randf() < 0.30 * float(passifs["echo_alchimique"]):
+		_appliquer_sort(float(sort["rayon"]), float(sort["degats"]) * efficacite * 0.50, str(sort["effet"]), false)
 
 func _lancer_ultime() -> void:
 	var id := ReglagesJoueur.ultime_effectif()
@@ -320,7 +400,7 @@ func _lancer_ultime() -> void:
 	if _charge_ultime < charge_requise:
 		return
 	_charge_ultime -= charge_requise
-	_appliquer_sort(INF, float(sort["degats"]), str(sort["effet"]), true)
+	_appliquer_sort(INF, float(sort["degats"]) * ReglagesJoueur.efficacite_sort(id), str(sort["effet"]), true)
 
 func _appliquer_sort(rayon: float, multiplicateur: float, effet: String, ultime: bool) -> void:
 	var couleur := Palette.ESSENCE if ultime else (Palette.GIVRE if effet == "givre" else Palette.ACIDE if effet == "acide" else Palette.OR)

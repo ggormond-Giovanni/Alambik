@@ -241,7 +241,7 @@ func _draw() -> void:
 		couleur = couleur.lerp(Color.WHITE, _flash * 0.8)
 
 	draw_set_transform(Vector2(0, r * 0.85), 0.0, Vector2(1.0, 0.4))
-	draw_circle(Vector2.ZERO, r * 0.9, Color(0, 0, 0, 0.3))
+	draw_circle(Vector2.ZERO, r * 0.9, Color(0, 0, 0, 0.18))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	# La menace est plus claire et plus saturee que le fond. Les telegraphes
@@ -287,7 +287,8 @@ func _dessiner_telegraphe(r: float) -> void:
 		return
 	var vers := global_position.direction_to(_cible.global_position)
 	if donnees.get("forme", "") == "plume" and _etat == "vise":
-		draw_line(vers * r, vers * float(donnees["portee"]), Color(Palette.DANGER, 0.35 + 0.25 * sin(_anim * 30.0)), 3.0, true)
+		var distance_cible := global_position.distance_to(_cible.global_position)
+		draw_line(vers * r, vers * distance_cible, Color(Palette.DANGER, 0.35 + 0.25 * sin(_anim * 30.0)), 3.0, true)
 	elif donnees.get("forme", "") == "dard" and _etat == "preparer":
 		var intensite := 0.4 + 0.6 * sin(_anim * 24.0)
 		draw_line(vers * r, vers * 620.0, Color(Palette.DANGER, 0.25 * intensite), 8.0, true)
@@ -321,11 +322,11 @@ func _dessiner_sentinelle(r: float, couleur: Color) -> void:
 	draw_line(Vector2(-r * 1.5, 0), Vector2(r * 1.5, 0), couleur.darkened(0.4), 2.5, true)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_circle(Vector2.ZERO, r * 0.42, Color(0.95, 0.95, 1.0, 0.9))
-	draw_circle(vers * r * 0.12, r * 0.20, Color(0.10, 0.08, 0.14))
+	draw_circle(vers * r * 0.12, r * 0.20, Color(0.18, 0.14, 0.25))
 	if _etat == "vise":
 		# Trait de visee : la spec veut un tir telegraphie, donc visible avant.
-		var portee: float = donnees["portee"]
-		draw_line(vers * r, vers * portee, Color(Palette.DANGER, 0.35 + 0.25 * sin(_anim * 30.0)), 3.0, true)
+		var distance_cible := global_position.distance_to(_cible.global_position)
+		draw_line(vers * r, vers * distance_cible, Color(Palette.DANGER, 0.35 + 0.25 * sin(_anim * 30.0)), 3.0, true)
 
 func _dessiner_veloce(r: float, couleur: Color) -> void:
 	var vers := _direction_charge if _direction_charge != Vector2.ZERO else Vector2.DOWN
@@ -344,7 +345,7 @@ func _dessiner_veloce(r: float, couleur: Color) -> void:
 
 func _dessiner_essaimeur(r: float, couleur: Color) -> void:
 	var corps := Dessin.blob(Vector2.ZERO, r, _graine, 0.10, _anim * 1.4)
-	draw_colored_polygon(corps, couleur.darkened(0.25))
+	draw_colored_polygon(corps, couleur.darkened(0.08))
 	Dessin.contour(self, corps, couleur.lightened(0.3), 2.5)
 	# Un masque de scribe : bandeau clair et trois encoches.
 	draw_rect(Rect2(-r * 0.7, -r * 0.25, r * 1.4, r * 0.5), Color(0.94, 0.92, 0.86, 0.92))

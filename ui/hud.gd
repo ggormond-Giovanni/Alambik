@@ -4,14 +4,13 @@ extends Control
 # et pose sous la safe area : sur telephone, l'encoche mange le haut.
 
 var _secousse := 0.0
+var _flash_degats := 0.0
 var _anim := 0.0
 signal pause_demandee
 signal sort_actif_demande
 signal ultime_demande
 
 var _style_compact: StyleBoxFlat
-var _style_progression: StyleBoxFlat
-var _style_remplissage: StyleBoxFlat
 var _bouton_pause: Button
 var _bouton_actif: Button
 var _bouton_ultime: Button
@@ -20,16 +19,13 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	Jeu.inventaire_change.connect(rafraichir)
-	Jeu.experience_changee.connect(rafraichir)
 	ReglagesJoueur.maitrise_changee.connect(rafraichir)
 	_style_compact = StyleInterface.panneau(Color(0.035, 0.045, 0.060, 0.94), Color(Palette.BORD_PAGE, 0.42), 20, 7)
-	_style_progression = StyleInterface.panneau(Color(0.018, 0.026, 0.038, 0.94), Color(0.0, 0.0, 0.0, 0.55), 13, 3)
-	_style_remplissage = StyleInterface.panneau(Color(0.84, 0.58, 0.18), Color(1.0, 0.82, 0.38, 0.75), 10, 0)
 	_bouton_pause = Button.new()
 	_bouton_pause.text = "Ⅱ"
-	_bouton_pause.custom_minimum_size = Vector2(82.0, 82.0)
-	_bouton_pause.size = Vector2(82.0, 82.0)
-	_bouton_pause.add_theme_font_size_override("font_size", 34)
+	_bouton_pause.custom_minimum_size = Vector2(Ecran.CIBLE_TACTILE, Ecran.CIBLE_TACTILE)
+	_bouton_pause.size = Vector2(Ecran.CIBLE_TACTILE, Ecran.CIBLE_TACTILE)
+	_bouton_pause.add_theme_font_size_override("font_size", 30)
 	StyleInterface.styliser_bouton(_bouton_pause, Palette.TEXTE_ATTENUE, true)
 	_bouton_pause.pressed.connect(func() -> void: pause_demandee.emit())
 	add_child(_bouton_pause)
@@ -44,7 +40,7 @@ func _ready() -> void:
 
 func _replacer_bouton() -> void:
 	if _bouton_pause != null:
-		_bouton_pause.position = Vector2(28.0, Ecran.marge_haute() + 14.0)
+		_bouton_pause.position = Vector2(12.0, Ecran.marge_haute() + 4.0)
 	var taille := get_viewport_rect().size
 	if _bouton_actif != null:
 		_bouton_actif.position = Vector2(taille.x - 142.0, taille.y - Ecran.marge_basse() - 350.0)
@@ -53,8 +49,8 @@ func _replacer_bouton() -> void:
 
 func _creer_bouton_sort(couleur: Color) -> Button:
 	var bouton := Button.new()
-	bouton.custom_minimum_size = Vector2(116, 116)
-	bouton.size = Vector2(116, 116)
+	bouton.custom_minimum_size = Vector2(128, 128)
+	bouton.size = Vector2(128, 128)
 	bouton.add_theme_font_size_override("font_size", 21)
 	StyleInterface.styliser_bouton(bouton, couleur)
 	return bouton
@@ -82,42 +78,62 @@ func secouer() -> void:
 		return
 	_secousse = 1.0
 
+func impact_degats() -> void:
+	# Le flash est volontairement très bref : il confirme le coup sans retirer
+	# la visibilité nécessaire pour esquiver le suivant.
+	_flash_degats = 1.0
+	secouer()
+
 func _process(delta: float) -> void:
 	_anim += delta
 	_secousse = maxf(0.0, _secousse - delta * 3.0)
+	_flash_degats = maxf(0.0, _flash_degats - delta * 7.5)
 	queue_redraw()
 
 func _draw() -> void:
 	var police := ThemeDB.fallback_font
 	var largeur := get_viewport_rect().size.x
-	var haut := Ecran.marge_haute() + 28.0
+	var haut := Ecran.marge_haute() + 16.0
 	var tremble := Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _secousse * 4.0
 	var centre_x := largeur * 0.5
-	var panneau_progression := Rect2(Vector2(142.0, haut - 12.0) + tremble, Vector2(largeur - 294.0, 102.0))
+	if _flash_degats > 0.0:
+		var alpha := _flash_degats * (0.10 if ReglagesJoueur.effets_reduits else 0.17)
+		var epaisseur := 34.0 + _flash_degats * 22.0
+		var hauteur_ecran := get_viewport_rect().size.y
+		# Une vignette sur les quatre bords reste visible sous les pouces et ne
+		# masque jamais le héros ou les projectiles au centre.
+		draw_rect(Rect2(0.0, 0.0, largeur, epaisseur), Color(Palette.DANGER, alpha))
+		draw_rect(Rect2(0.0, hauteur_ecran - epaisseur, largeur, epaisseur), Color(Palette.DANGER, alpha))
+		draw_rect(Rect2(0.0, 0.0, epaisseur, hauteur_ecran), Color(Palette.DANGER, alpha))
+		draw_rect(Rect2(largeur - epaisseur, 0.0, epaisseur, hauteur_ecran), Color(Palette.DANGER, alpha))
+	# Plus de niveau de run ni de grande barre : le centre reste libre. La page
+	# actuelle demeure lisible dans une petite capsule sous la safe area.
+	var panneau_progression := Rect2(Vector2(largeur * 0.5 - 105.0, haut - 8.0) + tremble, Vector2(210.0, 70.0))
 	draw_style_box(_style_compact, panneau_progression)
-	draw_string(police, Vector2(panneau_progression.position.x, haut + 25.0), "NIV %02d  •  PAGE %02d" % [Jeu.niveau, Jeu.salle_courante],
-		HORIZONTAL_ALIGNMENT_CENTER, panneau_progression.size.x, 31, Palette.TEXTE)
-	draw_string(police, Vector2(panneau_progression.position.x, haut + 48.0), "%s  —  XP %d / %d" % [Jeu.chapitre_courant()["nom"], Jeu.experience, Jeu.experience_requise()],
-		HORIZONTAL_ALIGNMENT_CENTER, panneau_progression.size.x, 19, Palette.TEXTE_ATTENUE)
-	var barre := Rect2(panneau_progression.position + Vector2(24.0, 69.0), Vector2(panneau_progression.size.x - 48.0, 18.0))
-	draw_style_box(_style_progression, barre)
-	var progression := clampf(float(Jeu.experience) / float(maxi(1, Jeu.experience_requise())), 0.02, 1.0)
-	var remplie := Rect2(barre.position + Vector2(3.0, 3.0), Vector2((barre.size.x - 6.0) * progression, barre.size.y - 6.0))
-	draw_style_box(_style_remplissage, remplie)
+	draw_string(police, Vector2(panneau_progression.position.x, haut + 35.0), "PAGE %02d / %02d" % [Jeu.salle_courante, Jeu.salles_du_chapitre()],
+		HORIZONTAL_ALIGNMENT_CENTER, panneau_progression.size.x, 27, Palette.TEXTE)
 
-	var compteur := Rect2(largeur - 126.0, haut - 12.0, 98.0, 82.0)
-	draw_style_box(_style_compact, compteur)
-	var gemme := Dessin.polygone_regulier(Vector2(compteur.position.x + 29.0, compteur.position.y + 41.0), 14.0, 4, PI * 0.25)
-	draw_colored_polygon(gemme, Palette.ESSENCE)
-	draw_string(police, Vector2(compteur.position.x + 48.0, compteur.position.y + 52.0), str(Jeu.inventaire.size()),
-		HORIZONTAL_ALIGNMENT_LEFT, 42.0, 28, Palette.TEXTE)
-	draw_string(police, Vector2(compteur.position.x - 8.0, compteur.position.y + 104.0), "✦ %s" % ReglagesJoueur.points_maitrise_affiches(),
-		HORIZONTAL_ALIGNMENT_CENTER, compteur.size.x + 16.0, 22, Palette.ESSENCE)
+	# Deux symboles alchimiques remplacent l'ancien compteur carre : la fiole
+	# compte le build de la run, la goutte la monnaie permanente.
+	var centre_fiole := Vector2(largeur - 142.0, haut + 25.0) + tremble
+	Dessin.halo(self, centre_fiole, 34.0, Color(Palette.ESSENCE, 0.55), 3)
+	Dessin.glyphe(self, "fiole", centre_fiole, 17.0, Palette.ESSENCE)
+	draw_string(police, centre_fiole + Vector2(25.0, 10.0), str(Jeu.inventaire.size()),
+		HORIZONTAL_ALIGNMENT_LEFT, 32.0, 25, Palette.TEXTE)
+	var centre_goutte := Vector2(largeur - 62.0, haut + 25.0) + tremble
+	draw_colored_polygon(Dessin.goutte(centre_goutte, 18.0, PI, 1.2), Palette.ESSENCE)
+	draw_string(police, centre_goutte + Vector2(23.0, 10.0), ReglagesJoueur.gouttes_affichees(),
+		HORIZONTAL_ALIGNMENT_LEFT, 42.0, 24, Palette.TEXTE)
+
+	var boss := get_tree().get_first_node_in_group("boss")
+	var boss_visible := boss != null and is_instance_valid(boss) and float(boss.pv_max) > 0.0
+	if boss_visible:
+		_dessiner_barre_boss(boss, police, largeur, haut, tremble)
 
 	# Inventaire : une pastille par reactif, teintee et glyphee. C'est la seule
 	# trace visible de ce que le joueur a construit pendant la run.
 	var x := centre_x - float(Jeu.inventaire_groupe().size() - 1) * 29.0
-	var y := haut + 124.0
+	var y := haut + (194.0 if boss_visible else 88.0)
 	for entree in Jeu.inventaire_groupe():
 		var id: String = entree[0]
 		var r := Jeu.reactif(id)
@@ -135,3 +151,22 @@ func _draw() -> void:
 			draw_string(police, centre + Vector2(12.0, 22.0), "x%d" % int(entree[1]),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.OR)
 		x += 58.0
+
+func _dessiner_barre_boss(boss: Node, police: Font, largeur: float, haut: float, tremble: Vector2) -> void:
+	var ratio := clampf(float(boss.pv) / maxf(1.0, float(boss.pv_max)), 0.0, 1.0)
+	var nom := str(boss.donnees.get("nom", "BOSS")).to_upper()
+	var cadre := Rect2(Vector2(150.0, haut + 88.0) + tremble, Vector2(largeur - 300.0, 54.0))
+	# Une ombre épaisse garde la barre lisible sur tous les décors, même sous un
+	# barrage très lumineux.
+	draw_rect(cadre.grow(7.0), Color(0.01, 0.008, 0.018, 0.90))
+	draw_rect(cadre, Color(0.16, 0.035, 0.055, 0.94))
+	var remplie := cadre.grow(-5.0)
+	remplie.size.x *= ratio
+	var couleur := Palette.DANGER.lerp(Palette.OR, ratio)
+	draw_rect(remplie, couleur)
+	draw_rect(cadre, Color(Palette.OR, 0.82), false, 4.0)
+	draw_string(police, Vector2(cadre.position.x, cadre.position.y - 13.0), nom,
+		HORIZONTAL_ALIGNMENT_CENTER, cadre.size.x, 26, Palette.TEXTE)
+	draw_string(police, Vector2(cadre.position.x, cadre.position.y + 37.0), "%d / %d" % [
+		maxi(0, ceili(float(boss.pv))), ceili(float(boss.pv_max))],
+		HORIZONTAL_ALIGNMENT_CENTER, cadre.size.x, 24, Color.WHITE)

@@ -5,6 +5,32 @@ extends RefCounted
 # reste possible, avec des rendements decroissants et un plafond de copies.
 
 const REPOS := "repos"
+const BONUS_BASIQUES := {
+	"bonus_attaque": {"nom": "Attaque", "description": "+6 % de dégâts pour cette descente.", "couleur": Color(1.00, 0.60, 0.32), "glyphe": "lance"},
+	"bonus_vitalite": {"nom": "Vitalité", "description": "+8 PV maximum et soin immédiat.", "couleur": Color(0.98, 0.42, 0.52), "glyphe": "fiole"},
+	"bonus_defense": {"nom": "Défense", "description": "4 % de dégâts subis en moins pour cette descente.", "couleur": Color(0.66, 0.82, 1.00), "glyphe": "hexagone"},
+	"bonus_soin": {"nom": "Soin", "description": "Rend 22 % des points de vie maximum.", "couleur": Color(0.55, 0.92, 0.62), "glyphe": "goutte"},
+}
+
+static func est_page_de_reactif(niveau: int) -> bool:
+	return niveau % 3 == 0
+
+static func proposer_basiques(rng: RandomNumberGenerator, nb := 3) -> Array[String]:
+	var restants: Array[String] = []
+	for id in BONUS_BASIQUES:
+		restants.append(id)
+	var tirage: Array[String] = []
+	while tirage.size() < nb and not restants.is_empty():
+		var index := rng.randi_range(0, restants.size() - 1)
+		tirage.append(restants.pop_at(index))
+	return tirage
+
+static func bonus_basique(id: String) -> Reactif:
+	if not BONUS_BASIQUES.has(id):
+		return null
+	var donnees: Dictionary = BONUS_BASIQUES[id]
+	return Reactif.creer(id, donnees["nom"], donnees["description"], {}, false,
+		donnees["couleur"], donnees["glyphe"])
 
 static func copies(inventaire: Array, id: String) -> int:
 	var total := 0

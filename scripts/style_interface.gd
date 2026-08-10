@@ -19,9 +19,14 @@ static func panneau(fond: Color, bord: Color, rayon := 24, ombre := 10) -> Style
 	return style
 
 static func styliser_bouton(bouton: Button, accent := Palette.OR, secondaire := false) -> void:
+	# Pas de focus clavier ni de déclenchement au premier contact : sur mobile,
+	# le joueur doit pouvoir glisser hors du bouton pour annuler son geste.
+	bouton.focus_mode = Control.FOCUS_NONE
+	bouton.action_mode = BaseButton.ACTION_MODE_BUTTON_RELEASE
 	var fond := Color(0.075, 0.060, 0.115, 0.96) if secondaire else Color(accent, 0.18)
 	bouton.add_theme_stylebox_override("normal", panneau(fond, Color(accent, 0.42), 24, 8))
-	bouton.add_theme_stylebox_override("hover", panneau(Color(accent, 0.25), Color(accent, 0.82), 24, 12))
+	# L'état hover ne porte aucune information : un écran tactile n'en a pas.
+	bouton.add_theme_stylebox_override("hover", panneau(fond, Color(accent, 0.42), 24, 8))
 	bouton.add_theme_stylebox_override("pressed", panneau(Color(accent, 0.38), accent, 20, 4))
 	bouton.add_theme_stylebox_override("focus", panneau(Color(accent, 0.24), accent, 24, 10))
 	bouton.add_theme_stylebox_override("disabled", panneau(Color(0.06, 0.05, 0.08, 0.72), Color(accent, 0.14), 24, 2))

@@ -1,13 +1,11 @@
 extends RefCounted
 
-# Cinquante pages par chapitre : on verifie les proprietes sur chacune.
+# Trente pages par chapitre : on vérifie les propriétés sur chacune.
 # on verifie les proprietes qui doivent tenir sur toutes.
 
 func test_chaque_page_de_combat_a_des_vagues(v: Verif) -> void:
 	for chapitre in Chapitres.nombre():
 		for numero in range(1, Chapitres.salles(chapitre) + 1):
-			if Chapitres.est_alambic(chapitre, numero):
-				continue
 			var vagues := Vagues.pour_salle(numero, chapitre, 1)
 			v.vrai(vagues.size() >= 1, "la page %d du chapitre %d doit avoir une vague" % [numero, chapitre])
 			for vague in vagues:
@@ -21,31 +19,31 @@ func test_les_ennemis_cites_existent(v: Verif) -> void:
 					v.vrai(CatalogueEnnemis.TOUS.has(id),
 						"l'ennemi %s de la page %d n'existe pas" % [id, numero])
 
-func test_les_alambics_n_ont_pas_de_vagues(v: Verif) -> void:
+func test_les_paliers_d_alambic_restent_des_combats(v: Verif) -> void:
 	for chapitre in Chapitres.nombre():
 		for numero in Chapitres.par_index(chapitre)["alambics"]:
-			v.vrai(Vagues.pour_salle(numero, chapitre, 1).is_empty(),
-				"un alambic n'est pas une arene (page %d)" % numero)
+			v.vrai(not Vagues.pour_salle(numero, chapitre, 1).is_empty(),
+				"la page %d est nettoyee avant le soin et la fusion" % numero)
 
-func test_la_derniere_page_est_le_boss(v: Verif) -> void:
+func test_un_boss_tous_les_dix_paliers(v: Verif) -> void:
 	for chapitre in Chapitres.nombre():
-		var derniere := Chapitres.salles(chapitre)
-		var vagues := Vagues.pour_salle(derniere, chapitre, 1)
-		v.egal(vagues.size(), 1, "le boss arrive seul, en une vague")
-		v.egal(vagues[0], [Chapitres.par_index(chapitre)["boss"]], "et c'est le boss du chapitre")
-
-func test_le_mi_chapitre_annonce_le_boss(v: Verif) -> void:
-	for chapitre in Chapitres.nombre():
-		var milieu: int = Chapitres.par_index(chapitre)["mi_boss"]
-		var vagues := Vagues.pour_salle(milieu, chapitre, 1)
-		v.egal(vagues[0], [Chapitres.par_index(chapitre)["boss"]], "le mi-chapitre montre le boss")
-	v.vrai(Vagues.facteur_mi_boss() < 1.0, "mais en version entamee")
+		for numero in [10, 20, 30]:
+			var vagues := Vagues.pour_salle(numero, chapitre, 1)
+			v.egal(vagues.size(), 1, "le boss page %d arrive en une vague" % numero)
+			v.egal(vagues[0], [Chapitres.par_index(chapitre)["boss"]], "et c'est le boss du chapitre")
 
 func test_difficulte_croissante(v: Verif) -> void:
 	for chapitre in Chapitres.nombre():
 		var debut := _ennemis(1, chapitre)
-		var fin := _ennemis(Chapitres.salles(chapitre) - 5, chapitre)
+		var fin := _ennemis(Chapitres.salles(chapitre) - 1, chapitre)
 		v.vrai(fin > debut, "le chapitre %d envoie plus d'ennemis a la fin qu'au debut" % chapitre)
+
+func test_le_mid_et_la_fin_ne_repopent_pas_sans_fin(v: Verif) -> void:
+	for chapitre in Chapitres.nombre():
+		for numero in [12, 15, 18, 22, 25, 29]:
+			var vagues := Vagues.pour_salle(numero, chapitre, 9)
+			v.vrai(vagues.size() <= 2, "la page %d reste limitee a deux vagues" % numero)
+			v.vrai(_ennemis(numero, chapitre) <= 11, "la page %d garde une densite mobile lisible" % numero)
 
 func test_les_creatures_grossissent(v: Verif) -> void:
 	for chapitre in Chapitres.nombre():
@@ -70,7 +68,7 @@ func test_chaque_ennemi_a_les_champs_requis(v: Verif) -> void:
 
 func test_chaque_vague_normale_force_une_esquive(v: Verif) -> void:
 	for chapitre in Chapitres.nombre():
-		for numero in [1, 5, 12, 35, 45]:
+		for numero in [1, 4, 12, 24, 29]:
 			for vague in Vagues.pour_salle(numero, chapitre, 17):
 				var menace_distance := false
 				for id in vague:

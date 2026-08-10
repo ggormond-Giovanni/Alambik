@@ -4,8 +4,8 @@ func test_paire_non_ordonnee(v: Verif) -> void:
 	v.egal(Recettes.essence_pour("braise", "ricochet"), Recettes.essence_pour("ricochet", "braise"),
 		"l'ordre des deux reactifs ne compte pas")
 
-func test_dix_recettes(v: Verif) -> void:
-	v.egal(Recettes.TABLE.size(), 10, "la V1 compte dix recettes")
+func test_onze_recettes_majeures(v: Verif) -> void:
+	v.egal(Recettes.TABLE.size(), 11, "onze fusions ont une identité entièrement dédiée")
 
 func test_paire_sans_recette_majeure_donne_un_amalgame(v: Verif) -> void:
 	var id := Recettes.essence_pour("fiole_de_vie", "perforation")
@@ -14,6 +14,16 @@ func test_paire_sans_recette_majeure_donne_un_amalgame(v: Verif) -> void:
 	v.vrai(amalgame != null and amalgame.est_essence, "l'amalgame est une essence utilisable")
 	v.vrai("fiole_de_vie" in amalgame.mods["drapeaux"], "il conserve le bonus de vie")
 	v.vrai(int(amalgame.mods["perforations_add"]) == 1, "il conserve la perforation")
+	var signatures := (amalgame.mods.get("drapeaux", []) as Array).filter(
+		func(drapeau: String) -> bool: return drapeau.begins_with("fusion_"))
+	v.egal(signatures.size(), 1, "meme un amalgame generique change la mecanique du tir")
+
+func test_perforation_ricochet_devient_un_paradoxe(v: Verif) -> void:
+	var id := Recettes.essence_pour("perforation", "ricochet")
+	v.egal(id, "paradoxe_balistique", "la paire a sa propre essence")
+	var essence := CatalogueEssences.par_id(id)
+	v.vrai("perfore_tout" in essence.mods["drapeaux"], "elle traverse tous les ennemis")
+	v.vrai("rebond_murs_infini" in essence.mods["drapeaux"], "elle rebondit sans stock de charges")
 
 func test_toutes_les_paires_de_base_existent(v: Verif) -> void:
 	var ids := CatalogueReactifs.ids()

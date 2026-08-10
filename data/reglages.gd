@@ -9,12 +9,12 @@ extends RefCounted
 # tests headless doivent pouvoir lire l'equilibrage sans en monter une.
 
 const HEROS_PV := 100.0
-const HEROS_VITESSE := 500.0
+const HEROS_VITESSE := 560.0
 const HEROS_ACCELERATION := 3100.0
 const HEROS_FREINAGE := 4200.0
 const HEROS_CADENCE := 2.4          # tirs par seconde
 const HEROS_INVULNERABILITE := 0.6  # secondes apres un coup recu
-const HEROS_RAYON := 34.0
+const HEROS_RAYON := 31.0
 
 const TIR_DEGATS := 10.0
 const TIR_VITESSE := 900.0
@@ -54,13 +54,13 @@ const RAFALE_INTERVALLE := 0.07
 const BOUCLIER_EXPLOSION_RAYON := 260.0
 
 const ARENE_MARGE_LATERALE := 32.0
-const ARENE_HAUT := 240.0            # sous le HUD
-const ARENE_BAS := 160.0             # garde la zone principale du pouce libre
+const ARENE_HAUT := 128.0            # une seule barre compacte sous la safe area
+const ARENE_BAS := 64.0              # le joystick flotte par-dessus l'arene
 
 # La longueur d'un chapitre et la place de ses alambics vivent dans
 # data/chapitres.gd : ces constantes ne servent plus qu'au repli, quand aucun
 # chapitre n'est charge.
-const SALLES_PAR_RUN := 50
+const SALLES_PAR_RUN := 30
 
 # Montee en puissance sur la longueur d'un chapitre. Cinquante pages a
 # difficulte plate seraient cinquante fois la meme page.
@@ -69,7 +69,10 @@ const SALLES_PAR_RUN := 50
 # geometrique. Cales sur la puissance mesuree du heros au meme endroit.
 const MONTEE_PV := 15.0
 const MONTEE_DEGATS := 1.00
-const MI_BOSS_PART_PV := 0.45
+const DEFI_MONTEE_PV := 7.0       # x8 entre la premiere et la derniere rencontre
+const DEFI_MONTEE_DEGATS := 1.0   # x2 sur les degats, en plus de la densite
+const DEFI_PV_BASE := 1.25
+const DEFI_DEGATS_BASE := 1.15
 
 # Un reactif se reprend, mais pas indefiniment : sans plafond, une descente de
 # cinquante pages se termine en empilant quinze fois le meme.
@@ -77,13 +80,18 @@ const MI_BOSS_PART_PV := 0.45
 # intouchable des la page 30 : une page sur deux, et le choix reprend du poids.
 const COPIES_MAX := 3
 const SOIN_REPOS := 0.30     # part des PV max rendue par une page de repos
-const SOIN_ALAMBIC := 0.20   # respiration garantie deux fois par chapitre
+const SOIN_ALAMBIC := 0.20   # respiration garantie avant chaque boss
+const BONUS_SIMPLE_DEGATS := 0.06
+const BONUS_SIMPLE_PV := 8.0
+const BONUS_SIMPLE_REDUCTION := 0.04
+const BONUS_SIMPLE_SOIN := 0.22
 
-# Les augments suivent le niveau du heros, pas les portes franchies. Le cout
-# croissant donne beaucoup de choix au debut puis espace progressivement les
-# evolutions, comme la courbe d'une run d'action.
-const EXPERIENCE_PREMIER_NIVEAU := 10
-const EXPERIENCE_PAR_NIVEAU := 12
+# Les niveaux 2 a 19 ouvrent chacun un element d'arsenal. Le dernier palier est
+# un prestige visible et un bond de puissance, jamais un dix-neuvieme sort.
+const NIVEAU_HEROS_MAX := 20
+const PRESTIGE_PV := 20.0
+const PRESTIGE_DEGATS := 1.15
+const PRESTIGE_VITESSE := 1.08
 
 const DELAI_ENTRE_VAGUES := 0.7
 # Un invocateur qui produit plus vite qu'on ne tue rend la salle infinie : la

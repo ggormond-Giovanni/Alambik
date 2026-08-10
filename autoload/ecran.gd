@@ -1,5 +1,9 @@
 extends Node
 
+# 112 unités sur notre viewport de 1080 correspondent à une cible confortable
+# sur un téléphone courant. Aucun bouton essentiel ne doit passer dessous.
+const CIBLE_TACTILE := 112.0
+
 # L'encoche et la barre de navigation mangent le haut et le bas de l'ecran.
 # Tout ce qui est tactile doit rester dans la zone sure, sinon le pouce tape
 # le systeme au lieu du jeu. Les marges sont exprimees dans le viewport de

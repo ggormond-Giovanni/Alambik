@@ -12,8 +12,18 @@ func test_sentinelle_tire_a_portee(v: Verif) -> void:
 func test_sentinelle_attend_si_pas_rechargee(v: Verif) -> void:
 	v.egal(Cerveaux.sentinelle(500.0, 700.0, 0.4), "attendre", "en recharge, elle attend")
 
-func test_sentinelle_hors_portee(v: Verif) -> void:
-	v.egal(Cerveaux.sentinelle(900.0, 700.0, 0.0), "attendre", "hors de portee, elle attend")
+func test_sentinelle_tire_depuis_toute_l_arene(v: Verif) -> void:
+	v.egal(Cerveaux.sentinelle(1800.0, 700.0, 0.0), "tirer", "la distance ne neutralise jamais un tireur")
+	v.vrai(float(CatalogueEnnemis.TOUS["plume_sentinelle"]["portee_projectile"]) >= 2000.0,
+		"son projectile traverse toute l'arene")
+
+func test_les_tireurs_laissent_un_temps_d_esquive(v: Verif) -> void:
+	v.vrai(float(CatalogueEnnemis.TOUS["plume_sentinelle"]["recharge"]) >= 1.15,
+		"la sentinelle espace ses eventails")
+	v.vrai(float(CatalogueEnnemis.TOUS["encrier_rampant"]["recharge"]) >= 1.90,
+		"le crachat du rampant ne se repete pas trop vite")
+	v.vrai(float(CatalogueEnnemis.TOUS["scribe_essaimeur"]["recharge"]) >= 2.90,
+		"le cercle du scribe laisse respirer")
 
 func test_veloce_prepare_puis_charge(v: Verif) -> void:
 	v.egal(Cerveaux.veloce(600.0, "repos", 0.0), "preparer", "de loin, elle se prepare")

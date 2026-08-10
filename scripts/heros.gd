@@ -13,7 +13,8 @@ signal morte
 signal sillage_depose(position: Vector2, gelant: bool)
 
 var stats := Stats.depuis_reglages(ReglagesJoueur.rangs_competences_effectifs(), ReglagesJoueur.bonus_niveau_pv(),
-	ReglagesJoueur.multiplicateur_niveau_degats(), ReglagesJoueur.multiplicateur_niveau_vitesse(), ReglagesJoueur.passifs_equipes_effectifs())
+	ReglagesJoueur.multiplicateur_niveau_degats(), ReglagesJoueur.multiplicateur_niveau_vitesse(), ReglagesJoueur.passifs_equipes_effectifs(),
+	ReglagesJoueur.bonus_objets_effectifs())
 var tir_courant: Tir
 var bouclier := 0
 var limites := Rect2(Vector2(80, 300), Vector2(920, 1400))
@@ -55,6 +56,7 @@ func recalculer() -> void:
 	stats.vitesse = Reglages.HEROS_VITESSE * ReglagesJoueur.multiplicateur_niveau_vitesse() \
 		* ArbreCompetences.multiplicateur_vitesse(ReglagesJoueur.rangs_competences_effectifs()) \
 		* Sorts.multiplicateur_vitesse(ReglagesJoueur.passifs_equipes_effectifs()) \
+		* (1.0 + float(ReglagesJoueur.bonus_objets_effectifs()["vitesse"])) \
 		* (Reglages.PAS_DE_CHAT_FACTEUR if "pas_de_chat" in drapeaux else 1.0)
 	if "fiole_de_vie" in drapeaux and not _fiole_appliquee:
 		_fiole_appliquee = true
@@ -185,6 +187,7 @@ func recevoir_degats(montant: float, _effets: Array = []) -> void:
 	_secousse = 1.0
 	var ratio_pv := stats.pv / maxf(1.0, stats.pv_max)
 	stats.blesser(montant * (1.0 - ArbreCompetences.reduction_degats(ReglagesJoueur.rangs_competences_effectifs())) \
+		* (1.0 - Jeu.reduction_degats_run()) \
 		* Sorts.multiplicateur_degats_recus(ReglagesJoueur.passifs_equipes_effectifs()) \
 		* Sorts.multiplicateur_degats_recus_conditionnel(ReglagesJoueur.passifs_equipes_effectifs(), ratio_pv))
 	touchee.emit(global_position)
@@ -192,7 +195,7 @@ func recevoir_degats(montant: float, _effets: Array = []) -> void:
 	if stats.est_mort():
 		if _seconde_chance_disponible and ReglagesJoueur.passifs_equipes_effectifs().has("seconde_chance"):
 			_seconde_chance_disponible = false
-			stats.pv = stats.pv_max * 0.35
+			stats.pv = stats.pv_max * 0.35 * float(ReglagesJoueur.passifs_equipes_effectifs()["seconde_chance"])
 			bouclier = 1
 			Sons.jouer("fusion", -7.0)
 			return
@@ -213,7 +216,7 @@ func _draw() -> void:
 
 	# Ombre portee : ancre la silhouette au sol, sinon elle flotte sans poids.
 	draw_set_transform(Vector2(0, r * 0.85), 0.0, Vector2(1.0, 0.40))
-	draw_circle(Vector2.ZERO, r * 1.05, Color(0, 0, 0, 0.45))
+	draw_circle(Vector2.ZERO, r * 1.05, Color(0, 0, 0, 0.26))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	if _invulnerable > 0.0 and fmod(_invulnerable, 0.16) > 0.08:
@@ -224,7 +227,7 @@ func _draw() -> void:
 
 	# Le sprite peint remplace la silhouette primitive. Sa taille depasse un peu
 	# la collision pour rester lisible sur un ecran de telephone.
-	var taille := r * 5.0
+	var taille := r * 4.65
 	var modulation := Color.WHITE
 	if _invulnerable > 0.0:
 		modulation = Color(1.0, 0.72, 0.76) if fmod(_invulnerable, 0.16) < 0.08 else Color.WHITE
@@ -241,7 +244,7 @@ func _draw() -> void:
 		# Les poses de course sont plus basses dans leur ligne source que les poses
 		# de tir. Deux ancres compensent cet ecart pour garder les pieds au meme point.
 		var ancre_y := -0.89 if cadre >= 4 else -1.30
-		var destination := Rect2(Vector2(-taille * 0.55, taille * ancre_y), Vector2(taille * 1.10, taille * 2.20))
+		var destination := Rect2(Vector2(-taille * 0.46, taille * ancre_y), Vector2(taille * 0.92, taille * 2.14))
 		draw_texture_rect_region(_texture_heros, destination, source, modulation)
 	else:
 		_dessiner_repli(r, teinte)
@@ -272,7 +275,7 @@ func _dessiner_repli(r: float, teinte: Color) -> void:
 	var capuche := Dessin.goutte(Vector2(0, -r * 0.15), r * 1.35, PI, 1.15)
 	draw_colored_polygon(capuche, Palette.HEROS_ROBE)
 	Dessin.contour(self, capuche, Palette.HEROS_ACCENT, 3.0)
-	draw_circle(Vector2(0, -r * 0.2), r * 0.62, Color(0.035, 0.02, 0.055))
+	draw_circle(Vector2(0, -r * 0.2), r * 0.62, Color(0.13, 0.08, 0.19))
 	for cote in [-1.0, 1.0]:
 		draw_circle(Vector2(cote * r * 0.22, -r * 0.22), r * 0.11, Palette.HEROS_ACCENT)
 	draw_circle(Vector2(r * 0.65, r * 0.2), r * 0.22, teinte)

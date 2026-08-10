@@ -14,6 +14,7 @@ var _onglets := {}
 var _liste: VBoxContainer
 var _resume: Label
 var _message: Label
+var integre_menu := false
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -28,7 +29,7 @@ func _construire() -> void:
 	marge.add_theme_constant_override("margin_left", 34)
 	marge.add_theme_constant_override("margin_right", 34)
 	marge.add_theme_constant_override("margin_top", int(Ecran.marge_haute()) + 180)
-	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 30)
+	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + (170 if integre_menu else 30))
 	add_child(marge)
 	var colonne := VBoxContainer.new()
 	colonne.add_theme_constant_override("separation", 12)
@@ -47,7 +48,7 @@ func _construire() -> void:
 		var bouton := Button.new()
 		bouton.text = categorie.to_upper()
 		bouton.toggle_mode = true
-		bouton.custom_minimum_size = Vector2(0, 92)
+		bouton.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
 		bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bouton.add_theme_font_size_override("font_size", 21)
 		StyleInterface.styliser_bouton(bouton, COULEURS[categorie], true)
@@ -69,13 +70,14 @@ func _construire() -> void:
 	_message.add_theme_font_size_override("font_size", 21)
 	_message.add_theme_color_override("font_color", Palette.OR)
 	colonne.add_child(_message)
-	var retour := Button.new()
-	retour.text = "RETOUR AU GRIMOIRE"
-	retour.custom_minimum_size = Vector2(0, 102)
-	retour.add_theme_font_size_override("font_size", 29)
-	StyleInterface.styliser_bouton(retour, Palette.TEXTE_ATTENUE, true)
-	retour.pressed.connect(func() -> void: ferme.emit())
-	colonne.add_child(retour)
+	if not integre_menu:
+		var retour := Button.new()
+		retour.text = "RETOUR AU GRIMOIRE"
+		retour.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
+		retour.add_theme_font_size_override("font_size", 29)
+		StyleInterface.styliser_bouton(retour, Palette.TEXTE_ATTENUE, true)
+		retour.pressed.connect(func() -> void: ferme.emit())
+		colonne.add_child(retour)
 
 func _catalogue() -> Dictionary:
 	match _categorie:
@@ -94,9 +96,14 @@ func _afficher(categorie: String) -> void:
 	_rafraichir_resume()
 
 func _ajouter_choix(id: String, donnees: Dictionary) -> void:
-	var ouvert := Sorts.debloque(id, ReglagesJoueur.niveau_heros, ReglagesJoueur.mode_dev)
+	var ouvert := ReglagesJoueur.sort_debloque(id)
+	var decouvert := ReglagesJoueur.sort_decouvert(id)
+	var rang := ReglagesJoueur.rang_sort(id)
 	var equipe := id == ReglagesJoueur.sort_actif_equipe or id == ReglagesJoueur.ultime_equipe or id in ReglagesJoueur.passifs_equipes
-	var etat := "ÉQUIPÉ" if equipe else "APPUYER POUR ÉQUIPER" if ouvert else "NIVEAU HÉROS %d" % int(donnees["niveau"])
+	var etat := "ÉQUIPÉ • NIVEAU %d/5 • %d %%" % [rang, roundi(ReglagesJoueur.efficacite_sort(id) * 100.0)] if equipe \
+		else "NIVEAU %d/5 • %d %% • TOUCHER POUR ÉQUIPER" % [rang, roundi(ReglagesJoueur.efficacite_sort(id) * 100.0)] if ouvert \
+		else "NIVEAU 0/5 • À OBTENIR EN DÉFI" if decouvert \
+		else "DÉBLOCAGE AU NIVEAU HÉROS %d" % int(donnees["niveau"])
 	var bouton := Button.new()
 	bouton.text = "%s\n%s\n%s" % [donnees["nom"], donnees["description"], etat]
 	bouton.custom_minimum_size = Vector2(0, 150)
