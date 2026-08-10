@@ -7,6 +7,15 @@ extends RefCounted
 const MARGE_FUSION := 1.15   # une essence doit depasser ses composants d'au moins 15 %
 const ECART_MAXIMAL := 2.2   # rapport tolere entre la meilleure main et la mediane
 
+func test_les_multiplicateurs_de_projectiles_ont_un_malus(v: Verif) -> void:
+	for id in ["fleche_double", "eclat_de_verre"]:
+		var reactif := CatalogueReactifs.par_id(id)
+		v.vrai(float(reactif.mods.get("degats_mult", 1.0)) < 1.0,
+			"%s paie sa multiplication de projectiles en degats" % reactif.nom)
+	var rafale := CatalogueEssences.par_id("rafale_alambic")
+	v.vrai(float(rafale.mods["degats_mult"]) < 1.0 and float(rafale.mods["cadence_mult"]) < 1.0,
+		"la rafale paie ses tirs supplementaires en degats et cadence")
+
 func test_toute_fusion_bat_ses_composants(v: Verif) -> void:
 	for cle in Recettes.TABLE:
 		var morceaux: PackedStringArray = (cle as String).split("+")

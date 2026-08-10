@@ -5,12 +5,36 @@ extends Control
 
 var _secousse := 0.0
 var _anim := 0.0
-var _pv_affiches := 1.0
+signal pause_demandee
+
+var _style_compact: StyleBoxFlat
+var _style_progression: StyleBoxFlat
+var _style_remplissage: StyleBoxFlat
+var _bouton_pause: Button
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	Jeu.inventaire_change.connect(rafraichir)
+	Jeu.experience_changee.connect(rafraichir)
+	ReglagesJoueur.maitrise_changee.connect(rafraichir)
+	_style_compact = StyleInterface.panneau(Color(0.035, 0.045, 0.060, 0.94), Color(Palette.BORD_PAGE, 0.42), 20, 7)
+	_style_progression = StyleInterface.panneau(Color(0.018, 0.026, 0.038, 0.94), Color(0.0, 0.0, 0.0, 0.55), 13, 3)
+	_style_remplissage = StyleInterface.panneau(Color(0.84, 0.58, 0.18), Color(1.0, 0.82, 0.38, 0.75), 10, 0)
+	_bouton_pause = Button.new()
+	_bouton_pause.text = "Ⅱ"
+	_bouton_pause.custom_minimum_size = Vector2(82.0, 82.0)
+	_bouton_pause.size = Vector2(82.0, 82.0)
+	_bouton_pause.add_theme_font_size_override("font_size", 34)
+	StyleInterface.styliser_bouton(_bouton_pause, Palette.TEXTE_ATTENUE, true)
+	_bouton_pause.pressed.connect(func() -> void: pause_demandee.emit())
+	add_child(_bouton_pause)
+	_replacer_bouton()
+	get_viewport().size_changed.connect(_replacer_bouton)
+
+func _replacer_bouton() -> void:
+	if _bouton_pause != null:
+		_bouton_pause.position = Vector2(28.0, Ecran.marge_haute() + 14.0)
 
 func rafraichir() -> void:
 	queue_redraw()
@@ -21,51 +45,39 @@ func secouer() -> void:
 func _process(delta: float) -> void:
 	_anim += delta
 	_secousse = maxf(0.0, _secousse - delta * 3.0)
-	var heros := get_tree().get_first_node_in_group("heros")
-	if heros != null:
-		var vise: float = clampf(heros.stats.pv / maxf(1.0, heros.stats.pv_max), 0.0, 1.0)
-		_pv_affiches = lerpf(_pv_affiches, vise, minf(1.0, delta * 8.0))
 	queue_redraw()
 
 func _draw() -> void:
 	var police := ThemeDB.fallback_font
 	var largeur := get_viewport_rect().size.x
 	var haut := Ecran.marge_haute() + 28.0
-	var tremble := Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _secousse * 6.0
+	var tremble := Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _secousse * 4.0
+	var centre_x := largeur * 0.5
+	var panneau_progression := Rect2(Vector2(142.0, haut - 12.0) + tremble, Vector2(largeur - 294.0, 102.0))
+	draw_style_box(_style_compact, panneau_progression)
+	draw_string(police, Vector2(panneau_progression.position.x, haut + 25.0), "NIV %02d  •  PAGE %02d" % [Jeu.niveau, Jeu.salle_courante],
+		HORIZONTAL_ALIGNMENT_CENTER, panneau_progression.size.x, 31, Palette.TEXTE)
+	draw_string(police, Vector2(panneau_progression.position.x, haut + 48.0), "%s  —  XP %d / %d" % [Jeu.chapitre_courant()["nom"], Jeu.experience, Jeu.experience_requise()],
+		HORIZONTAL_ALIGNMENT_CENTER, panneau_progression.size.x, 19, Palette.TEXTE_ATTENUE)
+	var barre := Rect2(panneau_progression.position + Vector2(24.0, 69.0), Vector2(panneau_progression.size.x - 48.0, 18.0))
+	draw_style_box(_style_progression, barre)
+	var progression := clampf(float(Jeu.experience) / float(maxi(1, Jeu.experience_requise())), 0.02, 1.0)
+	var remplie := Rect2(barre.position + Vector2(3.0, 3.0), Vector2((barre.size.x - 6.0) * progression, barre.size.y - 6.0))
+	draw_style_box(_style_remplissage, remplie)
 
-	var heros := get_tree().get_first_node_in_group("heros")
-	if heros == null:
-		return
-
-	# Barre de vie : large, lisible d'un coup d'oeil au pouce.
-	var barre := Rect2(Vector2(82.0, haut) + tremble, Vector2(largeur - 142.0, 38.0))
-	draw_rect(barre.grow(8.0), Color(0.025, 0.016, 0.045, 0.92))
-	draw_rect(barre.grow(4.0), Color(Palette.BORD_PAGE, 0.75), false, 3.0)
-	draw_rect(barre, Color(0.13, 0.085, 0.17))
-	var remplie := barre
-	remplie.size.x *= _pv_affiches
-	var teinte := Palette.DANGER.lerp(Color(0.55, 0.92, 0.62), _pv_affiches)
-	draw_rect(remplie, teinte)
-	draw_rect(Rect2(remplie.position, Vector2(remplie.size.x, 9.0)), Color(1, 1, 1, 0.24))
-	draw_rect(barre, Color(Palette.OR, 0.55), false, 2.0)
-	var coeur := barre.position + Vector2(-25.0, 19.0)
-	Dessin.halo(self, coeur, 30.0, Color(Palette.DANGER, 0.48), 3)
-	draw_colored_polygon(Dessin.goutte(coeur, 15.0, PI, 1.1), Palette.DANGER)
-	draw_string(police, barre.position + Vector2(14.0, 26.0),
-		"%d / %d" % [roundi(heros.stats.pv), roundi(heros.stats.pv_max)],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.10, 0.09, 0.13))
-
-	# Salle courante, en chiffres de page.
-	draw_string(police, Vector2(60.0, haut + 80.0), "%s  —  PAGE %02d / %02d" % [Jeu.chapitre_courant()["nom"], Jeu.salle_courante, Jeu.salles_du_chapitre()],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Palette.TEXTE)
-	if heros.bouclier > 0:
-		draw_string(police, Vector2(largeur - 260.0, haut + 74.0), "Bouclier",
-			HORIZONTAL_ALIGNMENT_RIGHT, 200, 28, Color(0.82, 0.90, 1.0))
+	var compteur := Rect2(largeur - 126.0, haut - 12.0, 98.0, 82.0)
+	draw_style_box(_style_compact, compteur)
+	var gemme := Dessin.polygone_regulier(Vector2(compteur.position.x + 29.0, compteur.position.y + 41.0), 14.0, 4, PI * 0.25)
+	draw_colored_polygon(gemme, Palette.ESSENCE)
+	draw_string(police, Vector2(compteur.position.x + 48.0, compteur.position.y + 52.0), str(Jeu.inventaire.size()),
+		HORIZONTAL_ALIGNMENT_LEFT, 42.0, 28, Palette.TEXTE)
+	draw_string(police, Vector2(compteur.position.x - 8.0, compteur.position.y + 104.0), "✦ %s" % ReglagesJoueur.points_maitrise_affiches(),
+		HORIZONTAL_ALIGNMENT_CENTER, compteur.size.x + 16.0, 22, Palette.ESSENCE)
 
 	# Inventaire : une pastille par reactif, teintee et glyphee. C'est la seule
 	# trace visible de ce que le joueur a construit pendant la run.
-	var x := 62.0
-	var y := haut + 122.0
+	var x := centre_x - float(Jeu.inventaire_groupe().size() - 1) * 29.0
+	var y := haut + 124.0
 	for entree in Jeu.inventaire_groupe():
 		var id: String = entree[0]
 		var r := Jeu.reactif(id)
@@ -83,6 +95,3 @@ func _draw() -> void:
 			draw_string(police, centre + Vector2(12.0, 22.0), "x%d" % int(entree[1]),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.OR)
 		x += 58.0
-		if x > get_viewport_rect().size.x - 60.0:
-			x = 62.0
-			y += 58.0

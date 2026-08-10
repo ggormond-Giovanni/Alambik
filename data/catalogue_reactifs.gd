@@ -7,8 +7,8 @@ extends RefCounted
 
 static var TOUS := {
 	"fleche_double": Reactif.creer("fleche_double", "Flèche double",
-		"Un projectile de plus, en léger éventail.",
-		{"nb_projectiles_add": 1, "angle_eventail_add": deg_to_rad(5.0), "ecart_lateral_add": 30.0, "degats_mult": 0.85},
+		"Un projectile de plus, en léger éventail, mais chaque trait frappe moins fort.",
+		{"nb_projectiles_add": 1, "angle_eventail_add": deg_to_rad(5.0), "ecart_lateral_add": 30.0, "degats_mult": 0.72},
 		false, Color(0.98, 0.82, 0.42), "eventail", 2),
 	"ricochet": Reactif.creer("ricochet", "Ricochet",
 		"Les projectiles rebondissent une fois.",
@@ -35,8 +35,8 @@ static var TOUS := {
 		{"effets": ["acide"]},
 		false, Color(0.62, 0.98, 0.42), "goutte", 1),
 	"eclat_de_verre": Reactif.creer("eclat_de_verre", "Éclat de verre",
-		"Les projectiles se fragmentent à l'impact.",
-		{"fragments_add": 2},
+		"Les projectiles se fragmentent à l'impact, au prix de dégâts directs réduits.",
+		{"fragments_add": 2, "degats_mult": 0.88},
 		false, Color(0.80, 0.96, 0.94), "eclats", 2),
 	"main_leste": Reactif.creer("main_leste", "Main leste",
 		"Cadence de tir augmentée.",

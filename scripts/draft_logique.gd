@@ -1,10 +1,8 @@
 class_name DraftLogique
 extends RefCounted
 
-# Sur cinquante pages, un joueur voit une quarantaine de drafts pour quinze
-# reactifs : reprendre un reactif deja possede doit etre possible, sinon le
-# panneau n'a plus rien a proposer des la vingtieme page. D'ou les plafonds de
-# copies, et la page de repos quand il ne reste vraiment plus rien.
+# Les choix viennent des niveaux d'experience. Reprendre un reactif deja possede
+# reste possible, avec des rendements decroissants et un plafond de copies.
 
 const REPOS := "repos"
 
@@ -34,6 +32,18 @@ static func proposer(inventaire: Array, rng: RandomNumberGenerator, nb := 3) -> 
 		# Tout est au plafond : on ne laisse pas une page sans recompense.
 		tirage.append(REPOS)
 	return tirage
+
+# Tous les trois niveaux, un heros blesse peut sacrifier une proposition pour
+# recuperer des PV. Le soin reste un choix, pas une regeneration gratuite.
+static func avec_repos(propositions: Array[String], niveau: int, est_blesse: bool) -> Array[String]:
+	var resultat: Array[String] = propositions.duplicate()
+	if not est_blesse or niveau % 3 != 0:
+		return resultat
+	if resultat.is_empty():
+		resultat.append(REPOS)
+	else:
+		resultat[resultat.size() - 1] = REPOS
+	return resultat
 
 # Second chemin vers les fusions : si le joueur possede deja les deux
 # composants d'une recette, le draft peut proposer l'essence elle-meme. Elle

@@ -1,6 +1,6 @@
 extends RefCounted
 
-# Cinquante pages par chapitre : on ne peut plus verifier chaque page a la main,
+# Cinquante pages par chapitre : on verifie les proprietes sur chacune.
 # on verifie les proprietes qui doivent tenir sur toutes.
 
 func test_chaque_page_de_combat_a_des_vagues(v: Verif) -> void:
@@ -67,6 +67,26 @@ func test_chaque_ennemi_a_les_champs_requis(v: Verif) -> void:
 		for champ in ["pv", "vitesse", "degats", "portee", "cerveau", "couleur", "rayon"]:
 			v.vrai(e.has(champ), "l'ennemi %s doit definir %s" % [id, champ])
 		v.vrai(e["pv"] > 0.0, "l'ennemi %s doit avoir des PV positifs" % id)
+
+func test_chaque_vague_normale_force_une_esquive(v: Verif) -> void:
+	for chapitre in Chapitres.nombre():
+		for numero in [1, 5, 12, 35, 45]:
+			for vague in Vagues.pour_salle(numero, chapitre, 17):
+				var menace_distance := false
+				for id in vague:
+					var ennemi := CatalogueEnnemis.par_id(id)
+					menace_distance = menace_distance or ennemi["cerveau"] in ["sentinelle", "essaimeur"]
+				v.vrai(menace_distance, "chaque vague de la page %d contient une menace a distance" % numero)
+
+func test_les_archétypes_imposent_chacun_une_contrainte(v: Verif) -> void:
+	var rampant := CatalogueEnnemis.par_id("encrier_rampant")
+	var sentinelle := CatalogueEnnemis.par_id("plume_sentinelle")
+	var veloce := CatalogueEnnemis.par_id("tache_veloce")
+	var essaimeur := CatalogueEnnemis.par_id("scribe_essaimeur")
+	v.vrai(rampant.has("vitesse_projectile"), "le rampant crache des projectiles")
+	v.vrai(int(sentinelle.get("projectiles", 0)) >= 3, "la sentinelle tire une salve")
+	v.vrai(float(veloce.get("duree_charge", 0.0)) > 0.0, "la veloce charge")
+	v.vrai(int(essaimeur.get("projectiles_cercle", 0)) >= 6, "l'essaimeur tire une onde")
 
 func test_les_invocations_pointent_vers_un_ennemi_connu(v: Verif) -> void:
 	for id in CatalogueEnnemis.TOUS:

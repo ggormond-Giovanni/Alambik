@@ -7,8 +7,22 @@ func test_paire_non_ordonnee(v: Verif) -> void:
 func test_dix_recettes(v: Verif) -> void:
 	v.egal(Recettes.TABLE.size(), 10, "la V1 compte dix recettes")
 
-func test_paire_sans_recette(v: Verif) -> void:
-	v.egal(Recettes.essence_pour("fiole_de_vie", "perforation"), "", "cette paire ne fusionne pas")
+func test_paire_sans_recette_majeure_donne_un_amalgame(v: Verif) -> void:
+	var id := Recettes.essence_pour("fiole_de_vie", "perforation")
+	v.vrai(id.begins_with(Recettes.PREFIXE_AMALGAME), "la paire produit un amalgame")
+	var amalgame := CatalogueEssences.par_id(id)
+	v.vrai(amalgame != null and amalgame.est_essence, "l'amalgame est une essence utilisable")
+	v.vrai("fiole_de_vie" in amalgame.mods["drapeaux"], "il conserve le bonus de vie")
+	v.vrai(int(amalgame.mods["perforations_add"]) == 1, "il conserve la perforation")
+
+func test_toutes_les_paires_de_base_existent(v: Verif) -> void:
+	var ids := CatalogueReactifs.ids()
+	var nombre := 0
+	for i in ids.size():
+		for j in range(i + 1, ids.size()):
+			nombre += 1
+			v.vrai(Recettes.essence_pour(ids[i], ids[j]) != "", "%s et %s se combinent" % [ids[i], ids[j]])
+	v.egal(nombre, 105, "quinze augments forment 105 paires")
 
 func test_composants_existants(v: Verif) -> void:
 	for cle in Recettes.TABLE:

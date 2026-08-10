@@ -10,8 +10,8 @@ static var TOUS := {
 		{"rebonds_add": 2, "effets": ["braise"], "drapeaux": ["flaque_au_rebond"]},
 		true, Color(1.00, 0.62, 0.28), "flamme"),
 	"volee_echardes": Reactif.creer("volee_echardes", "Volée d'échardes",
-		"L'impact projette cinq fragments.",
-		{"nb_projectiles_add": 1, "fragments_add": 5, "angle_eventail_add": deg_to_rad(6.0), "ecart_lateral_add": 34.0},
+		"L'impact projette cinq fragments ; chaque projectile inflige moins de dégâts.",
+		{"nb_projectiles_add": 1, "fragments_add": 5, "angle_eventail_add": deg_to_rad(6.0), "ecart_lateral_add": 34.0, "degats_mult": 0.62},
 		true, Color(0.88, 0.98, 0.92), "eclats"),
 	"marteau_de_glace": Reactif.creer("marteau_de_glace", "Marteau de glace",
 		"Projectile lent et lourd qui gèle brièvement.",
@@ -34,8 +34,8 @@ static var TOUS := {
 		{"drapeaux": ["sillage", "sillage_gelant"], "effets": ["givre"], "cadence_mult": 1.15, "degats_mult": 1.25},
 		true, Color(0.62, 0.94, 1.00), "vague"),
 	"rafale_alambic": Reactif.creer("rafale_alambic", "Rafale d'alambic",
-		"Chaque tir part en rafale de trois.",
-		{"cadence_mult": 1.35, "drapeaux": ["rafale"], "nb_projectiles_add": 1, "ecart_lateral_add": 26.0, "degats_mult": 0.9},
+		"Chaque tir part en rafale de trois, avec une cadence et des dégâts réduits.",
+		{"cadence_mult": 0.82, "drapeaux": ["rafale"], "nb_projectiles_add": 1, "ecart_lateral_add": 26.0, "degats_mult": 0.62},
 		true, Color(1.00, 0.86, 0.50), "triple_barre"),
 	"aura_de_cristal": Reactif.creer("aura_de_cristal", "Aura de cristal",
 		"Le bouclier brisé explose en éclats gelants.",
@@ -48,7 +48,8 @@ static var TOUS := {
 }
 
 static func par_id(id: String) -> Reactif:
-	return TOUS.get(id)
+	var essence: Reactif = TOUS.get(id)
+	return essence if essence != null else Recettes.creer_amalgame(id)
 
 static func ids() -> Array[String]:
 	var liste: Array[String] = []

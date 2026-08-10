@@ -48,7 +48,9 @@ func _draw() -> void:
 	var origine := _logique.origine
 	var pouce := origine + _logique.direction() * _logique.intensite() * JoystickLogique.RAYON
 	draw_circle(origine, JoystickLogique.RAYON, Color(1, 1, 1, 0.06))
-	draw_arc(origine, JoystickLogique.RAYON, 0.0, TAU, 40, Color(1, 1, 1, 0.18), 3.0, true)
+	draw_circle(origine, JoystickLogique.RAYON * 0.72, Color(0.025, 0.018, 0.050, 0.36))
+	draw_arc(origine, JoystickLogique.RAYON, -PI * 0.5, -PI * 0.5 + TAU * maxf(0.04, _logique.intensite()), 48, Color(Palette.OR, 0.72), 5.0, true)
+	draw_arc(origine, JoystickLogique.RAYON, 0.0, TAU, 48, Color(1, 1, 1, 0.14), 2.0, true)
 	draw_arc(origine, JoystickLogique.RAYON * 0.28, 0.0, TAU, 24, Color(1, 1, 1, 0.12), 2.0, true)
 	if _logique.intensite() > 0.0:
 		draw_line(origine, pouce, Color(Palette.OR, 0.35), 4.0, true)

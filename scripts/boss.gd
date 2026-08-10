@@ -1,7 +1,7 @@
 class_name Boss
 extends CharacterBody2D
 
-const TEXTURE_CORRECTEUR := preload("res://assets/characters/boss_corrector.png")
+const CHEMIN_SPRITES := "res://assets/characters/sheets/boss_corrector_sheet.png"
 
 # Le Correcteur. Il n'introduit aucune mecanique que le joueur n'a pas deja
 # rencontree : les barrages reutilisent le projectile des ennemis, l'invocation
@@ -42,6 +42,7 @@ var _acide := 0.0
 var _gel := 0.0
 var _ancre := Vector2.ZERO
 var _direction_charge := Vector2.ZERO
+var _texture_boss: Texture2D
 
 func configurer(donnees_: Dictionary) -> void:
 	donnees = donnees_
@@ -54,6 +55,8 @@ func _ready() -> void:
 	collision_layer = 2
 	collision_mask = 4
 	_cible = get_tree().get_first_node_in_group("heros")
+	if ResourceLoader.exists(CHEMIN_SPRITES):
+		_texture_boss = load(CHEMIN_SPRITES)
 	($CollisionShape2D.shape as CircleShape2D).radius = donnees["rayon"]
 	# Il tient le haut de la page : le joueur garde toute la profondeur pour
 	# esquiver. Sans ancre fixe, il derivait dans un coin et devenait illisible.
@@ -213,6 +216,15 @@ func _draw() -> void:
 	Dessin.halo(self, Vector2.ZERO, r * 2.4, couleur, 5)
 	if _phase == 2:
 		Dessin.contour(self, Dessin.etoile(Vector2.ZERO, r * 1.6, r * 1.25, 9, _anim * 0.9), Color(Palette.DANGER, 0.5), 3.0)
-	var taille := r * 4.5
+	var taille := r * 4.9
 	var modulation := Color.WHITE.lerp(couleur, 0.12)
-	draw_texture_rect(TEXTURE_CORRECTEUR, Rect2(Vector2.ONE * -taille * 0.5, Vector2.ONE * taille), false, modulation)
+	if _texture_boss != null:
+		var attaque := _motif != "pause"
+		var cadre := int(_anim * (7.0 if attaque else 4.0)) % 4 + (4 if attaque else 0)
+		var cellule := Vector2(_texture_boss.get_width() / 4.0, _texture_boss.get_height() / 2.0)
+		var source := Rect2(Vector2(float(cadre % 4) * cellule.x, float(cadre / 4) * cellule.y), cellule)
+		draw_texture_rect_region(_texture_boss, Rect2(Vector2(-taille * 0.55, -taille), Vector2(taille * 1.1, taille * 2.0)), source, modulation)
+	else:
+		draw_circle(Vector2.ZERO, r * 1.25, couleur)
+		draw_circle(Vector2.ZERO, r * 0.58, Color(0.95, 0.86, 0.66))
+		draw_colored_polygon(Dessin.goutte(Vector2.ZERO, r * 0.42, 0.0, 1.4), Color(0.12, 0.02, 0.18))

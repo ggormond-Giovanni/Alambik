@@ -9,7 +9,9 @@ extends RefCounted
 # tests headless doivent pouvoir lire l'equilibrage sans en monter une.
 
 const HEROS_PV := 100.0
-const HEROS_VITESSE := 420.0
+const HEROS_VITESSE := 500.0
+const HEROS_ACCELERATION := 3100.0
+const HEROS_FREINAGE := 4200.0
 const HEROS_CADENCE := 2.4          # tirs par seconde
 const HEROS_INVULNERABILITE := 0.6  # secondes apres un coup recu
 const HEROS_RAYON := 34.0
@@ -51,9 +53,9 @@ const RAFALE_NOMBRE := 3
 const RAFALE_INTERVALLE := 0.07
 const BOUCLIER_EXPLOSION_RAYON := 260.0
 
-const ARENE_MARGE_LATERALE := 40.0
-const ARENE_HAUT := 260.0            # sous le HUD
-const ARENE_BAS := 220.0             # au-dessus de la zone du pouce
+const ARENE_MARGE_LATERALE := 32.0
+const ARENE_HAUT := 240.0            # sous le HUD
+const ARENE_BAS := 160.0             # garde la zone principale du pouce libre
 
 # La longueur d'un chapitre et la place de ses alambics vivent dans
 # data/chapitres.gd : ces constantes ne servent plus qu'au repli, quand aucun
@@ -73,9 +75,15 @@ const MI_BOSS_PART_PV := 0.45
 # cinquante pages se termine en empilant quinze fois le meme.
 # Une recompense a chaque page rendait chaque draft insignifiant et le heros
 # intouchable des la page 30 : une page sur deux, et le choix reprend du poids.
-const DRAFT_TOUTES_LES := 2
 const COPIES_MAX := 3
 const SOIN_REPOS := 0.30     # part des PV max rendue par une page de repos
+const SOIN_ALAMBIC := 0.20   # respiration garantie deux fois par chapitre
+
+# Les augments suivent le niveau du heros, pas les portes franchies. Le cout
+# croissant donne beaucoup de choix au debut puis espace progressivement les
+# evolutions, comme la courbe d'une run d'action.
+const EXPERIENCE_PREMIER_NIVEAU := 10
+const EXPERIENCE_PAR_NIVEAU := 12
 
 const DELAI_ENTRE_VAGUES := 0.7
 # Un invocateur qui produit plus vite qu'on ne tue rend la salle infinie : la

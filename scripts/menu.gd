@@ -1,14 +1,23 @@
 extends Control
 
-const TEXTURE_HEROS := preload("res://assets/characters/hero_alchemist.png")
+const CHEMIN_SPRITES_HEROS := "res://assets/characters/sheets/hero_alchemist_sheet.png"
+const ARBRE := preload("res://ui/arbre_competences.tscn")
+const SELECTION_GRIMOIRE := preload("res://ui/selection_grimoire.tscn")
 
 # Titre, bouton, meilleur resultat. Aucun sprite : le grimoire est dessine.
 
 var _anim := 0.0
 var _particules: Array[Dictionary] = []
+var _texture_heros: Texture2D
+var _bouton_arbre: Button
+var _bouton_dev: Button
+var _bouton_grimoire: Button
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	Sons.musique_menu()
+	if ResourceLoader.exists(CHEMIN_SPRITES_HEROS):
+		_texture_heros = load(CHEMIN_SPRITES_HEROS)
 	print("Alambic pret")
 	var alea := RandomNumberGenerator.new()
 	alea.seed = 20260801
@@ -20,6 +29,7 @@ func _ready() -> void:
 			"phase": alea.randf() * TAU,
 		})
 	_construire()
+	StyleInterface.animer_entree(self, 16.0)
 	Capture.programmer(self)
 
 func _construire() -> void:
@@ -35,25 +45,54 @@ func _construire() -> void:
 	colonne.add_theme_constant_override("separation", 16)
 	marge.add_child(colonne)
 
-	# Un bouton par chapitre : ceux qu'on n'a pas encore ouverts restent lisibles
-	# mais inertes, sinon on ne sait pas ce qu'il reste a faire.
-	for index in Chapitres.nombre():
-		var chapitre := Chapitres.par_index(index)
-		var ouvert := ReglagesJoueur.chapitre_debloque(index)
-		var atteinte := ReglagesJoueur.meilleure_du_chapitre(index)
-		var bouton := Button.new()
-		bouton.text = chapitre["nom"] if ouvert else "%s — verrouillé" % chapitre["nom"]
-		if ouvert and atteinte > 0:
-			bouton.text += "   (page %d / %d)" % [atteinte, chapitre["salles"]]
-		bouton.custom_minimum_size = Vector2(0, 118)
-		bouton.add_theme_font_size_override("font_size", 36)
-		bouton.add_theme_color_override("font_color", chapitre["teinte"] if ouvert else Palette.TEXTE_ATTENUE)
-		bouton.disabled = not ouvert
-		bouton.pressed.connect(func() -> void:
-			Sons.jouer("choix", -10.0)
-			ReglagesJoueur.choisir_chapitre(index)
-			get_tree().change_scene_to_file("res://scenes/run.tscn"))
-		colonne.add_child(bouton)
+	var outils := HBoxContainer.new()
+	outils.add_theme_constant_override("separation", 10)
+	colonne.add_child(outils)
+	_bouton_arbre = Button.new()
+	_bouton_arbre.custom_minimum_size = Vector2(0, 106)
+	_bouton_arbre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_bouton_arbre.add_theme_font_size_override("font_size", 30)
+	StyleInterface.styliser_bouton(_bouton_arbre, Palette.ESSENCE)
+	_bouton_arbre.pressed.connect(_ouvrir_arbre)
+	outils.add_child(_bouton_arbre)
+	_bouton_dev = Button.new()
+	_bouton_dev.custom_minimum_size = Vector2(180, 106)
+	_bouton_dev.add_theme_font_size_override("font_size", 23)
+	_bouton_dev.pressed.connect(_basculer_dev)
+	outils.add_child(_bouton_dev)
+	_rafraichir_bouton_arbre()
+
+	_bouton_grimoire = Button.new()
+	_bouton_grimoire.text = "CHOISIR UN GRIMOIRE\n10 livres • 50 pages chacun"
+	_bouton_grimoire.custom_minimum_size = Vector2(0, 136)
+	_bouton_grimoire.add_theme_font_size_override("font_size", 32)
+	StyleInterface.styliser_bouton(_bouton_grimoire, Palette.OR)
+	_bouton_grimoire.pressed.connect(_ouvrir_bibliotheque)
+	colonne.add_child(_bouton_grimoire)
+
+func _rafraichir_bouton_arbre() -> void:
+	_bouton_arbre.text = "NIV. %d • ARBRE ✦ %s" % [ReglagesJoueur.niveau_heros_effectif(), ReglagesJoueur.points_maitrise_affiches()]
+	_bouton_dev.text = "DEV\n%s" % ("ON" if ReglagesJoueur.mode_dev else "OFF")
+	StyleInterface.styliser_bouton(_bouton_dev, Palette.DANGER if ReglagesJoueur.mode_dev else Palette.TEXTE_ATTENUE, true)
+
+func _basculer_dev() -> void:
+	ReglagesJoueur.definir_mode_dev(not ReglagesJoueur.mode_dev)
+	Sons.jouer("choix", -12.0)
+	get_tree().reload_current_scene()
+
+func _ouvrir_arbre() -> void:
+	Sons.jouer("choix", -12.0)
+	var arbre := ARBRE.instantiate()
+	add_child(arbre)
+	arbre.ferme.connect(func() -> void:
+		arbre.queue_free()
+		_rafraichir_bouton_arbre())
+
+func _ouvrir_bibliotheque() -> void:
+	Sons.jouer("choix", -12.0)
+	var bibliotheque := SELECTION_GRIMOIRE.instantiate()
+	add_child(bibliotheque)
+	bibliotheque.ferme.connect(func() -> void: bibliotheque.queue_free())
 
 func _chapitres_ouverts() -> int:
 	var total := 0
@@ -112,9 +151,11 @@ func _draw() -> void:
 			draw_line(Vector2(x1, y), Vector2(x2, y), Color(Palette.PARCHEMIN_VEINE, 0.55), 3.0)
 	# Le personnage est la promesse visuelle du jeu des le premier ecran.
 	var taille_heros := 360.0 + sin(_anim * 2.0) * 5.0
-	draw_texture_rect(TEXTURE_HEROS,
-		Rect2(centre - Vector2(taille_heros, taille_heros) * 0.5 + Vector2(0, 8), Vector2.ONE * taille_heros),
-		false)
+	if _texture_heros != null:
+		var cellule := Vector2(_texture_heros.get_width() / 4.0, _texture_heros.get_height() / 2.0)
+		var source := Rect2(Vector2(0.0, cellule.y), cellule)
+		draw_texture_rect_region(_texture_heros,
+			Rect2(centre + Vector2(-taille_heros * 0.45, -taille_heros * 0.92), Vector2(taille_heros * 0.9, taille_heros * 1.8)), source)
 	var chute := fmod(_anim * 0.5, 1.0)
 	var goutte := centre + Vector2(largeur * 0.45, lerpf(-hauteur, hauteur * 0.3, chute))
 	draw_colored_polygon(Dessin.goutte(goutte, 12.0, PI / 2.0, 1.4), Color(Palette.ESSENCE, 1.0 - chute * 0.3))

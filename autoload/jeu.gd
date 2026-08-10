@@ -5,10 +5,14 @@ extends Node
 
 signal run_terminee(victoire: bool)
 signal inventaire_change
+signal experience_changee
+signal niveau_gagne(nouveau_niveau: int)
 
 var salle_courante := 0
 var chapitre := 0
 var inventaire: Array[String] = []
+var niveau := 1
+var experience := 0
 var rng := RandomNumberGenerator.new()
 var graine := 0
 var mode_auto := false          # le bot headless pilote la run
@@ -39,6 +43,8 @@ func demarrer_run(graine_demandee: int = 0, salle_de_depart: int = 1, chapitre_d
 	chapitre = clampi(chapitre_demande, 0, Chapitres.nombre() - 1)
 	salle_courante = salle_de_depart
 	inventaire = []
+	niveau = 1
+	experience = 0
 	ennemis_abattus = 0
 	tirs_emis = 0
 	tirs_touches = 0
@@ -46,6 +52,20 @@ func demarrer_run(graine_demandee: int = 0, salle_de_depart: int = 1, chapitre_d
 	tirs_perdus = 0
 	debut_run = Time.get_ticks_msec() / 1000.0
 	images_de_jeu = 0
+	experience_changee.emit()
+
+func experience_requise() -> int:
+	return Reglages.EXPERIENCE_PREMIER_NIVEAU + (niveau - 1) * Reglages.EXPERIENCE_PAR_NIVEAU
+
+func ajouter_experience(montant: int) -> void:
+	if montant <= 0:
+		return
+	experience += montant
+	while experience >= experience_requise():
+		experience -= experience_requise()
+		niveau += 1
+		niveau_gagne.emit(niveau)
+	experience_changee.emit()
 
 func ajouter_reactif(id: String) -> void:
 	inventaire.append(id)

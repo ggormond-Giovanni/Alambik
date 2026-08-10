@@ -1,6 +1,6 @@
 extends Control
 
-# Trois propositions apres chaque salle de combat. Si le joueur possede deja
+# Trois propositions a chaque niveau gagne. Si le joueur possede deja
 # les deux composants d'une recette, l'une d'elles peut etre l'essence
 # elle-meme : c'est le second chemin vers les fusions.
 
@@ -14,6 +14,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_construire()
+	StyleInterface.animer_entree(self)
 	if Jeu.mode_auto:
 		_choisir_automatiquement()
 
@@ -35,7 +36,10 @@ func _construire() -> void:
 	_colonne.alignment = BoxContainer.ALIGNMENT_CENTER
 	marge.add_child(_colonne)
 
-	for id in DraftLogique.proposer_avec_essence(Jeu.inventaire, Jeu.rng):
+	var heros := get_tree().get_first_node_in_group("heros")
+	var est_blesse: bool = heros != null and heros.stats.pv < heros.stats.pv_max
+	var propositions := DraftLogique.avec_repos(DraftLogique.proposer(Jeu.inventaire, Jeu.rng), Jeu.niveau, est_blesse)
+	for id in propositions:
 		var reactif := Jeu.reactif(id)
 		if id == DraftLogique.REPOS:
 			reactif = Reactif.creer(DraftLogique.REPOS, "Page de repos",
@@ -56,7 +60,8 @@ func _sur_choix(id: String) -> void:
 	if id == DraftLogique.REPOS:
 		var heros := get_tree().get_first_node_in_group("heros")
 		if heros != null:
-			heros.stats.soigner(heros.stats.pv_max * Reglages.SOIN_REPOS)
+			heros.stats.soigner(heros.stats.pv_max * Reglages.SOIN_REPOS \
+				* ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
 		termine.emit()
 		return
 	# Une essence prise au draft consomme ses deux composants, exactement comme
@@ -76,15 +81,18 @@ func _choisir_automatiquement() -> void:
 
 func _draw() -> void:
 	var police := ThemeDB.fallback_font
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.035, 0.06, 0.88))
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.018, 0.014, 0.034, 0.94))
+	Dessin.halo(self, Vector2(size.x * 0.5, 0.0), 430.0, Color(Palette.ESSENCE, 0.18), 7)
 	var haut := Ecran.marge_haute() + 90.0
-	draw_string(police, Vector2(0, haut), "Un réactif vous attend",
-		HORIZONTAL_ALIGNMENT_CENTER, size.x, 46, Palette.TEXTE)
-	draw_string(police, Vector2(0, haut + 46.0), "%s — page %d / %d" % [
+	draw_string(police, Vector2(58.0, haut - 38.0), "NIVEAU %d — NOUVEL AUGMENT" % Jeu.niveau,
+		HORIZONTAL_ALIGNMENT_LEFT, size.x - 116.0, 22, Color(Palette.OR, 0.9))
+	draw_string(police, Vector2(58.0, haut + 16.0), "Choisissez votre évolution",
+		HORIZONTAL_ALIGNMENT_LEFT, size.x - 116.0, 46, Palette.TEXTE)
+	draw_string(police, Vector2(0, haut + 70.0), "%s — page %d / %d" % [
 		Jeu.chapitre_courant()["nom"], Jeu.salle_courante, Jeu.salles_du_chapitre()],
-		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
+		HORIZONTAL_ALIGNMENT_RIGHT, size.x - 58.0, 25, Palette.TEXTE_ATTENUE)
 	# Un filet d'encre anime en haut de page : la pause reste vivante.
-	var y := haut + 76.0
+	var y := haut + 92.0
 	var trace := PackedVector2Array()
 	for i in 41:
 		var t := float(i) / 40.0

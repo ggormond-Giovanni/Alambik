@@ -26,6 +26,9 @@ var _trainee: Array[Vector2] = []
 var _age := 0.0
 
 func _ready() -> void:
+	# Le rendu suit les positions entre deux ticks physiques, indispensable sur
+	# les projectiles rapides quand l'ecran du telephone rafraichit au-dessus de 60 Hz.
+	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_ON
 	_rebonds_restants = tir.rebonds
 	_perforations_restantes = tir.perforations
 	couleur = Palette.TIR_ENNEMI_HALO if hostile else Palette.teinte_du_tir(tir.effets)
@@ -74,18 +77,18 @@ func _sur_contact(corps: Node) -> void:
 	if "foudre" in tir.effets:
 		chaine_demandee.emit(global_position, corps, tir)
 
-	if _perforations_restantes > 0:
-		_perforations_restantes -= 1
-		_facteur_degats *= 1.0 - Reglages.PERFORATION_PERTE
-		return
-	if _rebonds_restants > 0:
-		_rebonds_restants -= 1
-		_facteur_degats *= 1.0 - Reglages.REBOND_PERTE
-		if "flaque_au_rebond" in tir.drapeaux:
-			zone_demandee.emit(global_position, "flaque")
-		_rebondir_vers_une_autre_cible()
-		return
-	_finir()
+	match PrioriteProjectile.apres_impact(_rebonds_restants, _perforations_restantes):
+		"rebond":
+			_rebonds_restants -= 1
+			_facteur_degats *= 1.0 - Reglages.REBOND_PERTE
+			if "flaque_au_rebond" in tir.drapeaux:
+				zone_demandee.emit(global_position, "flaque")
+			_rebondir_vers_une_autre_cible()
+		"perforation":
+			_perforations_restantes -= 1
+			_facteur_degats *= 1.0 - Reglages.PERFORATION_PERTE
+		"fin":
+			_finir()
 
 func _heurter_un_mur(_mur: Node) -> void:
 	if not hostile:

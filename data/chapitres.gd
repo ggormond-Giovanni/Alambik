@@ -9,42 +9,16 @@ extends RefCounted
 # n'a besoin de connaitre leur nombre.
 
 const TOUS := [
-	{
-		"id": "grimoire",
-		"nom": "Le Grimoire",
-		"sous_titre": "Les premières pages, celles qu'on lit encore sans crainte.",
-		"salles": 50,
-		"alambics": [10, 20, 30, 40],
-		"mi_boss": 25,
-		"boss": "le_correcteur",
-		"pv_mult": 1.0,
-		"degats_mult": 1.0,
-		"teinte": Color(0.60, 0.50, 0.92),
-	},
-	{
-		"id": "marges",
-		"nom": "Les Marges",
-		"sous_titre": "Ce qui a été griffonné à côté du texte, et qui a pris vie.",
-		"salles": 50,
-		"alambics": [10, 20, 30, 40],
-		"mi_boss": 25,
-		"boss": "la_rature",
-		"pv_mult": 1.35,
-		"degats_mult": 1.15,
-		"teinte": Color(0.95, 0.62, 0.35),
-	},
-	{
-		"id": "errata",
-		"nom": "L'Errata",
-		"sous_titre": "La page des fautes. Elle vous compte parmi elles.",
-		"salles": 50,
-		"alambics": [10, 20, 30, 40],
-		"mi_boss": 25,
-		"boss": "l_errata",
-		"pv_mult": 1.55,
-		"degats_mult": 1.25,
-		"teinte": Color(0.98, 0.36, 0.48),
-	},
+	{"id": "encres", "nom": "I — Grimoire des Encres", "sous_titre": "Les créatures quittent leurs lignes.", "salles": 50, "alambics": [10, 20, 30, 40], "mi_boss": 25, "boss": "le_correcteur", "pv_mult": 1.00, "degats_mult": 1.00, "teinte": Color(0.60, 0.50, 0.92)},
+	{"id": "braises", "nom": "II — Grimoire des Braises", "sous_titre": "Chaque page conserve une étincelle.", "salles": 50, "alambics": [10, 20, 30, 40], "mi_boss": 25, "boss": "la_rature", "pv_mult": 1.12, "degats_mult": 1.06, "teinte": Color(1.00, 0.55, 0.28)},
+	{"id": "givre", "nom": "III — Grimoire du Givre", "sous_titre": "Le papier craque sous le froid.", "salles": 50, "alambics": [10, 20, 30, 40], "mi_boss": 25, "boss": "l_errata", "pv_mult": 1.24, "degats_mult": 1.12, "teinte": Color(0.52, 0.86, 1.00)},
+	{"id": "orages", "nom": "IV — Grimoire des Orages", "sous_titre": "Les phrases grondent avant de frapper.", "salles": 50, "alambics": [10, 20, 30, 40], "mi_boss": 25, "boss": "le_correcteur", "pv_mult": 1.36, "degats_mult": 1.18, "teinte": Color(0.98, 0.90, 0.35)},
+	{"id": "venins", "nom": "V — Grimoire des Venins", "sous_titre": "L’encre ronge ceux qui la lisent.", "salles": 50, "alambics": [10, 20, 30, 40], "mi_boss": 25, "boss": "la_rature", "pv_mult": 1.48, "degats_mult": 1.24, "teinte": Color(0.52, 0.94, 0.38)},
+	{"id": "echos", "nom": "VI — Grimoire des Échos", "sous_titre": "Chaque attaque revient une seconde fois.", "salles": 50, "alambics": [10, 20, 30, 40], "mi_boss": 25, "boss": "l_errata", "pv_mult": 1.60, "degats_mult": 1.30, "teinte": Color(0.70, 0.56, 0.98)},
+	{"id": "ombres", "nom": "VII — Grimoire des Ombres", "sous_titre": "Les mots se déplacent quand on détourne les yeux.", "salles": 50, "alambics": [10, 20, 30, 40], "mi_boss": 25, "boss": "le_correcteur", "pv_mult": 1.72, "degats_mult": 1.36, "teinte": Color(0.46, 0.42, 0.68)},
+	{"id": "runes", "nom": "VIII — Grimoire des Runes", "sous_titre": "Des signes anciens défendent leurs secrets.", "salles": 50, "alambics": [10, 20, 30, 40], "mi_boss": 25, "boss": "la_rature", "pv_mult": 1.84, "degats_mult": 1.42, "teinte": Color(0.35, 0.92, 0.76)},
+	{"id": "neant", "nom": "IX — Grimoire du Néant", "sous_titre": "Certaines pages auraient dû rester blanches.", "salles": 50, "alambics": [10, 20, 30, 40], "mi_boss": 25, "boss": "l_errata", "pv_mult": 1.96, "degats_mult": 1.48, "teinte": Color(0.82, 0.38, 0.82)},
+	{"id": "alambic", "nom": "X — Grimoire de l’Alambic", "sous_titre": "Toutes les formules convergent ici.", "salles": 50, "alambics": [10, 20, 30, 40], "mi_boss": 25, "boss": "le_correcteur", "pv_mult": 2.08, "degats_mult": 1.54, "teinte": Color(1.00, 0.74, 0.24)},
 ]
 
 static func nombre() -> int:
@@ -75,7 +49,7 @@ static func est_mi_boss(index: int, salle: int) -> bool:
 # Montee en puissance des creatures : leur chapitre, puis leur profondeur dans
 # ce chapitre. La courbe est geometrique, pas lineaire — la puissance du heros
 # l'est aussi, et une montee lineaire donnait un debut infernal suivi d'une fin
-# ou plus rien ne le menacait (mesure : rapport 0,5 page 10, 16 page 50).
+# ou plus rien ne le menacait.
 static func progression(index: int, salle: int) -> float:
 	var chapitre := par_index(index)
 	return clampf(float(salle - 1) / maxf(1.0, float(chapitre["salles"] - 1)), 0.0, 1.0)

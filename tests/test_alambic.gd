@@ -5,12 +5,12 @@ func test_aucune_paire_dans_un_inventaire_vide(v: Verif) -> void:
 
 func test_paire_detectee(v: Verif) -> void:
 	var paires := AlambicLogique.paires_possibles(["braise", "ricochet", "perforation"])
-	v.egal(paires.size(), 1, "une seule paire fusionnable ici")
-	v.egal(paires[0][2], "trainee_etincelles", "elle donne la Trainee d'etincelles")
+	v.egal(paires.size(), 3, "toutes les paires sont fusionnables")
+	v.vrai(["braise", "ricochet", "trainee_etincelles"] in paires, "la recette majeure reste disponible")
 
-func test_paire_sans_recette_refusee(v: Verif) -> void:
-	v.egal(AlambicLogique.peut_fusionner(["braise", "perforation"], "braise", "perforation"), false,
-		"une paire sans recette ne peut pas etre selectionnee")
+func test_toute_paire_de_reactifs_est_acceptee(v: Verif) -> void:
+	v.vrai(AlambicLogique.peut_fusionner(["braise", "perforation"], "braise", "perforation"),
+		"une paire sans recette majeure produit un amalgame")
 
 func test_reactif_absent_refuse(v: Verif) -> void:
 	v.egal(AlambicLogique.peut_fusionner(["braise"], "braise", "ricochet"), false,
@@ -35,10 +35,9 @@ func test_partenaires_d_un_reactif(v: Verif) -> void:
 	var partenaires := AlambicLogique.partenaires(inventaire, "givre")
 	v.vrai("sillage" in partenaires, "Givre + Sillage donne la Piste de gel")
 	v.vrai("encre_lourde" in partenaires, "Givre + Encre lourde donne le Marteau de glace")
-	v.vrai(not "perforation" in partenaires, "Givre + Perforation n'a pas de recette")
+	v.vrai("perforation" in partenaires, "Givre peut aussi fusionner avec Perforation")
 
-func test_fiole_de_vie_n_a_aucune_recette(v: Verif) -> void:
-	# Regle explicite de la spec : tous les reactifs n'entrent pas dans une recette.
+func test_fiole_de_vie_se_combine_avec_tout(v: Verif) -> void:
 	var inventaire := CatalogueReactifs.ids()
-	v.egal(AlambicLogique.partenaires(inventaire, "fiole_de_vie").size(), 0,
-		"Fiole de vie ne se combine avec rien")
+	v.egal(AlambicLogique.partenaires(inventaire, "fiole_de_vie").size(), inventaire.size() - 1,
+		"Fiole de vie se combine avec chaque autre augment")

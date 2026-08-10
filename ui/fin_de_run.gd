@@ -9,15 +9,21 @@ var _victoire := false
 var _salle := 0
 var _anim := 0.0
 var _duree := 0.0
+var _coffre_points := 0
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	StyleInterface.animer_entree(self)
 
 func afficher(victoire: bool, salle_atteinte: int) -> void:
 	_victoire = victoire
 	_salle = salle_atteinte
 	_duree = Jeu.duree_run()
+	if victoire:
+		_coffre_points = roundi(float(Jeu.rng.randi_range(45, 90)) \
+			* ArbreCompetences.multiplicateur_coffre(ReglagesJoueur.rangs_competences_effectifs()))
+		ReglagesJoueur.ajouter_points_maitrise(_coffre_points)
 	ReglagesJoueur.enregistrer_resultat(salle_atteinte, victoire, Jeu.chapitre)
 
 	var marge := MarginContainer.new()
@@ -36,6 +42,7 @@ func afficher(victoire: bool, salle_atteinte: int) -> void:
 	rejouer.text = "Redescendre"
 	rejouer.custom_minimum_size = Vector2(0, 120)
 	rejouer.add_theme_font_size_override("font_size", 34)
+	StyleInterface.styliser_bouton(rejouer, Palette.OR)
 	rejouer.pressed.connect(func() -> void:
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/run.tscn"))
@@ -45,6 +52,7 @@ func afficher(victoire: bool, salle_atteinte: int) -> void:
 	menu.text = "Refermer le grimoire"
 	menu.custom_minimum_size = Vector2(0, 100)
 	menu.add_theme_font_size_override("font_size", 30)
+	StyleInterface.styliser_bouton(menu, Palette.TEXTE_ATTENUE, true)
 	menu.pressed.connect(func() -> void:
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
@@ -56,20 +64,27 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var police := ThemeDB.fallback_font
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.03, 0.028, 0.05, 0.92))
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.015, 0.012, 0.030, 0.96))
 	var haut := size.y * 0.22
 	var titre := "Grimoire refermé" if _victoire else "L'encre a gagné"
 	var teinte := Palette.OR if _victoire else Palette.DANGER
 	Dessin.halo(self, Vector2(size.x / 2.0, haut - 20.0), 220.0, Color(teinte, 0.5), 5)
+	draw_string(police, Vector2(0, haut - 58.0), "RÉSUMÉ DE LA DESCENTE", HORIZONTAL_ALIGNMENT_CENTER, size.x, 22, Color(teinte, 0.8))
 	draw_string(police, Vector2(0, haut), titre, HORIZONTAL_ALIGNMENT_CENTER, size.x, 62, teinte)
 	draw_string(police, Vector2(0, haut + 70.0), "%s — page %d / %d" % [Jeu.chapitre_courant()["nom"], _salle, Jeu.salles_du_chapitre()],
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 34, Palette.TEXTE)
 	draw_string(police, Vector2(0, haut + 118.0), "Créatures d'encre effacées : %d" % Jeu.ennemis_abattus,
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
-	draw_string(police, Vector2(0, haut + 158.0), "Durée : %d min %02d s" % [int(_duree / 60.0), int(_duree) % 60],
+	draw_string(police, Vector2(0, haut + 158.0), "Niveau atteint : %d  •  Durée : %d min %02d s" % [Jeu.niveau, int(_duree / 60.0), int(_duree) % 60],
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
 	draw_string(police, Vector2(0, haut + 206.0), "Meilleure descente ici : page %d" % ReglagesJoueur.meilleure_du_chapitre(Jeu.chapitre),
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Color(Palette.OR, 0.8))
+	if _victoire:
+		var coffre := Rect2(size.x * 0.5 - 220.0, haut + 230.0, 440.0, 78.0)
+		draw_rect(coffre, Color(Palette.OR, 0.12))
+		draw_rect(coffre, Color(Palette.OR, 0.75), false, 3.0)
+		draw_string(police, Vector2(coffre.position.x, coffre.position.y + 51.0),
+			"COFFRE DU GRIMOIRE  ✦ +%d" % _coffre_points, HORIZONTAL_ALIGNMENT_CENTER, coffre.size.x, 27, Palette.OR)
 
 	# Ce que la run a construit : la seule trace qui compte.
 	var groupe := Jeu.inventaire_groupe()
@@ -79,7 +94,7 @@ func _draw() -> void:
 		var r := Jeu.reactif(id)
 		if r == null:
 			continue
-		var centre := Vector2(x, haut + 280.0)
+		var centre := Vector2(x, haut + (350.0 if _victoire else 280.0))
 		if r.est_essence:
 			Dessin.halo(self, centre, 40.0, Palette.ESSENCE, 3)
 		draw_circle(centre, 26.0, Color(0.10, 0.09, 0.14))

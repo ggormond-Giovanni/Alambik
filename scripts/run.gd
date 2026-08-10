@@ -11,6 +11,7 @@ const ALAMBIC := preload("res://ui/alambic.tscn")
 const FIN := preload("res://ui/fin_de_run.tscn")
 const HUD := preload("res://ui/hud.tscn")
 const JOYSTICK := preload("res://ui/joystick.tscn")
+const PAUSE := preload("res://ui/pause.tscn")
 const BOT := preload("res://sondes/bot.gd")
 
 var _fond: Node2D
@@ -25,6 +26,8 @@ var _panneau: Control
 var _limites := Rect2()
 var _terminee := false
 var _temps_dans_la_salle := 0.0
+var _musique_minuterie := 0.0
+var _niveaux_en_attente := 0
 
 func _ready() -> void:
 	var arguments := OS.get_cmdline_user_args()
@@ -42,7 +45,14 @@ func _ready() -> void:
 			var index := Jeu.rng.randi_range(0, candidats.size() - 1)
 			Jeu.ajouter_reactif(candidats[index])
 			candidats.remove_at(index)
+	if ReglagesJoueur.mode_dev:
+		Jeu.niveau = 99
+		for id in CatalogueReactifs.ids():
+			var reactif := CatalogueReactifs.par_id(id)
+			while Jeu.copies(id) < reactif.copies_permises():
+				Jeu.ajouter_reactif(id)
 	Jeu.run_terminee.connect(_sur_run_terminee)
+	Jeu.niveau_gagne.connect(_sur_niveau_gagne)
 
 	_calculer_limites()
 	get_tree().get_root().size_changed.connect(_calculer_limites)
@@ -75,6 +85,9 @@ func _ready() -> void:
 	add_child(_couche)
 	_hud = HUD.instantiate()
 	_couche.add_child(_hud)
+	_hud.pause_demandee.connect(func() -> void:
+		if not _terminee and _panneau == null:
+			_ouvrir_pause())
 	_joystick = JOYSTICK.instantiate()
 	_couche.add_child(_joystick)
 	_joystick.intention_changee.connect(_sur_intention)
@@ -95,6 +108,14 @@ func _physics_process(_delta: float) -> void:
 		Jeu.images_de_jeu += 1
 
 func _process(delta: float) -> void:
+	_musique_minuterie -= delta
+	if _musique_minuterie <= 0.0 and not _terminee and _panneau == null:
+		_musique_minuterie = 0.35
+		if Chapitres.est_boss(Jeu.chapitre, Jeu.salle_courante):
+			Sons.musique_boss()
+		else:
+			var menaces := get_tree().get_nodes_in_group("ennemis").size()
+			Sons.musique_combat(clampf(float(menaces) / 7.0, 0.25, 1.0))
 	if not Jeu.mode_auto or _terminee or _panneau != null:
 		return
 	_temps_dans_la_salle += delta
@@ -122,8 +143,8 @@ func _calculer_limites() -> void:
 	var haut := Reglages.ARENE_HAUT + Ecran.marge_haute()
 	var bas := Reglages.ARENE_BAS + Ecran.marge_basse()
 	_limites = Rect2(
-		Vector2(Reglages.ARENE_MARGE_LATERALE + 40.0, haut),
-		Vector2(taille.x - 2.0 * (Reglages.ARENE_MARGE_LATERALE + 40.0), maxf(600.0, taille.y - haut - bas)))
+		Vector2(Reglages.ARENE_MARGE_LATERALE, haut),
+		Vector2(taille.x - 2.0 * Reglages.ARENE_MARGE_LATERALE, maxf(600.0, taille.y - haut - bas)))
 	if _heros != null:
 		_heros.limites = _limites
 
@@ -154,12 +175,42 @@ func _sur_salle_terminee() -> void:
 		return
 	Jeu.salle_courante += 1
 	if Chapitres.est_alambic(Jeu.chapitre, Jeu.salle_courante):
+		_heros.stats.soigner(_heros.stats.pv_max * Reglages.SOIN_ALAMBIC \
+			* ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
 		_ouvrir(ALAMBIC)
 	else:
-		_ouvrir(DRAFT)
+		_entrer_dans_la_salle()
+
+func _sur_niveau_gagne(_nouveau_niveau: int) -> void:
+	_niveaux_en_attente += 1
+	call_deferred("_ouvrir_draft_niveau")
+
+func _ouvrir_draft_niveau() -> void:
+	if _terminee or _panneau != null or _niveaux_en_attente <= 0:
+		return
+	_niveaux_en_attente -= 1
+	get_tree().paused = true
+	Sons.musique_calme()
+	_panneau = DRAFT.instantiate()
+	_panneau.process_mode = Node.PROCESS_MODE_ALWAYS
+	_couche.add_child(_panneau)
+	_panneau.termine.connect(func() -> void:
+		_panneau.queue_free()
+		_panneau = null
+		_heros.recalculer()
+		_hud.rafraichir()
+		if _niveaux_en_attente > 0:
+			call_deferred("_ouvrir_draft_niveau")
+			return
+		get_tree().paused = false
+		if Chapitres.est_boss(Jeu.chapitre, Jeu.salle_courante):
+			Sons.musique_boss()
+		else:
+			Sons.musique_combat(0.5))
 
 func _ouvrir(scene: PackedScene) -> void:
 	get_tree().paused = true
+	Sons.musique_calme()
 	_panneau = scene.instantiate()
 	_panneau.process_mode = Node.PROCESS_MODE_ALWAYS
 	_couche.add_child(_panneau)
@@ -167,7 +218,23 @@ func _ouvrir(scene: PackedScene) -> void:
 		_panneau.queue_free()
 		_panneau = null
 		get_tree().paused = false
+		Sons.musique_combat(0.35)
 		_entrer_dans_la_salle())
+
+func _ouvrir_pause() -> void:
+	get_tree().paused = true
+	Sons.musique_calme()
+	_panneau = PAUSE.instantiate()
+	_panneau.process_mode = Node.PROCESS_MODE_ALWAYS
+	_couche.add_child(_panneau)
+	_panneau.termine.connect(func() -> void:
+		_panneau.queue_free()
+		_panneau = null
+		get_tree().paused = false
+		if Chapitres.est_boss(Jeu.chapitre, Jeu.salle_courante):
+			Sons.musique_boss()
+		else:
+			Sons.musique_combat(0.5))
 
 func _sur_intention(direction: Vector2, intensite: float) -> void:
 	if _heros != null and not Jeu.mode_auto:
@@ -203,6 +270,7 @@ func _sur_run_terminee(victoire: bool) -> void:
 	if _terminee:
 		return
 	_terminee = true
+	Sons.musique_calme()
 	get_tree().paused = true
 	var fin := FIN.instantiate()
 	fin.process_mode = Node.PROCESS_MODE_ALWAYS

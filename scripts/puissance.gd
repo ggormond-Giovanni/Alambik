@@ -27,7 +27,7 @@ const VALEUR_DRAPEAUX := {
 	"chaine_longue": 1.15,
 	"nuage_a_la_mort": 1.25,
 	"sillage_gelant": 1.08,
-	"rafale": 1.30,
+	"rafale": 2.40,
 	"bouclier_explosif": 1.18,
 	"tir_en_course": 1.45,   # tirer en marchant change la facon de jouer
 }

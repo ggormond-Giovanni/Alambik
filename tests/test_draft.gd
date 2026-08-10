@@ -1,5 +1,14 @@
 extends RefCounted
 
+func test_le_repos_arrive_tous_les_trois_niveaux_si_blesse(v: Verif) -> void:
+	var propositions: Array[String] = ["braise", "givre", "foudre"]
+	v.vrai(DraftLogique.REPOS in DraftLogique.avec_repos(propositions, 3, true),
+		"un niveau de repos propose de se soigner")
+	v.vrai(not DraftLogique.REPOS in DraftLogique.avec_repos(propositions, 2, true),
+		"le soin n'envahit pas chaque niveau")
+	v.vrai(not DraftLogique.REPOS in DraftLogique.avec_repos(propositions, 3, false),
+		"le soin n'est pas propose a pleine vie")
+
 func _rng() -> RandomNumberGenerator:
 	var r := RandomNumberGenerator.new()
 	r.seed = 7

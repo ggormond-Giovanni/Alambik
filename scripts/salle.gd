@@ -9,6 +9,8 @@ signal terminee
 const PROJECTILE := preload("res://scenes/projectile.tscn")
 const ENNEMI := preload("res://scenes/ennemi.tscn")
 const BOSS := preload("res://scenes/boss.tscn")
+const PORTE_DISTANCE_MARCHE := 110.0
+const PORTE_DISTANCE_APPUI := 165.0
 
 var effets: Node2D
 var zones: Node2D
@@ -61,7 +63,11 @@ func _construire_obstacles() -> void:
 	alea.seed = Jeu.graine * 31 + numero
 	# Les blocs restent dans la bande mediane : trop bas, ils bouchent la ligne de
 	# tir des le depart et le joueur ne comprend pas pourquoi rien ne touche.
-	var nombre := 0 if Chapitres.est_boss(Jeu.chapitre, numero) else alea.randi_range(0, 2)
+	# Les motifs du boss supposent une arene ouverte. Un bloc protegerait le boss
+	# de nos tirs tout en laissant le heros se cacher de ses barrages, ce qui
+	# neutraliserait le combat ; la regle vaut aussi pour son apparition a mi-run.
+	var combat_de_boss := Chapitres.est_boss(Jeu.chapitre, numero) or Chapitres.est_mi_boss(Jeu.chapitre, numero)
+	var nombre := 0 if combat_de_boss else alea.randi_range(0, 2)
 	for i in nombre:
 		var taille := Vector2(alea.randf_range(90.0, 200.0), alea.randf_range(50.0, 110.0))
 		var centre := Vector2(
@@ -90,10 +96,31 @@ func _process(delta: float) -> void:
 	if not _porte_ouverte or _finie:
 		return
 	var heros := get_tree().get_first_node_in_group("heros")
-	if heros != null and heros.global_position.distance_to(_porte_position) < 110.0:
-		_finie = true
-		Sons.jouer("porte", -12.0)
-		terminee.emit()
+	if heros != null and heros.global_position.distance_to(_porte_position) < PORTE_DISTANCE_MARCHE:
+		_franchir_porte()
+
+func _unhandled_input(evenement: InputEvent) -> void:
+	if not _porte_ouverte or _finie:
+		return
+	var position_appui := Vector2.ZERO
+	var appui := false
+	if evenement is InputEventScreenTouch:
+		appui = (evenement as InputEventScreenTouch).pressed
+		position_appui = (evenement as InputEventScreenTouch).position
+	elif evenement is InputEventMouseButton:
+		var souris := evenement as InputEventMouseButton
+		appui = souris.pressed and souris.button_index == MOUSE_BUTTON_LEFT
+		position_appui = souris.position
+	if appui and position_appui.distance_to(_porte_position) <= PORTE_DISTANCE_APPUI:
+		get_viewport().set_input_as_handled()
+		_franchir_porte()
+
+func _franchir_porte() -> void:
+	if _finie or not _porte_ouverte:
+		return
+	_finie = true
+	Sons.jouer("porte", -12.0)
+	terminee.emit()
 
 func _vague_suivante() -> void:
 	_vague_courante += 1
@@ -148,8 +175,14 @@ func _sur_ennemi_touche(position: Vector2, couleur: Color) -> void:
 	if effets != null:
 		effets.eclats(position, couleur.lightened(0.3), 3, 140.0, 0.5)
 
-func _sur_mort_ennemi(_qui: Node, position: Vector2, couleur: Color) -> void:
+func _sur_mort_ennemi(qui: Node, position: Vector2, couleur: Color) -> void:
 	Jeu.ennemis_abattus += 1
+	var donnees_ennemi: Dictionary = qui.donnees
+	var experience_gagnee := int(donnees_ennemi.get("experience", 1))
+	Jeu.ajouter_experience(experience_gagnee)
+	ReglagesJoueur.ajouter_experience_heros(experience_gagnee)
+	# Aucun objet au sol : les deux compteurs progressent des la mort.
+	ReglagesJoueur.ajouter_points_maitrise(maxi(1, int(donnees_ennemi.get("points_garantis", 0))))
 	if effets != null:
 		effets.mort(position, couleur)
 	# Le noeud mort est encore dans l'arbre a cet instant : on attend une frame
@@ -223,8 +256,15 @@ func _sur_fragments(origine: Vector2, direction: Vector2, tir_source: Tir, hosti
 	eclat.angle_eventail = 0.0
 	eclat.degats = tir_source.degats * Reglages.FRAGMENT_PART_DEGATS
 	eclat.portee = Reglages.FRAGMENT_PORTEE
-	for i in tir_source.fragments:
-		var angle := TAU * float(i) / float(tir_source.fragments) + randf() * 0.3
+	# Le signal part d'un contact physique : ajouter des Area2D pendant que le
+	# moteur vide ses collisions produit une erreur et une saccade visible.
+	call_deferred("_tirer_fragments", eclat, tir_source.fragments, origine, direction, hostile)
+
+func _tirer_fragments(eclat: Tir, nombre: int, origine: Vector2, direction: Vector2, hostile: bool) -> void:
+	if not is_inside_tree():
+		return
+	for i in nombre:
+		var angle := TAU * float(i) / float(nombre) + randf() * 0.3
 		tirer(eclat, origine, direction.rotated(angle), hostile)
 
 func _sur_chaine(depuis: Vector2, cible: Node, tir_source: Tir) -> void:

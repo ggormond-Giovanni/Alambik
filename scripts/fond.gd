@@ -32,47 +32,56 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	var page := Rect2(limites.position - Vector2(30, 30), limites.size + Vector2(60, 60))
+	var page := limites
 	draw_rect(Rect2(Vector2(-200, -200), get_viewport_rect().size + Vector2(400, 400)), Palette.FOND)
-	# Trois couches donnent plus de profondeur que l'ancien aplat uniforme.
-	draw_rect(page.grow(12.0), Color(0.035, 0.020, 0.060))
-	draw_rect(page, Palette.PARCHEMIN_SOMBRE)
-	draw_rect(page.grow(-18.0), Color(0.16, 0.105, 0.215, 0.34), false, 2.0)
+	# Une arene carree et lisible remplace la page rayee. Le damier reste sombre
+	# et mineral pour conserver l'atmosphere du grimoire.
+	draw_rect(page.grow(34.0), Color(0.018, 0.026, 0.038))
+	draw_rect(page.grow(22.0), Palette.BORD_ARENE)
+	var tuile := 126.0
+	var colonnes := ceili(page.size.x / tuile)
+	var lignes := ceili(page.size.y / tuile)
+	for y in lignes:
+		for x in colonnes:
+			var rect := Rect2(page.position + Vector2(float(x), float(y)) * tuile, Vector2.ONE * tuile).intersection(page)
+			var couleur := Palette.SOL_ARENE if (x + y + numero) % 2 == 0 else Palette.SOL_ARENE_ALT
+			draw_rect(rect, couleur)
+			draw_rect(rect.grow(-2.0), Color(1.0, 1.0, 1.0, 0.018), false, 1.0)
 
-	# Lignes reglees de la page, plus pales au centre : le regard va au jeu.
-	for i in 15:
-		var y := page.position.y + page.size.y * float(i + 1) / 16.0
-		var pale := 0.35 + 0.30 * absf(float(i) / 14.0 - 0.5) * 2.0
-		draw_line(Vector2(page.position.x + 24.0, y), Vector2(page.end.x - 24.0, y),
-			Color(Palette.PARCHEMIN_VEINE, pale * 0.72), 2.0)
-	# Marge d'annotation, comme sur une page de garde.
-	draw_line(Vector2(page.position.x + 66.0, page.position.y + 20.0),
-		Vector2(page.position.x + 66.0, page.end.y - 20.0), Color(0.55, 0.30, 0.34, 0.30), 2.0)
+	# Un grand sceau central donne un point de repere sans voler la lisibilite.
+	var centre := page.get_center()
+	draw_arc(centre, 188.0, 0.0, TAU, 64, Color(Palette.ESSENCE, 0.065), 5.0, true)
+	draw_arc(centre, 136.0, 0.0, TAU, 48, Color(Palette.OR, 0.045), 3.0, true)
+	Dessin.contour(self, Dessin.polygone_regulier(centre, 112.0, 6, PI / 6.0), Color(Palette.ESSENCE, 0.045), 3.0)
 
 	for t in _taches:
-		var c := Palette.PARCHEMIN_VEINE
-		c.a = t["alpha"]
+		var c := Palette.MOUSSE_MAGIQUE
+		c.a = t["alpha"] * 0.55
 		draw_colored_polygon(Dessin.blob(t["position"], t["rayon"], t["graine"], 0.28), c)
 
-	# Vignette : quatre bandes sombres qui referment la page sur elle-meme. Sans
-	# elle, l'arene se dilue dans le fond et on ne sait plus ou sont ses bords.
-	var epaisseur := 90.0
-	for i in 8:
-		var t := float(i) / 7.0
-		var a := 0.30 * (1.0 - t)
-		var creux := page.grow(-epaisseur * t)
-		draw_rect(creux, Color(0, 0, 0, a), false, epaisseur / 7.0)
+	# Roches d'encre et pousses alchimiques ferment les bords comme un decor,
+	# tandis que le centre reste parfaitement degage pour les projectiles.
+	for cote in [-1.0, 1.0]:
+		var x_bord := page.position.x - 18.0 if cote < 0.0 else page.end.x + 18.0
+		for i in 12:
+			var y_bord := lerpf(page.position.y + 30.0, page.end.y - 30.0, float(i) / 11.0)
+			var rayon := 27.0 + 7.0 * sin(float(i) * 2.1 + float(numero))
+			draw_circle(Vector2(x_bord, y_bord), rayon, Color(0.035, 0.070, 0.072))
+			draw_circle(Vector2(x_bord - cote * 5.0, y_bord - 5.0), rayon * 0.62, Color(Palette.MOUSSE_MAGIQUE, 0.46))
+	draw_rect(page, Color(0.015, 0.028, 0.035), false, 8.0)
+	draw_rect(page.grow(-8.0), Color(Palette.ESSENCE, 0.16), false, 2.0)
 
-	# Bord de page : double filet, coins marques. C'est ce qui donne l'impression
-	# de jouer dans un livre plutot que dans un rectangle.
-	draw_rect(page, Color(0.05, 0.025, 0.08), false, 10.0)
-	draw_rect(page, Palette.BORD_PAGE, false, 4.0)
-	draw_rect(page.grow(-10.0), Color(Palette.OR, 0.28), false, 1.5)
-	for coin in [page.position, Vector2(page.end.x, page.position.y), page.end, Vector2(page.position.x, page.end.y)]:
-		draw_circle(coin, 9.0, Palette.BORD_PAGE)
-		draw_circle(coin, 4.0, Palette.OR)
+	# Le portail est visible avant son ouverture : il donne un objectif spatial.
+	var portail := Vector2(page.get_center().x, page.position.y - 16.0)
+	draw_rect(Rect2(portail + Vector2(-106.0, -58.0), Vector2(212.0, 78.0)), Color(0.035, 0.050, 0.065))
+	for i in 5:
+		var pierre := Rect2(portail + Vector2(-102.0 + float(i) * 41.0, -54.0), Vector2(37.0, 68.0))
+		draw_rect(pierre, Color(0.14, 0.18, 0.20))
+		draw_rect(pierre, Color(Palette.BORD_PAGE, 0.34), false, 2.0)
+	draw_rect(Rect2(portail + Vector2(-56.0, -34.0), Vector2(112.0, 54.0)), Color(0.025, 0.018, 0.045))
+	draw_line(portail + Vector2(0.0, -32.0), portail + Vector2(0.0, 18.0), Color(Palette.OR, 0.24), 2.0)
 
 	# Numero de page, en bas a droite, discret.
 	var police := ThemeDB.fallback_font
-	draw_string(police, Vector2(page.end.x - 90.0, page.end.y + 44.0), "— %d —" % numero,
+	draw_string(police, Vector2(page.end.x - 90.0, page.end.y + 50.0), "SECTEUR %02d" % numero,
 		HORIZONTAL_ALIGNMENT_RIGHT, 80, 26, Color(Palette.TEXTE_ATTENUE, 0.6))

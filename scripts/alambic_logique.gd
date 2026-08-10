@@ -1,9 +1,8 @@
 class_name AlambicLogique
 extends RefCounted
 
-# Une essence ne peut jamais etre composant : elle n'apparait dans aucune cle
-# de Recettes.TABLE, donc essence_pour renvoie "". La regle de la spec est
-# garantie par la structure de donnees, pas par une verification oubliable.
+# Toute paire de reactifs de base est valide. Les essences restent des resultats
+# finaux et ne peuvent pas etre refusionnees.
 
 static func paires_possibles(inventaire: Array) -> Array[Array]:
 	var trouvees: Array[Array] = []

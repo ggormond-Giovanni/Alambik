@@ -1,9 +1,6 @@
 extends CharacterBody2D
 
-const TEXTURE_RAMPANT := preload("res://assets/characters/enemy_crawler.png")
-const TEXTURE_SENTINELLE := preload("res://assets/characters/enemy_sentinel.png")
-const TEXTURE_VELOCE := preload("res://assets/characters/enemy_charger.png")
-const TEXTURE_ESSAIMEUR := preload("res://assets/characters/enemy_summoner.png")
+const CHEMIN_SPRITES := "res://assets/characters/sheets/enemies_sheet.png"
 
 # Base commune des quatre archetypes. Les decisions viennent de Cerveaux, qui
 # est pur et testable ; ce fichier ne fait que les traduire en mouvement, en
@@ -35,6 +32,7 @@ var _graine := 0
 var _invocations := 0
 var _contournement := 0.0
 var _sens_contournement := 1.0
+var _texture_ennemis: Texture2D
 
 func configurer(donnees_: Dictionary) -> void:
 	donnees = donnees_
@@ -47,6 +45,8 @@ func _ready() -> void:
 	collision_mask = 4
 	_graine = randi() % 1000
 	_cible = get_tree().get_first_node_in_group("heros")
+	if ResourceLoader.exists(CHEMIN_SPRITES):
+		_texture_ennemis = load(CHEMIN_SPRITES)
 	var forme := $CollisionShape2D.shape as CircleShape2D
 	forme.radius = donnees["rayon"]
 	_recharge = float(donnees.get("recharge", 1.0)) * 0.5
@@ -99,6 +99,11 @@ func _agir_rampant(_delta: float) -> void:
 	elif _recharge <= 0.0:
 		_recharge = 1.0
 		_cible.recevoir_degats(donnees["degats"])
+	# Il ne sert plus seulement de sac de PV de melee : son crachat lent coupe
+	# regulierement la trajectoire du joueur, sans punir une esquive tardive.
+	if distance <= float(donnees.get("portee_tir", 0.0)) and distance > donnees["portee"] and _recharge <= 0.0:
+		_recharge = donnees.get("recharge", 2.3)
+		_tirer_vers(_cible.global_position)
 
 func _agir_sentinelle() -> void:
 	var distance := global_position.distance_to(_cible.global_position)
@@ -117,11 +122,23 @@ func _agir_sentinelle() -> void:
 
 func _tirer_vers(cible: Vector2) -> void:
 	var t := Tir.new()
-	t.degats = donnees["degats"]
+	t.degats = donnees["degats"] * float(donnees.get("part_degats_projectile", 1.0))
 	t.vitesse = donnees.get("vitesse_projectile", 420.0)
-	t.portee = donnees["portee"] * 1.4
+	t.portee = donnees.get("portee_projectile", donnees["portee"] * 1.4)
 	t.cadence = 1.0
+	t.nb_projectiles = int(donnees.get("projectiles", 1))
+	t.angle_eventail = float(donnees.get("angle_eventail", 0.0))
 	tir_demande.emit(t, global_position, global_position.direction_to(cible))
+
+func _tirer_cercle(nombre: int) -> void:
+	var t := Tir.new()
+	t.degats = donnees["degats"] * float(donnees.get("part_degats_projectile", 1.0))
+	t.vitesse = donnees.get("vitesse_projectile", 320.0)
+	t.portee = donnees.get("portee_projectile", 900.0)
+	t.cadence = 1.0
+	for i in nombre:
+		var direction := Vector2.RIGHT.rotated(TAU * float(i) / float(nombre))
+		tir_demande.emit(t, global_position, direction)
 
 func _agir_veloce(_delta: float) -> void:
 	var distance := global_position.distance_to(_cible.global_position)
@@ -173,6 +190,7 @@ func _agir_essaimeur(_delta: float) -> void:
 			for i in int(donnees.get("nb_invoques", 2)):
 				var ecart := Vector2(randf_range(-90.0, 90.0), randf_range(-90.0, 90.0))
 				invocation_demandee.emit(donnees.get("invoque", "encrier_rampant"), global_position + ecart)
+			_tirer_cercle(int(donnees.get("projectiles_cercle", 0)))
 
 func recevoir_degats(montant: float, effets: Array = []) -> void:
 	if pv <= 0.0:
@@ -230,10 +248,16 @@ func _draw() -> void:
 	# restent proceduraux, mais les silhouettes sont maintenant peintes.
 	Dessin.halo(self, Vector2.ZERO, r * 2.2, couleur, 4)
 	_dessiner_telegraphe(r)
-	var texture := _texture_pour_forme(donnees.get("forme", "goutte"))
 	var taille := r * (6.8 if donnees.get("forme", "goutte") == "masque" else 6.25)
 	var modulation := Color.WHITE.lerp(couleur, 0.18)
-	draw_texture_rect(texture, Rect2(Vector2.ONE * -taille * 0.5, Vector2.ONE * taille), false, modulation)
+	if _texture_ennemis != null:
+		var ligne := _ligne_de_sprites(donnees.get("forme", "goutte"))
+		var cadre := (int(_anim * 8.0) + _graine) % 4
+		var cellule := Vector2(_texture_ennemis.get_width() / 4.0, _texture_ennemis.get_height() / 4.0)
+		var source := Rect2(Vector2(float(cadre) * cellule.x, float(ligne) * cellule.y), cellule)
+		draw_texture_rect_region(_texture_ennemis, Rect2(Vector2.ONE * -taille * 0.5, Vector2.ONE * taille), source, modulation)
+	else:
+		_dessiner_repli(r, couleur)
 
 	if _braise > 0.0:
 		for i in 3:
@@ -244,12 +268,19 @@ func _draw() -> void:
 		Dessin.contour(self, Dessin.etoile(Vector2.ZERO, r * 1.5, r * 0.7, 6, _anim * 0.4), Palette.GIVRE, 2.5)
 	_dessiner_barre_de_vie(r)
 
-func _texture_pour_forme(forme: String) -> Texture2D:
+func _ligne_de_sprites(forme: String) -> int:
 	match forme:
-		"plume": return TEXTURE_SENTINELLE
-		"dard": return TEXTURE_VELOCE
-		"masque": return TEXTURE_ESSAIMEUR
-		_: return TEXTURE_RAMPANT
+		"plume": return 1
+		"dard": return 2
+		"masque": return 3
+	return 0
+
+func _dessiner_repli(r: float, couleur: Color) -> void:
+	match donnees.get("forme", "goutte"):
+		"plume": _dessiner_sentinelle(r, couleur)
+		"dard": _dessiner_veloce(r, couleur)
+		"masque": _dessiner_essaimeur(r, couleur)
+		_: _dessiner_rampant(r, couleur)
 
 func _dessiner_telegraphe(r: float) -> void:
 	if _cible == null:

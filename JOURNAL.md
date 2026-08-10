@@ -121,3 +121,50 @@ parallèle de cette implémentation, avec des retouches d'interface associées.
 Ils ne viennent pas de la session qui a écrit ce journal. Point de vigilance :
 ils sont chargés par `preload`, donc un fichier absent casse le lancement, alors
 que la règle du plan est que le jeu tourne de bout en bout sans un seul sprite.
+## 2026-08-07 — Musique adaptative et fluidité
+
+Le jeu n'avait aucune musique : huit balayages synthétiques très courts
+constituaient toute la trame sonore. Trois couches stéréo originales sont
+maintenant synthétisées au démarrage sur une même grille harmonique : ambiance,
+combat et boss. Elles restent synchronisées et se fondent selon l'écran et le
+nombre de menaces, tandis que les drafts et la fin de run ramènent le calme.
+
+Le héros passe désormais par une accélération et un freinage courts, avec une
+inclinaison et une compression visuelles qui ne touchent pas sa collision. Les
+projectiles rapides utilisent l'interpolation physique afin de rester continus
+sur un écran à rafraîchissement élevé. Le test en situation a également montré
+que les fragments étaient créés pendant le traitement d'une collision ; leur
+création est maintenant différée, supprimant les erreurs et saccades associées.
+
+Mesure locale : les trois boucles stéréo de dix secondes sont produites en moins
+d'une seconde sur la machine de développement. Cette durée et le mix restent à
+mesurer sur Android. `./verifier.sh` : 17 suites, 3 220 assertions, 0 échec,
+aucun `SCRIPT ERROR`.
+
+### Spritesheets et interface moderne
+
+Trois planches originales remplacent les images fixes : huit frames de course
+et d'attaque pour l'alchimiste, quatre frames pour chacun des quatre ennemis,
+et huit frames de flottement et d'attaque pour le boss. Elles sont découpées à
+l'exécution, sans créer un noeud par frame. Leur chargement reste optionnel :
+les replis géométriques reprennent la main si un PNG manque.
+
+L'interface repose maintenant sur `StyleInterface` : panneaux arrondis, ombres,
+bordures lumineuses, états de survol/appui, transitions d'entrée et grandes
+cibles tactiles cohérentes. Le langage est appliqué au menu, au HUD, au joystick,
+aux cartes, au draft, à l'alambic et à l'écran de fin. La couche musicale calme
+a aussi reçu une ligne aérienne lente au-dessus de son pad et de son arpège.
+
+Retour de jeu suivant : l'ancrage vertical différait entre la ligne de course et
+celle de tir. Chaque ligne a maintenant sa propre compensation, la taille du
+héros a été réduite, sa vitesse portée à 500 et l'arène élargie en supprimant une
+marge latérale redondante. Les réserves haute et basse ont aussi été resserrées.
+
+### Arène et hiérarchie de combat
+
+La référence visuelle fournie a servi pour la structure, pas pour ses assets :
+arène centrale carrelée, limites décoratives, objectif spatial en haut et HUD en
+trois blocs. L'interprétation reste celle d'Alambic, plus sombre et minérale,
+avec mousse magique, pierres d'encre, sceau alchimique et portail de grimoire.
+La vie est désormais attachée au mage ; le haut affiche pause, page et nombre de
+réactifs. Le bouton ouvre une vraie pause qui conserve exactement la salle.

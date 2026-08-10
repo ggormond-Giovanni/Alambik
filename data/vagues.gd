@@ -11,13 +11,13 @@ extends RefCounted
 
 # `jusqu_a` est une fraction de la longueur du chapitre.
 const PALIERS := [
-	{"jusqu_a": 0.10, "vagues": 2, "par_vague": 2, "pool": ["encrier_rampant"]},
-	{"jusqu_a": 0.20, "vagues": 2, "par_vague": 3, "pool": ["encrier_rampant", "plume_sentinelle"]},
-	{"jusqu_a": 0.32, "vagues": 3, "par_vague": 3, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce"]},
-	{"jusqu_a": 0.46, "vagues": 3, "par_vague": 4, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce", "scribe_essaimeur"]},
-	{"jusqu_a": 0.62, "vagues": 3, "par_vague": 5, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce", "scribe_essaimeur"]},
-	{"jusqu_a": 0.80, "vagues": 4, "par_vague": 5, "pool": ["plume_sentinelle", "tache_veloce", "scribe_essaimeur", "encrier_rampant"]},
-	{"jusqu_a": 1.01, "vagues": 4, "par_vague": 6, "pool": ["tache_veloce", "scribe_essaimeur", "plume_sentinelle", "encrier_rampant"]},
+	{"jusqu_a": 0.10, "vagues": 2, "par_vague": 2, "pool": ["encrier_rampant", "plume_sentinelle"], "distance": ["plume_sentinelle"]},
+	{"jusqu_a": 0.20, "vagues": 2, "par_vague": 3, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce"], "distance": ["plume_sentinelle"]},
+	{"jusqu_a": 0.32, "vagues": 3, "par_vague": 3, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce"], "distance": ["plume_sentinelle"]},
+	{"jusqu_a": 0.46, "vagues": 3, "par_vague": 4, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce", "scribe_essaimeur"], "distance": ["plume_sentinelle", "scribe_essaimeur"]},
+	{"jusqu_a": 0.62, "vagues": 3, "par_vague": 5, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce", "scribe_essaimeur"], "distance": ["plume_sentinelle", "scribe_essaimeur"]},
+	{"jusqu_a": 0.80, "vagues": 4, "par_vague": 5, "pool": ["plume_sentinelle", "tache_veloce", "scribe_essaimeur", "encrier_rampant"], "distance": ["plume_sentinelle", "scribe_essaimeur"]},
+	{"jusqu_a": 1.01, "vagues": 4, "par_vague": 6, "pool": ["tache_veloce", "scribe_essaimeur", "plume_sentinelle", "encrier_rampant"], "distance": ["plume_sentinelle", "scribe_essaimeur"]},
 ]
 
 static func palier_pour(progression: float) -> Dictionary:
@@ -49,7 +49,10 @@ static func pour_salle(numero: int, chapitre := 0, graine := 0) -> Array:
 		# La derniere vague d'une page est la plus fournie : la page monte.
 		var nombre := int(palier["par_vague"]) + (1 if i == int(palier["vagues"]) - 1 else 0)
 		for j in nombre:
-			vague.append(pool[alea.randi_range(0, pool.size() - 1)])
+			# Chaque vague contient au moins un ennemi qui force a lire et
+			# esquiver des projectiles, y compris les toutes premieres pages.
+			var choix: Array = palier["distance"] if j == 0 else pool
+			vague.append(choix[alea.randi_range(0, choix.size() - 1)])
 		vagues.append(vague)
 	return vagues
 

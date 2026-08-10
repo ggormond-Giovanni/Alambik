@@ -9,15 +9,16 @@ var degats: float
 var vitesse_projectile: float
 var portee: float
 
-static func depuis_reglages() -> Stats:
+static func depuis_reglages(rangs: Dictionary = {}, bonus_niveau_pv := 0.0,
+		mult_niveau_degats := 1.0, mult_niveau_vitesse := 1.0) -> Stats:
 	var s := Stats.new()
-	s.pv_max = Reglages.HEROS_PV
-	s.pv = Reglages.HEROS_PV
-	s.vitesse = Reglages.HEROS_VITESSE
-	s.cadence = Reglages.HEROS_CADENCE
-	s.degats = Reglages.TIR_DEGATS
-	s.vitesse_projectile = Reglages.TIR_VITESSE
-	s.portee = Reglages.TIR_PORTEE
+	s.pv_max = Reglages.HEROS_PV + bonus_niveau_pv + ArbreCompetences.bonus_pv(rangs)
+	s.pv = s.pv_max
+	s.vitesse = Reglages.HEROS_VITESSE * mult_niveau_vitesse * ArbreCompetences.multiplicateur_vitesse(rangs)
+	s.cadence = Reglages.HEROS_CADENCE * ArbreCompetences.multiplicateur_cadence(rangs)
+	s.degats = Reglages.TIR_DEGATS * mult_niveau_degats * ArbreCompetences.multiplicateur_degats(rangs)
+	s.vitesse_projectile = Reglages.TIR_VITESSE * ArbreCompetences.multiplicateur_projectile(rangs)
+	s.portee = Reglages.TIR_PORTEE * ArbreCompetences.multiplicateur_projectile(rangs)
 	return s
 
 func blesser(montant: float) -> void:

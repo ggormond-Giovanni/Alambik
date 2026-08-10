@@ -1,9 +1,8 @@
 extends Control
 
-# La salle 5 et la salle 9. Deux reactifs choisis par le joueur disparaissent
-# et deviennent une essence. Trois regles de la spec sont tenues ici :
-# une essence n'est jamais composant, on peut partir sans fusionner, et
-# l'interface montre ce qui est possible avant le clic au lieu de punir apres.
+# Deux augments choisis disparaissent et deviennent une essence. Toutes les
+# paires de reactifs de base fonctionnent ; leur resultat reste masque jusqu'a
+# sa premiere creation, puis rejoint le carnet de recettes du joueur.
 
 signal termine
 
@@ -20,6 +19,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_construire()
+	StyleInterface.animer_entree(self)
 	if Jeu.mode_auto:
 		_jouer_automatiquement()
 
@@ -52,8 +52,10 @@ func _construire() -> void:
 
 	_apercu = Label.new()
 	_apercu.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_apercu.add_theme_font_size_override("font_size", 30)
-	_apercu.custom_minimum_size = Vector2(0, 44)
+	_apercu.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_apercu.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_apercu.add_theme_font_size_override("font_size", 24)
+	_apercu.custom_minimum_size = Vector2(0, 168)
 	colonne.add_child(_apercu)
 
 	var boutons := HBoxContainer.new()
@@ -80,6 +82,7 @@ func _creer_bouton(texte: String, teinte: Color) -> Button:
 	bouton.add_theme_font_size_override("font_size", 30)
 	bouton.add_theme_color_override("font_color", teinte)
 	bouton.add_theme_color_override("font_disabled_color", Color(teinte, 0.28))
+	StyleInterface.styliser_bouton(bouton, teinte, texte.begins_with("Quitter"))
 	return bouton
 
 func _construire_cartes() -> void:
@@ -104,6 +107,16 @@ func _construire_cartes() -> void:
 		_cartes.append(carte)
 	_rafraichir_boutons()
 
+func _actualiser_cartes() -> void:
+	var fusionnables := _ids_fusionnables()
+	for carte in _cartes:
+		if not is_instance_valid(carte):
+			continue
+		carte.selectionnee = carte.reactif.id in _selection
+		carte.desactivee = not carte.reactif.id in fusionnables and not carte.selectionnee
+		carte.queue_redraw()
+	_rafraichir_boutons()
+
 func _ids_fusionnables() -> Array[String]:
 	var ids: Array[String] = []
 	for paire in AlambicLogique.paires_possibles(Jeu.inventaire):
@@ -121,13 +134,17 @@ func _rafraichir_boutons() -> void:
 	_bouton_fusionner.disabled = not possible
 	if possible:
 		var essence := Jeu.reactif(Recettes.essence_pour(_selection[0], _selection[1]))
-		_apercu.text = "→ %s" % essence.nom
+		if ReglagesJoueur.recette_decouverte(_selection[0], _selection[1]):
+			var bonus := DetailsReactif.texte(essence)
+			_apercu.text = "→ %s\n%s%s" % [essence.nom, essence.description, "\n" + bonus if not bonus.is_empty() else ""]
+		else:
+			_apercu.text = "→ ???\nFusion encore inconnue"
 		_apercu.add_theme_color_override("font_color", Palette.ESSENCE)
 	elif AlambicLogique.paires_possibles(Jeu.inventaire).is_empty():
 		_apercu.text = "Aucun de ces réactifs ne se combine."
 		_apercu.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
 	else:
-		_apercu.text = "Choisissez deux réactifs compatibles."
+		_apercu.text = "Choisissez deux augments. Toutes les paires sont possibles."
 		_apercu.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
 
 func _sur_choix(id: String) -> void:
@@ -137,7 +154,7 @@ func _sur_choix(id: String) -> void:
 		_selection.erase(id)
 	elif _selection.size() < 2:
 		_selection.append(id)
-	_construire_cartes()
+	_actualiser_cartes()
 
 func _sur_fusionner() -> void:
 	if _fusion_en_cours or _selection.size() != 2:
@@ -146,13 +163,15 @@ func _sur_fusionner() -> void:
 		return
 	_fusion_en_cours = true
 	var essence := Recettes.essence_pour(_selection[0], _selection[1])
+	ReglagesJoueur.decouvrir_recette(_selection[0], _selection[1])
 	Sons.jouer("fusion", -8.0)
 	var consommes: Array[String] = _selection.duplicate()
 	Jeu.retirer_reactifs(consommes)
 	Jeu.ajouter_reactif(essence)
 	_selection.clear()
-	_construire_cartes()
-	_apercu.text = "%s !" % Jeu.reactif(essence).nom
+	_actualiser_cartes()
+	var cree := Jeu.reactif(essence)
+	_apercu.text = "%s !\n%s" % [cree.nom, cree.description]
 	_apercu.add_theme_color_override("font_color", Palette.ESSENCE)
 	await get_tree().create_timer(1.1).timeout
 	termine.emit()
@@ -169,16 +188,18 @@ func _jouer_automatiquement() -> void:
 		termine.emit()
 		return
 	_selection = [paires[0][0], paires[0][1]]
-	_construire_cartes()
+	_actualiser_cartes()
 	_sur_fusionner()
 
 func _draw() -> void:
 	var police := ThemeDB.fallback_font
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.035, 0.06, 0.93))
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.018, 0.014, 0.034, 0.96))
+	Dessin.halo(self, Vector2(size.x / 2.0, 220.0), 420.0, Color(Palette.ESSENCE, 0.20), 7)
 	var haut := Ecran.marge_haute() + 80.0
-	draw_string(police, Vector2(0, haut), "L'alambic", HORIZONTAL_ALIGNMENT_CENTER, size.x, 52, Palette.ESSENCE)
-	draw_string(police, Vector2(0, haut + 44.0), "Deux réactifs entrent, une essence sort.",
-		HORIZONTAL_ALIGNMENT_CENTER, size.x, 26, Palette.TEXTE_ATTENUE)
+	draw_string(police, Vector2(52.0, haut - 36.0), "LABORATOIRE D'ESSENCES", HORIZONTAL_ALIGNMENT_LEFT, size.x - 104.0, 22, Palette.ESSENCE)
+	draw_string(police, Vector2(52.0, haut + 18.0), "Fusion alchimique", HORIZONTAL_ALIGNMENT_LEFT, size.x - 104.0, 52, Palette.TEXTE)
+	draw_string(police, Vector2(52.0, haut + 58.0), "Deux augments entrent, une essence sort. PV restaurés : %d %%" % roundi(Reglages.SOIN_ALAMBIC * 100.0),
+		HORIZONTAL_ALIGNMENT_LEFT, size.x - 104.0, 26, Palette.TEXTE_ATTENUE)
 	_dessiner_alambic(Vector2(size.x / 2.0, haut + 210.0))
 
 func _dessiner_alambic(centre: Vector2) -> void:

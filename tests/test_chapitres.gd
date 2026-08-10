@@ -1,7 +1,7 @@
 extends RefCounted
 
 func test_plusieurs_chapitres(v: Verif) -> void:
-	v.vrai(Chapitres.nombre() >= 3, "la V1 compte au moins trois chapitres")
+	v.egal(Chapitres.nombre(), 10, "la bibliotheque compte dix grimoires")
 
 func test_cinquante_pages(v: Verif) -> void:
 	for chapitre in Chapitres.nombre():
@@ -20,12 +20,11 @@ func test_chaque_boss_existe(v: Verif) -> void:
 		v.vrai(CatalogueEnnemis.TOUS.has(chapitre["boss"]),
 			"le boss %s du chapitre %s doit etre catalogue" % [chapitre["boss"], chapitre["nom"]])
 
-func test_les_boss_sont_distincts(v: Verif) -> void:
-	# Trois fois le meme boss, c'est trois fois le meme chapitre.
+func test_les_dix_grimoires_sont_distincts(v: Verif) -> void:
 	var vus: Array[String] = []
 	for chapitre in Chapitres.TOUS:
-		v.vrai(not chapitre["boss"] in vus, "le boss %s est reutilise" % chapitre["boss"])
-		vus.append(chapitre["boss"])
+		v.vrai(not chapitre["id"] in vus, "le grimoire %s est unique" % chapitre["id"])
+		vus.append(chapitre["id"])
 
 func test_les_alambics_tombent_dans_le_chapitre(v: Verif) -> void:
 	for index in Chapitres.nombre():

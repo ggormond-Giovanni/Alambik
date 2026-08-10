@@ -1,6 +1,6 @@
 # État — Alambic
 
-*Mis à jour le 2026-08-05.*
+*Mis à jour le 2026-08-07.*
 
 La V1 est jouable de bout en bout : menu, **trois chapitres de cinquante pages**,
 quatre alambics et un mi-chapitre par chapitre, un boss propre à chacun, écran
@@ -23,9 +23,12 @@ listé plus bas, sans arrondi.
 | toucher au comportement d'un ennemi | `scripts/cerveaux.gd` (décision pure) puis `scripts/ennemi.gd` (exécution) |
 | toucher au boss | `scripts/boss.gd` |
 | toucher au dessin d'une créature ou d'une icône | `scripts/dessin.gd` (formes) et `scripts/palette.gd` (couleurs) |
+| modifier les cycles animés des personnages | `assets/characters/sheets/` puis `heros.gd`, `ennemi.gd` et `boss.gd` |
+| modifier le langage visuel commun de l'interface | `scripts/style_interface.gd` |
 | toucher à l'enchaînement des pages | `scripts/run.gd` |
 | toucher à une page de combat | `scripts/salle.gd` |
 | toucher à l'interface | `ui/` : `hud.gd`, `draft.gd`, `alambic.gd`, `carte_reactif.gd`, `joystick.gd`, `fin_de_run.gd` |
+| modifier la pause en combat | `ui/pause.gd` puis `_ouvrir_pause()` dans `scripts/run.gd` |
 | lancer sur PC | `./lancer.sh` |
 | installer sur le téléphone | `./deploy.sh` (voir `MOBILE.md`) |
 | produire l'APK à télécharger | `./publier.sh` → `dist/alambic.apk` |
@@ -43,7 +46,7 @@ Mesurées, pas estimées. Machine de développement, Godot 4.7.1, headless.
 
 | Quoi | Valeur | Comment |
 |---|---|---|
-| Suites de tests | 15 suites, 522 assertions, 0 échec | `./verifier.sh` |
+| Suites de tests | 17 suites, 3 220 assertions, 0 échec | `./verifier.sh` |
 | Runs du bot, six descentes | **0 blocage sur 6**, deux par chapitre | `CHAPITRE=n ./sondes/vingt_runs.sh` |
 | Pages atteintes, chapitre 1 | 50/50 et 14/50 | idem |
 | Pages atteintes, chapitre 2 | 25/50 et 9/50 | idem |
@@ -134,6 +137,8 @@ qu'une page sur deux. Rapport héros/créatures sur le premier chapitre : entre
   était intouchable.
 - **Contournement** : ennemis et bot dévient quand ils n'avancent plus. Un
   ennemi qui pousse contre un bloc bloque la page pour toujours.
+- **HUD lié à l'action** : la vie suit le mage ; le haut de l'écran porte la
+  progression, la pause et les réactifs. Aucune monnaie fictive n'est affichée.
 
 ## Ce qui reste à faire
 
@@ -148,6 +153,8 @@ qu'une page sur deux. Rapport héros/créatures sur le premier chapitre : entre
   difficulté ressentie au pouce.
 - La spec annonce des sessions de cinq à sept minutes ; un chapitre de cinquante
   pages en demande huit à neuf. Soit la spec change, soit le chapitre raccourcit.
-- La musique et les sons sont synthétisés au démarrage, volontairement discrets.
-  Rien de définitif : hors périmètre V1.
+- Valider au téléphone le mix de la musique adaptative et le temps de synthèse
+  au premier lancement ; le rendu headless ne dispose pas de sortie audio.
+- Valider sur appareil la taille apparente et la cadence des nouvelles
+  spritesheets ; le mode headless vérifie leur import mais pas leur confort visuel.
 - Le nom « Alambic » n'a pas été vérifié sur les registres de marques.

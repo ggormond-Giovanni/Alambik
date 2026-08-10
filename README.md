@@ -51,9 +51,9 @@ Arguments de développement, après `--` :
 ## Rendu
 
 Le socle est dessiné par le code (`scripts/dessin.gd`, `scripts/palette.gd`) et
-le son est synthétisé au démarrage (`autoload/sons.gd`) : aucun fichier audio
-dans le dépôt. Des sprites de personnages ont été ajoutés depuis dans
-`assets/characters/` et sont utilisés par le héros et les ennemis.
+le son, musique adaptative comprise, est synthétisé au démarrage
+(`autoload/sons.gd`) : aucun fichier audio dans le dépôt. Les personnages sont
+animés par les planches de `assets/characters/sheets/`.
 
 Attention à la règle du plan — le repli géométrique doit rester possible : un
 `preload` sur un PNG absent casse le lancement, alors que le dessin, lui, ne
