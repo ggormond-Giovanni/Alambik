@@ -13,7 +13,7 @@ signal morte
 signal sillage_depose(position: Vector2, gelant: bool)
 
 var stats := Stats.depuis_reglages(ReglagesJoueur.rangs_competences_effectifs(), ReglagesJoueur.bonus_niveau_pv(),
-	ReglagesJoueur.multiplicateur_niveau_degats(), ReglagesJoueur.multiplicateur_niveau_vitesse())
+	ReglagesJoueur.multiplicateur_niveau_degats(), ReglagesJoueur.multiplicateur_niveau_vitesse(), ReglagesJoueur.passifs_equipes_effectifs())
 var tir_courant: Tir
 var bouclier := 0
 var limites := Rect2(Vector2(80, 300), Vector2(920, 1400))
@@ -33,6 +33,7 @@ var _flottement := 0.0
 var _secousse := 0.0
 var _inclinaison := 0.0
 var _attaque := 0.0
+var _seconde_chance_disponible := true
 var _texture_heros: Texture2D
 
 func _ready() -> void:
@@ -53,12 +54,19 @@ func recalculer() -> void:
 	var drapeaux := tir_courant.drapeaux
 	stats.vitesse = Reglages.HEROS_VITESSE * ReglagesJoueur.multiplicateur_niveau_vitesse() \
 		* ArbreCompetences.multiplicateur_vitesse(ReglagesJoueur.rangs_competences_effectifs()) \
+		* Sorts.multiplicateur_vitesse(ReglagesJoueur.passifs_equipes_effectifs()) \
 		* (Reglages.PAS_DE_CHAT_FACTEUR if "pas_de_chat" in drapeaux else 1.0)
 	if "fiole_de_vie" in drapeaux and not _fiole_appliquee:
 		_fiole_appliquee = true
 		stats.pv_max += Reglages.FIOLE_PV
-		stats.soigner(Reglages.FIOLE_PV)
-	bouclier = 1 if "bouclier_de_sel" in drapeaux else 0
+		stats.soigner(Reglages.FIOLE_PV * ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
+	bouclier = 1 if "bouclier_de_sel" in drapeaux or ArbreCompetences.donne_bouclier(ReglagesJoueur.rangs_competences_effectifs()) or Sorts.donne_bouclier(ReglagesJoueur.passifs_equipes_effectifs()) else 0
+
+func preparer_nouvelle_page() -> void:
+	recalculer()
+	var soin := ArbreCompetences.soin_par_page(ReglagesJoueur.rangs_competences_effectifs()) + Sorts.soin_par_page(ReglagesJoueur.passifs_equipes_effectifs())
+	if soin > 0.0:
+		stats.soigner(stats.pv_max * soin * ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
 
 func _physics_process(delta: float) -> void:
 	var vise := _intention * stats.vitesse * _intensite
@@ -175,11 +183,24 @@ func recevoir_degats(montant: float, _effets: Array = []) -> void:
 		return
 	_invulnerable = Reglages.HEROS_INVULNERABILITE
 	_secousse = 1.0
-	stats.blesser(montant * (1.0 - ArbreCompetences.reduction_degats(ReglagesJoueur.rangs_competences_effectifs())))
+	var ratio_pv := stats.pv / maxf(1.0, stats.pv_max)
+	stats.blesser(montant * (1.0 - ArbreCompetences.reduction_degats(ReglagesJoueur.rangs_competences_effectifs())) \
+		* Sorts.multiplicateur_degats_recus(ReglagesJoueur.passifs_equipes_effectifs()) \
+		* Sorts.multiplicateur_degats_recus_conditionnel(ReglagesJoueur.passifs_equipes_effectifs(), ratio_pv))
 	touchee.emit(global_position)
 	Sons.jouer("degat", -6.0)
 	if stats.est_mort():
+		if _seconde_chance_disponible and ReglagesJoueur.passifs_equipes_effectifs().has("seconde_chance"):
+			_seconde_chance_disponible = false
+			stats.pv = stats.pv_max * 0.35
+			bouclier = 1
+			Sons.jouer("fusion", -7.0)
+			return
 		morte.emit()
+
+func multiplicateur_degats_passif() -> float:
+	return Sorts.multiplicateur_degats_conditionnel(ReglagesJoueur.passifs_equipes_effectifs(),
+		stats.pv / maxf(1.0, stats.pv_max))
 
 func _draw() -> void:
 	var r := Reglages.HEROS_RAYON

@@ -2,7 +2,9 @@ extends Control
 
 const CHEMIN_SPRITES_HEROS := "res://assets/characters/sheets/hero_alchemist_sheet.png"
 const ARBRE := preload("res://ui/arbre_competences.tscn")
+const MENU_SORTS := preload("res://ui/sorts.tscn")
 const SELECTION_GRIMOIRE := preload("res://ui/selection_grimoire.tscn")
+const REGLAGES := preload("res://ui/reglages.tscn")
 
 # Titre, bouton, meilleur resultat. Aucun sprite : le grimoire est dessine.
 
@@ -55,11 +57,25 @@ func _construire() -> void:
 	StyleInterface.styliser_bouton(_bouton_arbre, Palette.ESSENCE)
 	_bouton_arbre.pressed.connect(_ouvrir_arbre)
 	outils.add_child(_bouton_arbre)
+	var bouton_sorts := Button.new()
+	bouton_sorts.text = "SORTS\n1 • 2 • 1"
+	bouton_sorts.custom_minimum_size = Vector2(210, 106)
+	bouton_sorts.add_theme_font_size_override("font_size", 23)
+	StyleInterface.styliser_bouton(bouton_sorts, Palette.OR)
+	bouton_sorts.pressed.connect(_ouvrir_sorts)
+	outils.add_child(bouton_sorts)
 	_bouton_dev = Button.new()
 	_bouton_dev.custom_minimum_size = Vector2(180, 106)
 	_bouton_dev.add_theme_font_size_override("font_size", 23)
 	_bouton_dev.pressed.connect(_basculer_dev)
 	outils.add_child(_bouton_dev)
+	var bouton_reglages := Button.new()
+	bouton_reglages.text = "RÉGLAGES"
+	bouton_reglages.custom_minimum_size = Vector2(190, 106)
+	bouton_reglages.add_theme_font_size_override("font_size", 23)
+	StyleInterface.styliser_bouton(bouton_reglages, Palette.TEXTE_ATTENUE, true)
+	bouton_reglages.pressed.connect(_ouvrir_reglages)
+	outils.add_child(bouton_reglages)
 	_rafraichir_bouton_arbre()
 
 	_bouton_grimoire = Button.new()
@@ -71,7 +87,7 @@ func _construire() -> void:
 	colonne.add_child(_bouton_grimoire)
 
 func _rafraichir_bouton_arbre() -> void:
-	_bouton_arbre.text = "NIV. %d • ARBRE ✦ %s" % [ReglagesJoueur.niveau_heros_effectif(), ReglagesJoueur.points_maitrise_affiches()]
+	_bouton_arbre.text = "HÉROS NIVEAU %d\nARBRE ✦ %s" % [ReglagesJoueur.niveau_heros_effectif(), ReglagesJoueur.points_maitrise_affiches()]
 	_bouton_dev.text = "DEV\n%s" % ("ON" if ReglagesJoueur.mode_dev else "OFF")
 	StyleInterface.styliser_bouton(_bouton_dev, Palette.DANGER if ReglagesJoueur.mode_dev else Palette.TEXTE_ATTENUE, true)
 
@@ -88,11 +104,23 @@ func _ouvrir_arbre() -> void:
 		arbre.queue_free()
 		_rafraichir_bouton_arbre())
 
+func _ouvrir_sorts() -> void:
+	Sons.jouer("choix", -12.0)
+	var sorts := MENU_SORTS.instantiate()
+	add_child(sorts)
+	sorts.ferme.connect(func() -> void: sorts.queue_free())
+
 func _ouvrir_bibliotheque() -> void:
 	Sons.jouer("choix", -12.0)
 	var bibliotheque := SELECTION_GRIMOIRE.instantiate()
 	add_child(bibliotheque)
 	bibliotheque.ferme.connect(func() -> void: bibliotheque.queue_free())
+
+func _ouvrir_reglages() -> void:
+	Sons.jouer("choix", -12.0)
+	var panneau := REGLAGES.instantiate()
+	add_child(panneau)
+	panneau.ferme.connect(func() -> void: panneau.queue_free())
 
 func _chapitres_ouverts() -> int:
 	var total := 0

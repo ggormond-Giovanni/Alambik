@@ -4,17 +4,16 @@ signal ferme
 
 const CARTE_BRANCHE := preload("res://ui/carte_branche.gd")
 const COULEURS := {
-	"Défense": Color(0.38, 0.82, 0.72),
-	"Offense": Color(1.0, 0.42, 0.34),
-	"Utilitaire": Color(0.68, 0.58, 1.0),
+	"Offensif": Color(1.0, 0.45, 0.30),
+	"Défensif": Color(0.35, 0.70, 1.0),
+	"Passif": Color(0.38, 0.82, 0.72),
 }
-const Y_NOEUDS := [10.0, 260.0, 510.0, 760.0]
 
 var _statut: Label
 var _onglets := {}
 var _zone: ScrollContainer
 var _carte: Control
-var _branche := "Défense"
+var _branche := "Offensif"
 var _message := ""
 
 func _ready() -> void:
@@ -97,10 +96,10 @@ func _afficher_branche(branche: String) -> void:
 		_carte.queue_free()
 	_carte = Control.new()
 	_carte.set_script(CARTE_BRANCHE)
-	_carte.configurer(COULEURS[branche])
+	var ids: Array = ArbreCompetences.BRANCHES[branche]
+	_carte.configurer(COULEURS[branche], ids.size())
 	_carte.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_zone.add_child(_carte)
-	var ids: Array = ArbreCompetences.BRANCHES[branche]
 	for index in ids.size():
 		_creer_noeud(ids[index], index)
 	_zone.scroll_vertical = 0
@@ -114,8 +113,8 @@ func _creer_noeud(id: String, index: int) -> void:
 	bouton.anchor_right = 0.945
 	bouton.offset_left = 0.0
 	bouton.offset_right = 0.0
-	bouton.offset_top = Y_NOEUDS[index]
-	bouton.offset_bottom = Y_NOEUDS[index] + 190.0
+	bouton.offset_top = 10.0 + float(index) * 230.0
+	bouton.offset_bottom = bouton.offset_top + 190.0
 	bouton.add_theme_font_size_override("font_size", 22)
 	StyleInterface.styliser_bouton(bouton, COULEURS[_branche], index > 0)
 	bouton.pressed.connect(func() -> void: _sur_noeud(id))
@@ -125,20 +124,21 @@ func _sur_noeud(id: String) -> void:
 	var noeud: Dictionary = ArbreCompetences.NOEUDS[id]
 	var rang := ReglagesJoueur.rang_competence(id)
 	if rang >= ArbreCompetences.MAX_RANG:
-		_message = "%s est déjà au niveau maximum." % noeud["nom"]
+		_message = "%s est déjà maîtrisé." % noeud["nom"]
 	elif not ReglagesJoueur.mode_dev and not ArbreCompetences.prerequis_atteint(id, ReglagesJoueur.rangs_competences):
 		var requis: Dictionary = ArbreCompetences.NOEUDS[noeud["requis"]]
 		_message = "Terminez d’abord %s (%d/%d)." % [requis["nom"], ReglagesJoueur.rang_competence(noeud["requis"]), ArbreCompetences.MAX_RANG]
 	elif not ReglagesJoueur.mode_dev and ReglagesJoueur.points_maitrise < ReglagesJoueur.cout_competence(id):
 		_message = "Il manque %d points pour %s." % [ReglagesJoueur.cout_competence(id) - ReglagesJoueur.points_maitrise, noeud["nom"]]
 	elif ReglagesJoueur.acheter_competence(id):
-		_message = "%s passe au niveau %d !" % [noeud["nom"], rang + 1]
+		_message = "%s maîtrisé : bonus permanent actif." % noeud["nom"]
 		Sons.jouer("choix", -12.0)
 	_rafraichir()
 
 func _rafraichir() -> void:
-	var xp := "MAX" if ReglagesJoueur.mode_dev else "%d/%d" % [ReglagesJoueur.experience_heros, ReglagesJoueur.experience_heros_requise()]
-	var base := "HÉROS %d  •  XP %s  •  ✦ %s" % [ReglagesJoueur.niveau_heros_effectif(), xp, ReglagesJoueur.points_maitrise_affiches()]
+	var xp := "%d/%d" % [ReglagesJoueur.experience_heros, ReglagesJoueur.experience_heros_requise()]
+	var base := "HÉROS %d • XP %s • POINTS ✦ %s" % [ReglagesJoueur.niveau_heros_effectif(), xp,
+		ReglagesJoueur.points_maitrise_affiches()]
 	_statut.text = _message if not _message.is_empty() else base
 	_statut.add_theme_color_override("font_color", Palette.OR if not _message.is_empty() else Palette.TEXTE_ATTENUE)
 	for id in ArbreCompetences.BRANCHES[_branche]:
@@ -148,10 +148,10 @@ func _rafraichir() -> void:
 		var noeud: Dictionary = ArbreCompetences.NOEUDS[id]
 		var rang := ReglagesJoueur.rang_competence(id)
 		var disponible := ReglagesJoueur.mode_dev or ArbreCompetences.prerequis_atteint(id, ReglagesJoueur.rangs_competences)
-		var prix := "MAX" if rang >= ArbreCompetences.MAX_RANG else "AMÉLIORER  ✦ %d" % ReglagesJoueur.cout_competence(id)
+		var prix := "MAÎTRISÉ" if rang >= 1 else "DÉBLOQUER  ✦ %d" % ReglagesJoueur.cout_competence(id)
 		if not disponible:
 			prix = "VERROUILLÉ — terminez %s" % ArbreCompetences.NOEUDS[noeud["requis"]]["nom"]
-		bouton.text = "%s   NIV. %d/%d\n%s\n%s" % [noeud["nom"], rang, ArbreCompetences.MAX_RANG, noeud["description"], prix]
+		bouton.text = "%s\n%s\n%s" % [noeud["nom"], noeud["description"], prix]
 		# Toujours appuyable : le message explique verrou ou manque de points.
 		bouton.disabled = false
 		bouton.modulate = Color.WHITE if disponible else Color(0.62, 0.62, 0.68)

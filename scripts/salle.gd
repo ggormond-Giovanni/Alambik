@@ -5,6 +5,7 @@ extends Node2D
 # du code.
 
 signal terminee
+signal ennemi_abattu
 
 const PROJECTILE := preload("res://scenes/projectile.tscn")
 const ENNEMI := preload("res://scenes/ennemi.tscn")
@@ -183,6 +184,7 @@ func _sur_mort_ennemi(qui: Node, position: Vector2, couleur: Color) -> void:
 	ReglagesJoueur.ajouter_experience_heros(experience_gagnee)
 	# Aucun objet au sol : les deux compteurs progressent des la mort.
 	ReglagesJoueur.ajouter_points_maitrise(maxi(1, int(donnees_ennemi.get("points_garantis", 0))))
+	ennemi_abattu.emit()
 	if effets != null:
 		effets.mort(position, couleur)
 	# Le noeud mort est encore dans l'arbre a cet instant : on attend une frame

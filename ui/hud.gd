@@ -6,11 +6,15 @@ extends Control
 var _secousse := 0.0
 var _anim := 0.0
 signal pause_demandee
+signal sort_actif_demande
+signal ultime_demande
 
 var _style_compact: StyleBoxFlat
 var _style_progression: StyleBoxFlat
 var _style_remplissage: StyleBoxFlat
 var _bouton_pause: Button
+var _bouton_actif: Button
+var _bouton_ultime: Button
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -29,17 +33,53 @@ func _ready() -> void:
 	StyleInterface.styliser_bouton(_bouton_pause, Palette.TEXTE_ATTENUE, true)
 	_bouton_pause.pressed.connect(func() -> void: pause_demandee.emit())
 	add_child(_bouton_pause)
+	_bouton_actif = _creer_bouton_sort(Palette.OR)
+	_bouton_actif.pressed.connect(func() -> void: sort_actif_demande.emit())
+	add_child(_bouton_actif)
+	_bouton_ultime = _creer_bouton_sort(Palette.ESSENCE)
+	_bouton_ultime.pressed.connect(func() -> void: ultime_demande.emit())
+	add_child(_bouton_ultime)
 	_replacer_bouton()
 	get_viewport().size_changed.connect(_replacer_bouton)
 
 func _replacer_bouton() -> void:
 	if _bouton_pause != null:
 		_bouton_pause.position = Vector2(28.0, Ecran.marge_haute() + 14.0)
+	var taille := get_viewport_rect().size
+	if _bouton_actif != null:
+		_bouton_actif.position = Vector2(taille.x - 142.0, taille.y - Ecran.marge_basse() - 350.0)
+	if _bouton_ultime != null:
+		_bouton_ultime.position = Vector2(taille.x - 142.0, taille.y - Ecran.marge_basse() - 494.0)
+
+func _creer_bouton_sort(couleur: Color) -> Button:
+	var bouton := Button.new()
+	bouton.custom_minimum_size = Vector2(116, 116)
+	bouton.size = Vector2(116, 116)
+	bouton.add_theme_font_size_override("font_size", 21)
+	StyleInterface.styliser_bouton(bouton, couleur)
+	return bouton
+
+func rafraichir_sorts(recharge_active: float, charge_ultime: int) -> void:
+	var actif := ReglagesJoueur.sort_actif_effectif()
+	var ultime := ReglagesJoueur.ultime_effectif()
+	_bouton_actif.visible = Sorts.ACTIFS.has(actif)
+	_bouton_ultime.visible = Sorts.ULTIMES.has(ultime)
+	if _bouton_actif.visible:
+		var donnees: Dictionary = Sorts.ACTIFS[actif]
+		_bouton_actif.text = "%s\n%s" % [donnees["nom"], "%.1f s" % recharge_active if recharge_active > 0.0 else "PRÊT"]
+		_bouton_actif.disabled = recharge_active > 0.0
+	if _bouton_ultime.visible:
+		var donnees: Dictionary = Sorts.ULTIMES[ultime]
+		var requis := ceili(float(donnees["charge"]) * Sorts.multiplicateur_charge_ultime(ReglagesJoueur.passifs_equipes_effectifs()))
+		_bouton_ultime.text = "%s\n%d/%d" % [donnees["nom"], mini(charge_ultime, requis), requis]
+		_bouton_ultime.disabled = charge_ultime < requis
 
 func rafraichir() -> void:
 	queue_redraw()
 
 func secouer() -> void:
+	if not ReglagesJoueur.secousses_ecran:
+		return
 	_secousse = 1.0
 
 func _process(delta: float) -> void:

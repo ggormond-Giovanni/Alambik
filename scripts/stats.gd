@@ -10,15 +10,15 @@ var vitesse_projectile: float
 var portee: float
 
 static func depuis_reglages(rangs: Dictionary = {}, bonus_niveau_pv := 0.0,
-		mult_niveau_degats := 1.0, mult_niveau_vitesse := 1.0) -> Stats:
+		mult_niveau_degats := 1.0, mult_niveau_vitesse := 1.0, passifs: Dictionary = {}) -> Stats:
 	var s := Stats.new()
-	s.pv_max = Reglages.HEROS_PV + bonus_niveau_pv + ArbreCompetences.bonus_pv(rangs)
+	s.pv_max = (Reglages.HEROS_PV + bonus_niveau_pv + ArbreCompetences.bonus_pv(rangs)) * Sorts.multiplicateur_pv(passifs)
 	s.pv = s.pv_max
-	s.vitesse = Reglages.HEROS_VITESSE * mult_niveau_vitesse * ArbreCompetences.multiplicateur_vitesse(rangs)
-	s.cadence = Reglages.HEROS_CADENCE * ArbreCompetences.multiplicateur_cadence(rangs)
-	s.degats = Reglages.TIR_DEGATS * mult_niveau_degats * ArbreCompetences.multiplicateur_degats(rangs)
-	s.vitesse_projectile = Reglages.TIR_VITESSE * ArbreCompetences.multiplicateur_projectile(rangs)
-	s.portee = Reglages.TIR_PORTEE * ArbreCompetences.multiplicateur_projectile(rangs)
+	s.vitesse = Reglages.HEROS_VITESSE * mult_niveau_vitesse * ArbreCompetences.multiplicateur_vitesse(rangs) * Sorts.multiplicateur_vitesse(passifs)
+	s.cadence = Reglages.HEROS_CADENCE * ArbreCompetences.multiplicateur_cadence(rangs) * Sorts.multiplicateur_cadence(passifs)
+	s.degats = Reglages.TIR_DEGATS * mult_niveau_degats * ArbreCompetences.multiplicateur_degats(rangs) * Sorts.multiplicateur_degats(passifs)
+	s.vitesse_projectile = Reglages.TIR_VITESSE * ArbreCompetences.multiplicateur_projectile(rangs) * Sorts.multiplicateur_projectile(passifs)
+	s.portee = Reglages.TIR_PORTEE * ArbreCompetences.multiplicateur_projectile(rangs) * Sorts.multiplicateur_projectile(passifs)
 	return s
 
 func blesser(montant: float) -> void:

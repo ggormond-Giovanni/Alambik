@@ -20,7 +20,8 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 func _zone_valide(position: Vector2) -> bool:
-	return position.y > get_viewport_rect().size.y * 0.42
+	var taille := get_viewport_rect().size
+	return position.y > taille.y * 0.42 and position.x < taille.x * 0.78
 
 func _input(evenement: InputEvent) -> void:
 	if evenement is InputEventScreenTouch:

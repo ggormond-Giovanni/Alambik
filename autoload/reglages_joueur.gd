@@ -18,11 +18,20 @@ var rangs_competences := {}
 var niveau_heros := 1
 var experience_heros := 0
 var mode_dev := false
+var volume_musique := 1.0
+var volume_effets := 1.0
+var secousses_ecran := true
+var effets_reduits := false
+var sort_actif_equipe := ""
+var ultime_equipe := ""
+var passifs_equipes: Array[String] = []
 
 signal maitrise_changee
+signal reglages_changes
 
 func _ready() -> void:
 	charger()
+	Sons.appliquer_reglages()
 
 func charger() -> void:
 	var config := ConfigFile.new()
@@ -41,6 +50,17 @@ func charger() -> void:
 	niveau_heros = int(config.get_value("heros", "niveau", 1))
 	experience_heros = int(config.get_value("heros", "experience", 0))
 	mode_dev = bool(config.get_value("options", "mode_dev", false))
+	volume_musique = clampf(float(config.get_value("audio", "musique", 1.0)), 0.0, 1.0)
+	volume_effets = clampf(float(config.get_value("audio", "effets", 1.0)), 0.0, 1.0)
+	secousses_ecran = bool(config.get_value("accessibilite", "secousses", true))
+	effets_reduits = bool(config.get_value("accessibilite", "effets_reduits", false))
+	sort_actif_equipe = str(config.get_value("sorts", "actif", ""))
+	ultime_equipe = str(config.get_value("sorts", "ultime", ""))
+	passifs_equipes.clear()
+	for id in config.get_value("sorts", "passifs", []):
+		var passif := str(id)
+		if Sorts.PASSIFS.has(passif) and passifs_equipes.size() < 2:
+			passifs_equipes.append(passif)
 
 func sauvegarder() -> void:
 	var config := ConfigFile.new()
@@ -55,14 +75,34 @@ func sauvegarder() -> void:
 	config.set_value("heros", "niveau", niveau_heros)
 	config.set_value("heros", "experience", experience_heros)
 	config.set_value("options", "mode_dev", mode_dev)
+	config.set_value("audio", "musique", volume_musique)
+	config.set_value("audio", "effets", volume_effets)
+	config.set_value("accessibilite", "secousses", secousses_ecran)
+	config.set_value("accessibilite", "effets_reduits", effets_reduits)
+	config.set_value("sorts", "actif", sort_actif_equipe)
+	config.set_value("sorts", "ultime", ultime_equipe)
+	config.set_value("sorts", "passifs", passifs_equipes)
 	config.save(FICHIER)
+
+func definir_reglages_audio(musique: float, effets: float) -> void:
+	volume_musique = clampf(musique, 0.0, 1.0)
+	volume_effets = clampf(effets, 0.0, 1.0)
+	Sons.appliquer_reglages()
+	sauvegarder()
+	reglages_changes.emit()
+
+func definir_accessibilite(secousses: bool, reduire_effets: bool) -> void:
+	secousses_ecran = secousses
+	effets_reduits = reduire_effets
+	sauvegarder()
+	reglages_changes.emit()
 
 func ajouter_points_maitrise(nombre: int) -> void:
 	if mode_dev:
 		return
 	if nombre <= 0:
 		return
-	points_maitrise += nombre
+	points_maitrise += maxi(1, roundi(float(nombre) * ArbreCompetences.multiplicateur_collecte(rangs_competences_effectifs())))
 	sauvegarder()
 	maitrise_changee.emit()
 
@@ -88,23 +128,23 @@ func bonus_niveau_pv() -> float:
 	return float(niveau_heros_effectif() - 1)
 
 func niveau_heros_effectif() -> int:
-	return 100 if mode_dev else niveau_heros
+	return niveau_heros
 
 func rang_competence(id: String) -> int:
-	if mode_dev and ArbreCompetences.NOEUDS.has(id):
-		return ArbreCompetences.MAX_RANG
 	return int(rangs_competences.get(id, 0))
 
 func points_maitrise_affiches() -> String:
 	return "∞" if mode_dev else str(points_maitrise)
 
 func rangs_competences_effectifs() -> Dictionary:
-	if not mode_dev:
-		return rangs_competences
-	var maximums := {}
-	for id in ArbreCompetences.NOEUDS:
-		maximums[id] = ArbreCompetences.MAX_RANG
-	return maximums
+	return rangs_competences
+
+func passifs_equipes_effectifs() -> Dictionary:
+	var resultat := {}
+	for id in passifs_equipes:
+		if Sorts.PASSIFS.has(id) and Sorts.debloque(id, niveau_heros, mode_dev):
+			resultat[id] = 1
+	return resultat
 
 func cout_competence(id: String) -> int:
 	return ArbreCompetences.cout(id, rang_competence(id))
@@ -114,17 +154,49 @@ func peut_acheter_competence(id: String) -> bool:
 		return false
 	var noeud: Dictionary = ArbreCompetences.NOEUDS[id]
 	return rang_competence(id) < ArbreCompetences.MAX_RANG \
-		and ArbreCompetences.prerequis_atteint(id, rangs_competences) \
-		and points_maitrise >= cout_competence(id)
+		and (mode_dev or ArbreCompetences.prerequis_atteint(id, rangs_competences)) \
+		and (mode_dev or points_maitrise >= cout_competence(id))
 
 func acheter_competence(id: String) -> bool:
 	if not peut_acheter_competence(id):
 		return false
-	points_maitrise -= cout_competence(id)
+	if not mode_dev:
+		points_maitrise -= cout_competence(id)
 	rangs_competences[id] = rang_competence(id) + 1
 	sauvegarder()
 	maitrise_changee.emit()
 	return true
+
+func equiper_sort(id: String, type: String) -> void:
+	if not Sorts.debloque(id, niveau_heros, mode_dev):
+		return
+	if type == "actif" and Sorts.ACTIFS.has(id):
+		sort_actif_equipe = id
+	elif type == "ultime" and Sorts.ULTIMES.has(id):
+		ultime_equipe = id
+	sauvegarder()
+	maitrise_changee.emit()
+
+func basculer_passif(id: String) -> String:
+	if not Sorts.PASSIFS.has(id) or not Sorts.debloque(id, niveau_heros, mode_dev):
+		return "verrouille"
+	if id in passifs_equipes:
+		passifs_equipes.erase(id)
+		sauvegarder()
+		maitrise_changee.emit()
+		return "retire"
+	if passifs_equipes.size() >= 2:
+		return "plein"
+	passifs_equipes.append(id)
+	sauvegarder()
+	maitrise_changee.emit()
+	return "equipe"
+
+func sort_actif_effectif() -> String:
+	return sort_actif_equipe if Sorts.debloque(sort_actif_equipe, niveau_heros, mode_dev) else ""
+
+func ultime_effectif() -> String:
+	return ultime_equipe if Sorts.debloque(ultime_equipe, niveau_heros, mode_dev) else ""
 
 func reinitialiser_arbre() -> int:
 	var rembourses := 0

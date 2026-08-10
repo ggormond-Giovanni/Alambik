@@ -2,6 +2,8 @@ extends Control
 
 signal termine
 
+const REGLAGES := preload("res://ui/reglages.tscn")
+
 var _titre_detail: Label
 var _description_detail: Label
 var _stats_detail: Label
@@ -27,7 +29,7 @@ func _construire() -> void:
 	marge.add_child(colonne)
 
 	var inventaire_titre := Label.new()
-	inventaire_titre.text = "VOS AUGMENTS — appuyez pour voir les bonus"
+	inventaire_titre.text = "DEV — appuyez pour ajouter un augment à tester" if ReglagesJoueur.mode_dev else "VOS AUGMENTS — appuyez pour voir les bonus"
 	inventaire_titre.add_theme_font_size_override("font_size", 24)
 	inventaire_titre.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
 	colonne.add_child(inventaire_titre)
@@ -43,7 +45,12 @@ func _construire() -> void:
 	grille.add_theme_constant_override("h_separation", 12)
 	grille.add_theme_constant_override("v_separation", 12)
 	defilement.add_child(grille)
-	if Jeu.inventaire.is_empty():
+	if ReglagesJoueur.mode_dev:
+		var ids: Array[String] = CatalogueReactifs.ids()
+		ids.append_array(CatalogueEssences.ids())
+		for id in ids:
+			_ajouter_bouton_reactif(grille, id, Jeu.copies(id))
+	elif Jeu.inventaire.is_empty():
 		var vide := Label.new()
 		vide.text = "Aucun augment pour le moment."
 		vide.add_theme_font_size_override("font_size", 28)
@@ -78,6 +85,14 @@ func _construire() -> void:
 	_stats_detail.add_theme_color_override("font_color", Palette.ESSENCE)
 	textes.add_child(_stats_detail)
 
+	var bouton_reglages := Button.new()
+	bouton_reglages.text = "RÉGLAGES"
+	bouton_reglages.custom_minimum_size = Vector2(0, 96)
+	bouton_reglages.add_theme_font_size_override("font_size", 29)
+	StyleInterface.styliser_bouton(bouton_reglages, Palette.OR, true)
+	bouton_reglages.pressed.connect(_ouvrir_reglages)
+	colonne.add_child(bouton_reglages)
+
 	var continuer := Button.new()
 	continuer.text = "Continuer"
 	continuer.custom_minimum_size = Vector2(0, 116)
@@ -94,6 +109,13 @@ func _construire() -> void:
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
 	colonne.add_child(quitter)
+
+func _ouvrir_reglages() -> void:
+	Sons.jouer("choix", -12.0)
+	var panneau := REGLAGES.instantiate()
+	panneau.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(panneau)
+	panneau.ferme.connect(func() -> void: panneau.queue_free())
 
 func _ajouter_bouton_reactif(grille: GridContainer, id: String, copies: int) -> void:
 	var reactif := Jeu.reactif(id)
@@ -114,6 +136,15 @@ func _afficher_details(id: String, copies: int) -> void:
 	var reactif := Jeu.reactif(id)
 	if reactif == null:
 		return
+	if ReglagesJoueur.mode_dev:
+		Jeu.ajouter_reactif(id)
+		copies = Jeu.copies(id)
+		var heros := get_tree().get_first_node_in_group("heros")
+		if heros != null:
+			heros.recalculer()
+		var bouton_ajoute: Button = _boutons_reactifs.get(id)
+		if bouton_ajoute != null:
+			bouton_ajoute.text = "%s%s\nTEST x%d (+1)" % ["✦ " if reactif.est_essence else "", reactif.nom, copies]
 	_selection = id
 	for bouton_id in _boutons_reactifs:
 		(_boutons_reactifs[bouton_id] as Button).button_pressed = bouton_id == id

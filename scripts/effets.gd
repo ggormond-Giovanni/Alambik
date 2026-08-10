@@ -31,6 +31,8 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func eclats(position: Vector2, couleur: Color, nombre := 8, force := 260.0, poids := 1.0) -> void:
+	if ReglagesJoueur.effets_reduits:
+		nombre = maxi(2, ceili(float(nombre) * 0.45))
 	for i in nombre:
 		var angle := randf() * TAU
 		_particules.append({

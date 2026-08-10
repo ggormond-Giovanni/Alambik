@@ -51,6 +51,7 @@ func _construire() -> void:
 		bouton.pressed.connect(func() -> void:
 			ReglagesJoueur.choisir_chapitre(index)
 			Sons.jouer("choix", -10.0)
+			Sons.musique_combat(0.35)
 			get_tree().change_scene_to_file("res://scenes/run.tscn"))
 		grille.add_child(bouton)
 	var retour := Button.new()
