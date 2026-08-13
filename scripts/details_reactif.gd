@@ -54,30 +54,20 @@ static func _ajouter_entier(resultat: Array[String], mods: Dictionary,
 
 static func _detail_effet(effet: String) -> String:
 	match effet:
-		"braise":
-			return "Brûlure : %s dégâts/s pendant %s s" % [_nombre(Reglages.BRAISE_DEGATS_PAR_SECONDE), _nombre(Reglages.BRAISE_DUREE)]
-		"givre":
-			return "Givre : vitesse ennemie -%s %% pendant %s s" % [_nombre((1.0 - Reglages.GIVRE_RALENTISSEMENT) * 100.0), _nombre(Reglages.GIVRE_DUREE)]
-		"foudre":
-			return "Foudre : %s %% des dégâts à une cible dans un rayon de %s" % [_nombre(Reglages.FOUDRE_PART_DEGATS * 100.0), _nombre(Reglages.FOUDRE_PORTEE_CHAINE)]
-		"acide":
-			return "Acide : dégâts reçus +%s %% pendant %s s" % [_nombre((Reglages.ACIDE_VULNERABILITE - 1.0) * 100.0), _nombre(Reglages.ACIDE_DUREE)]
+		"feu": return "Brûlures cumulatives proportionnelles aux dégâts"
+		"eau": return "Mouillé : cible ralentie et vulnérable"
+		"terre": return "Impact lourd : retarde la prochaine attaque"
+		"lumiere": return "Rend une part des dégâts sous forme de vie"
 	return effet.capitalize()
 
 static func _detail_drapeau(drapeau: String) -> String:
 	match drapeau:
-		"pas_de_chat": return "Vitesse de déplacement +%s %%" % _nombre((Reglages.PAS_DE_CHAT_FACTEUR - 1.0) * 100.0)
-		"fiole_de_vie": return "PV maximum +%s et soin immédiat +%s" % [_nombre(Reglages.FIOLE_PV), _nombre(Reglages.FIOLE_PV)]
-		"bouclier_de_sel": return "Bouclier : absorbe 1 coup par salle"
-		"sillage": return "Sillage : rayon %s pendant %s s" % [_nombre(Reglages.SILLAGE_RAYON), _nombre(Reglages.SILLAGE_DUREE)]
-		"flaque_au_rebond": return "Flaque enflammée : rayon %s pendant %s s" % [_nombre(Reglages.FLAQUE_RAYON), _nombre(Reglages.FLAQUE_DUREE)]
-		"gel_bref": return "Gel complet pendant %s s" % _nombre(Reglages.GEL_BREF_DUREE)
-		"chaine_longue": return "Portée de la chaîne de foudre x2"
-		"nuage_a_la_mort": return "Nuage à la mort : rayon %s pendant %s s" % [_nombre(Reglages.NUAGE_RAYON), _nombre(Reglages.NUAGE_DUREE)]
-		"sillage_gelant": return "Le sillage gèle les ennemis"
 		"rafale": return "Rafale de %d tirs, intervalle %s s" % [Reglages.RAFALE_NOMBRE, _nombre(Reglages.RAFALE_INTERVALLE)]
-		"bouclier_explosif": return "Explosion du bouclier : rayon %s" % _nombre(Reglages.BOUCLIER_EXPLOSION_RAYON)
-		"tir_en_course": return "Permet de tirer en se déplaçant"
+		"egide": return "Annule la première attaque de chaque salle"
+		"regeneration": return "Récupère des PV entre les salles"
+		"avidite": return "Augmente l'XP de run et les Gouttes de la tentative"
+		"courageux": return "Plus puissant à mesure que les PV diminuent"
+		"mannequin": return "Puissance et cadence après une immobilité prolongée"
 	return drapeau.replace("_", " ").capitalize()
 
 static func _nombre(valeur: float) -> String:

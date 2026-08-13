@@ -9,7 +9,7 @@ var _anim := 0.0
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_recompense = Recompenses.tirer_epreuve(Jeu.rng, ReglagesJoueur.rangs_sorts, ReglagesJoueur.niveau_heros_effectif())
+	_recompense = Recompenses.tirer_epreuve(Jeu.rng, ReglagesJoueur.rangs_sorts)
 	if _recompense["type"] == "gouttes":
 		ReglagesJoueur.ajouter_gouttes(int(_recompense["quantite"]))
 	else:
@@ -18,7 +18,7 @@ func _ready() -> void:
 	StyleInterface.animer_entree(self)
 	if Jeu.mode_auto:
 		await get_tree().create_timer(0.15).timeout
-		termine.emit()
+		_quitter()
 
 func _construire() -> void:
 	var marge := MarginContainer.new()
@@ -35,19 +35,22 @@ func _construire() -> void:
 	continuer.custom_minimum_size = Vector2(0, 132)
 	continuer.add_theme_font_size_override("font_size", 31)
 	StyleInterface.styliser_bouton(continuer, Palette.ESSENCE)
-	continuer.pressed.connect(func() -> void: termine.emit())
+	continuer.pressed.connect(_quitter)
 	colonne.add_child(continuer)
+
+func _quitter() -> void:
+	StyleInterface.sortir_puis(self, func() -> void: termine.emit())
 
 func _process(delta: float) -> void:
 	_anim += delta
 	queue_redraw()
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.015, 0.025, 0.045, 0.96))
+	StyleInterface.dessiner_fond(self, size, Palette.ESSENCE, _anim, 0.98)
 	var police := ThemeDB.fallback_font
 	var centre := Vector2(size.x * 0.5, size.y * 0.43)
 	Dessin.halo(self, centre, 300.0, Color(Palette.ESSENCE, 0.36), 7)
-	draw_string(police, Vector2(0, centre.y - 210.0), "BOSS %d / 3 VAINCU" % int(etage_recompense / 4),
+	draw_string(police, Vector2(0, centre.y - 210.0), "MINIBOSS %d / 5 VAINCU" % etage_recompense,
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
 	if _recompense["type"] == "gouttes":
 		draw_colored_polygon(Dessin.goutte(centre, 92.0 + sin(_anim * 3.0) * 4.0, PI, 1.2), Palette.ESSENCE)
@@ -60,7 +63,7 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, 42, Palette.OR)
 		draw_string(police, Vector2(90.0, centre.y + 202.0), str(donnees["description"]),
 			HORIZONTAL_ALIGNMENT_CENTER, size.x - 180.0, 25, Palette.TEXTE_ATTENUE)
-		draw_string(police, Vector2(0, centre.y + 262.0), "%s • NIVEAU %d / 5 • %d %%" % [
+		draw_string(police, Vector2(0, centre.y + 262.0), "%s • RANG %d / %d • %d %%" % [
 			str(_recompense["type"]).to_upper(), ReglagesJoueur.rang_sort(str(_recompense["id"])),
-			roundi(ReglagesJoueur.efficacite_sort(str(_recompense["id"])) * 100.0)],
+			Reglages.CAPACITE_RANG_MAX, roundi(ReglagesJoueur.efficacite_sort(str(_recompense["id"])) * 100.0)],
 			HORIZONTAL_ALIGNMENT_CENTER, size.x, 25, Palette.ESSENCE)

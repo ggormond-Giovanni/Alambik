@@ -40,5 +40,5 @@ func test_base_non_modifiee(v: Verif) -> void:
 	v.egal(base.effets.size(), 0, "les effets du Tir de base non plus")
 
 func test_drapeaux(v: Verif) -> void:
-	var t := Mods.appliquer(_base(), [{"drapeaux": ["tir_en_course"]}])
-	v.vrai("tir_en_course" in t.drapeaux, "le drapeau est transmis")
+	var t := Mods.appliquer(_base(), [{"drapeaux": ["homing"]}])
+	v.vrai("homing" in t.drapeaux, "le drapeau est transmis")

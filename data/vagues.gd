@@ -1,65 +1,91 @@
 class_name Vagues
 extends RefCounted
 
-# Composition des pages. Écrire trente listes à la main par chapitre serait
-# illisible et diverge au premier reglage : on decrit des paliers, et la
-# composition se deduit du numero de page. C'est toujours de la donnee — ajuster
-# la difficulte ne demande jamais de toucher au code de la salle.
-#
-# Le tirage est deterministe : meme graine et meme page donnent la meme vague,
-# sinon la sonde ne pourrait pas rejouer un blocage.
+# Les rencontres de campagne sont concues, pas generees depuis une courbe. La
+# graine ne change que l'ordre interne de certaines vagues : le joueur peut
+# apprendre une salle tout en gardant une petite variation d'execution.
 
-# `jusqu_a` est une fraction de la longueur du chapitre.
-const PALIERS := [
-	{"jusqu_a": 0.10, "vagues": 2, "par_vague": 2, "pool": ["encrier_rampant", "plume_sentinelle"], "distance": ["plume_sentinelle"]},
-	{"jusqu_a": 0.20, "vagues": 2, "par_vague": 3, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce"], "distance": ["plume_sentinelle"]},
-	{"jusqu_a": 0.32, "vagues": 2, "par_vague": 3, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce"], "distance": ["plume_sentinelle"]},
-	{"jusqu_a": 0.46, "vagues": 2, "par_vague": 4, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce", "scribe_essaimeur"], "distance": ["plume_sentinelle", "scribe_essaimeur"]},
-	{"jusqu_a": 0.62, "vagues": 2, "par_vague": 4, "pool": ["encrier_rampant", "plume_sentinelle", "tache_veloce", "scribe_essaimeur"], "distance": ["plume_sentinelle", "scribe_essaimeur"]},
-	{"jusqu_a": 0.80, "vagues": 2, "par_vague": 5, "pool": ["plume_sentinelle", "tache_veloce", "scribe_essaimeur", "encrier_rampant"], "distance": ["plume_sentinelle", "scribe_essaimeur"]},
-	{"jusqu_a": 1.01, "vagues": 2, "par_vague": 5, "pool": ["tache_veloce", "scribe_essaimeur", "plume_sentinelle", "encrier_rampant"], "distance": ["plume_sentinelle", "scribe_essaimeur"]},
+const RENCONTRES := [
+	[["encrier_rampant", "plume_sentinelle"], ["encrier_rampant", "encrier_rampant"]],
+	[["plume_sentinelle", "encrier_rampant"], ["tache_veloce", "encrier_rampant"]],
+	[["encrier_rampant", "tache_veloce", "plume_sentinelle"], ["encrier_rampant", "encrier_rampant", "plume_sentinelle"]],
+	[["tache_veloce", "plume_sentinelle", "encrier_rampant"], ["tache_veloce", "encrier_rampant", "plume_sentinelle"]],
+	[],
+	[["plume_sentinelle", "folio_orbiteur", "encrier_rampant"], ["tache_veloce", "tache_veloce", "encrier_rampant"]],
+	[["scribe_essaimeur", "plume_sentinelle"], ["folio_orbiteur", "tache_veloce", "encrier_rampant"]],
+	[["tache_veloce", "marge_harceleuse", "plume_sentinelle"], ["scribe_essaimeur", "encrier_rampant", "folio_orbiteur"]],
+	[["sceau_belier", "plume_sentinelle", "tache_veloce"], ["marge_harceleuse", "encrier_rampant", "folio_orbiteur"]],
+	[],
+	[["fiole_volatile", "miroir_encre", "tache_veloce"], ["scribe_essaimeur", "encrier_rampant", "marge_harceleuse"]],
+	[["fuseau_tisseur", "folio_orbiteur"], ["plume_sentinelle", "sceau_belier", "encrier_rampant"]],
+	[["cachet_phaseur", "marge_harceleuse", "plume_sentinelle"], ["miroir_encre", "fiole_volatile", "folio_orbiteur"]],
+	[["scribe_essaimeur", "fuseau_tisseur", "folio_orbiteur"], ["sceau_belier", "marge_harceleuse", "encrier_rampant"]],
+	[],
+	[["scribe_essaimeur", "sceau_belier", "cachet_phaseur"], ["miroir_encre", "marge_harceleuse", "tache_veloce"]],
+	[["fuseau_tisseur", "folio_orbiteur", "sceau_belier"], ["scribe_essaimeur", "miroir_encre", "fiole_volatile"]],
+	[["scribe_essaimeur", "tache_veloce", "marge_harceleuse"], ["fuseau_tisseur", "miroir_encre", "folio_orbiteur"]],
+	[["cachet_phaseur", "sceau_belier", "plume_sentinelle"], ["fiole_volatile", "marge_harceleuse", "miroir_encre"]],
+	[],
 ]
 
-static func palier_pour(progression: float) -> Dictionary:
-	for palier in PALIERS:
-		if progression <= palier["jusqu_a"]:
-			return palier
-	return PALIERS[PALIERS.size() - 1]
+const POOL_MINE_DEBUT := ["encrier_rampant", "plume_sentinelle", "tache_veloce", "folio_orbiteur"]
+const POOL_MINE_FIN := ["encrier_rampant", "plume_sentinelle", "tache_veloce", "scribe_essaimeur",
+	"folio_orbiteur", "sceau_belier", "marge_harceleuse", "miroir_encre",
+	"cachet_phaseur", "fuseau_tisseur", "fiole_volatile"]
 
 static func pour_salle(numero: int, chapitre := 0, graine := 0, mode := "grimoire") -> Array:
-	var donnees := Chapitres.par_index(chapitre)
-	var longueur := 12 if mode == "epreuve_sorts" else int(donnees["salles"])
-	if mode == "grimoire" and Chapitres.est_boss(chapitre, numero):
-		return [[donnees["boss"]]]
-	if mode == "epreuve_sorts" and numero % 4 == 0:
-		return [[donnees["boss"]]]
-	var progression := float(numero) / float(longueur)
-	var palier := palier_pour(progression)
-	var alea := RandomNumberGenerator.new()
-	# La graine melange chapitre et page : deux pages voisines ne se ressemblent
-	# pas, et la meme page rejouee est identique.
-	alea.seed = graine * 7919 + chapitre * 104729 + numero * 31
+	if mode == "retro":
+		return [
+			["encrier_rampant", "plume_sentinelle", "tache_veloce"],
+			["folio_orbiteur", "fiole_volatile", "fuseau_tisseur"],
+			["la_rature"],
+		]
 	if mode == "epreuve_sorts":
-		# Trois grandes rencontres puis un boss. Chaque rencontre tient en une
-		# seule vague dense : le defi est plus nerveux, sans attente de repop.
-		var vague_defi: Array = []
-		var nombre_defi := 7 + int((numero - 1) / 4)
-		var pool_defi := ["encrier_rampant", "plume_sentinelle", "tache_veloce", "scribe_essaimeur"]
-		for j in nombre_defi:
-			var choix_defi: Array = ["plume_sentinelle", "scribe_essaimeur"] if j == 0 else pool_defi
-			vague_defi.append(choix_defi[alea.randi_range(0, choix_defi.size() - 1)])
-		return [vague_defi]
+		return _miniboss_aleatoire(numero, graine)
+	if mode == "mine":
+		# La Mine est alimentee au fil du temps par Salle, pas par une vague posee
+		# integralement au chargement.
+		return []
+	var donnees := Chapitres.par_index(chapitre)
+	if Chapitres.est_boss(chapitre, numero):
+		return [[donnees["boss"]]] if numero == 20 else _miniboss_campagne(numero, chapitre, graine)
+	var index := clampi(numero - 1, 0, RENCONTRES.size() - 1)
+	var resultat: Array = RENCONTRES[index].duplicate(true)
+	var alea := RandomNumberGenerator.new()
+	alea.seed = graine * 7919 + chapitre * 104729 + numero * 31
+	for vague in resultat:
+		if alea.randf() < 0.5:
+			vague.reverse()
+	return resultat
 
-	var pool: Array = palier["pool"]
-	var vagues: Array = []
-	for i in int(palier["vagues"]):
-		var vague: Array = []
-		# La derniere vague d'une page est la plus fournie : la page monte.
-		var nombre := int(palier["par_vague"]) + (1 if i == int(palier["vagues"]) - 1 else 0)
-		for j in nombre:
-			# Chaque vague contient au moins un ennemi qui force a lire et
-			# esquiver des projectiles, y compris les toutes premieres pages.
-			var choix: Array = palier["distance"] if j == 0 else pool
-			vague.append(choix[alea.randi_range(0, choix.size() - 1)])
-		vagues.append(vague)
-	return vagues
+static func _miniboss_campagne(numero: int, chapitre: int, graine: int) -> Array:
+	var candidats: Array[String] = CatalogueEnnemis.ids_miniboss()
+	var boss_final := str(Chapitres.par_index(chapitre)["boss"])
+	candidats.erase(boss_final)
+	if candidats.is_empty():
+		return [[boss_final]]
+	var alea := RandomNumberGenerator.new()
+	alea.seed = graine * 8191 + chapitre * 131071
+	var depart := alea.randi_range(0, candidats.size() - 1)
+	var index_palier := maxi(0, [5, 10, 15].find(numero))
+	return [[candidats[(depart + index_palier) % candidats.size()]]]
+
+static func _miniboss_aleatoire(numero: int, graine: int) -> Array:
+	var miniboss: Array[String] = CatalogueEnnemis.ids_miniboss()
+	var alea := RandomNumberGenerator.new()
+	alea.seed = graine * 7919
+	var depart := alea.randi_range(0, miniboss.size() - 1)
+	return [[miniboss[(depart + maxi(0, numero - 1)) % miniboss.size()]]]
+
+static func pool_mine(progression: float) -> Array:
+	return POOL_MINE_DEBUT if progression < 0.50 else POOL_MINE_FIN
+
+static func ennemi_mine(alea: RandomNumberGenerator, progression := 0.0) -> String:
+	var pool := pool_mine(progression)
+	return pool[alea.randi_range(0, pool.size() - 1)]
+
+static func boss_mine(graine: int) -> String:
+	var candidats: Array[String] = CatalogueEnnemis.ids_miniboss()
+	var alea := RandomNumberGenerator.new()
+	alea.seed = graine * 65537 + 97
+	return candidats[alea.randi_range(0, candidats.size() - 1)]

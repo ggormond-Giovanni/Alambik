@@ -1,13 +1,13 @@
 extends Control
 
-const CHEMIN_SPRITES_HEROS := "res://assets/characters/sheets/hero_alchemist_sheet.png"
 const ARBRE := preload("res://ui/arbre_competences.tscn")
 const MENU_SORTS := preload("res://ui/sorts.tscn")
 const SELECTION_GRIMOIRE := preload("res://ui/selection_grimoire.tscn")
 const REGLAGES := preload("res://ui/reglages.tscn")
+const EQUIPEMENT := preload("res://ui/equipement.tscn")
 const ONGLET_MENU := preload("res://ui/onglet_menu.gd")
 const DUREE_INTRO := 1.55
-const PAGES := ["boutique", "stuff", "grimoire", "arbre", "sorts"]
+const PAGES := ["stuff", "grimoire", "arbre", "sorts"]
 
 # Titre, bouton, meilleur resultat. Aucun sprite : le grimoire est dessine.
 
@@ -15,18 +15,16 @@ var _anim := 0.0
 var _temps_intro := 0.0
 var _intro_active := false
 var _particules: Array[Dictionary] = []
-var _texture_heros: Texture2D
 var _interface: Control
-var _bouton_arbre: Button
-var _bouton_dev: Button
-var _bouton_grimoire: Button
 var _bouton_action: Button
 var _onglets: Array[Button] = []
-var _page := 2
+var _page := 1
 var _panneau_menu: Control
 var _superposition: Control
 var _doigt_navigation := -1
 var _depart_navigation := Vector2.ZERO
+var _glissement_page := 0.0
+var _animation_page: Tween
 
 static var _intro_deja_vue := false
 
@@ -38,8 +36,6 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	Sons.musique_menu()
-	if ResourceLoader.exists(CHEMIN_SPRITES_HEROS):
-		_texture_heros = load(CHEMIN_SPRITES_HEROS)
 	print("Alambic pret")
 	var alea := RandomNumberGenerator.new()
 	alea.seed = 20260801
@@ -85,6 +81,17 @@ func _construire_carrousel() -> void:
 	_bouton_action.pressed.connect(_ouvrir_page_courante)
 	_interface.add_child(_bouton_action)
 
+	var socle_navigation := PanelContainer.new()
+	socle_navigation.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	socle_navigation.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	socle_navigation.offset_left = 18.0
+	socle_navigation.offset_right = -18.0
+	socle_navigation.offset_top = -160.0 - Ecran.marge_basse()
+	socle_navigation.offset_bottom = -12.0 - Ecran.marge_basse()
+	socle_navigation.add_theme_stylebox_override("panel", StyleInterface.panneau(
+		Color(0.025, 0.020, 0.045, 0.96), Color(Palette.BORD_PAGE, 0.28), 25, 8))
+	_interface.add_child(socle_navigation)
+
 	var navigation := HBoxContainer.new()
 	navigation.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	navigation.offset_left = 24.0
@@ -99,21 +106,43 @@ func _construire_carrousel() -> void:
 		onglet.pressed.connect(func() -> void: _changer_page(index))
 		navigation.add_child(onglet)
 		_onglets.append(onglet)
-	_changer_page(2, false)
+	_changer_page(1, false)
 
 func _changer_page(index: int, ouvrir_contenu := true) -> void:
 	if _panneau_menu != null and is_instance_valid(_panneau_menu):
 		_panneau_menu.queue_free()
 		_panneau_menu = null
 	var nouvelle_page := clampi(index, 0, PAGES.size() - 1)
+	var ancienne_page := _page
 	if nouvelle_page != _page:
 		Sons.jouer("choix", -17.0, 1.08)
 	_page = nouvelle_page
+	if ancienne_page != _page:
+		if _animation_page != null and _animation_page.is_valid():
+			_animation_page.kill()
+		var direction := 1.0 if _page > ancienne_page else -1.0
+		_glissement_page = direction * (20.0 if ReglagesJoueur.effets_reduits else 74.0)
+		_interface.position.x = direction * (8.0 if ReglagesJoueur.effets_reduits else 30.0)
+		_interface.modulate.a = 0.70
+		_animation_page = create_tween()
+		_animation_page.set_parallel(true)
+		_animation_page.set_trans(Tween.TRANS_QUINT)
+		_animation_page.set_ease(Tween.EASE_OUT)
+		_animation_page.tween_property(self, "_glissement_page", 0.0,
+			0.14 if ReglagesJoueur.effets_reduits else 0.38)
+		_animation_page.tween_property(_interface, "position:x", 0.0,
+			0.14 if ReglagesJoueur.effets_reduits else 0.38)
+		_animation_page.tween_property(_interface, "modulate:a", 1.0,
+			0.10 if ReglagesJoueur.effets_reduits else 0.25)
 	for i in _onglets.size():
 		_onglets[i].set("actif", i == _page)
 	match PAGES[_page]:
 		"grimoire":
 			_bouton_action.text = "CHOISIR UN GRIMOIRE"
+			_bouton_action.disabled = false
+			_bouton_action.visible = true
+		"stuff":
+			_bouton_action.text = "GÉRER L'ÉQUIPEMENT"
 			_bouton_action.disabled = false
 			_bouton_action.visible = true
 		_:
@@ -127,6 +156,18 @@ func _changer_page(index: int, ouvrir_contenu := true) -> void:
 func _ouvrir_page_courante() -> void:
 	if PAGES[_page] == "grimoire":
 		_ouvrir_bibliotheque()
+	elif PAGES[_page] == "stuff":
+		_ouvrir_equipement()
+
+func _ouvrir_equipement() -> void:
+	Sons.jouer("choix", -12.0)
+	var equipement := EQUIPEMENT.instantiate()
+	_superposition = equipement
+	add_child(equipement)
+	equipement.ferme.connect(func() -> void:
+		equipement.queue_free()
+		_superposition = null
+		queue_redraw())
 
 func _gui_input(evenement: InputEvent) -> void:
 	if _intro_active:
@@ -143,69 +184,6 @@ func _gui_input(evenement: InputEvent) -> void:
 				_changer_page(_page - 1 if ecart > 0.0 else _page + 1)
 				accept_event()
 
-func _construire() -> void:
-	_interface = MarginContainer.new()
-	_interface.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_interface.add_theme_constant_override("margin_left", 90)
-	_interface.add_theme_constant_override("margin_right", 90)
-	_interface.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 70)
-	add_child(_interface)
-
-	var colonne := VBoxContainer.new()
-	colonne.alignment = BoxContainer.ALIGNMENT_END
-	colonne.add_theme_constant_override("separation", 16)
-	_interface.add_child(colonne)
-
-	var outils := HBoxContainer.new()
-	outils.add_theme_constant_override("separation", 10)
-	colonne.add_child(outils)
-	_bouton_arbre = Button.new()
-	_bouton_arbre.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
-	_bouton_arbre.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_bouton_arbre.add_theme_font_size_override("font_size", 30)
-	StyleInterface.styliser_bouton(_bouton_arbre, Palette.ESSENCE)
-	_bouton_arbre.pressed.connect(_ouvrir_arbre)
-	outils.add_child(_bouton_arbre)
-	var bouton_sorts := Button.new()
-	bouton_sorts.text = "SORTS\n1 • 2 • 1"
-	bouton_sorts.custom_minimum_size = Vector2(210, Ecran.CIBLE_TACTILE)
-	bouton_sorts.add_theme_font_size_override("font_size", 23)
-	StyleInterface.styliser_bouton(bouton_sorts, Palette.OR)
-	bouton_sorts.pressed.connect(_ouvrir_sorts)
-	outils.add_child(bouton_sorts)
-	_bouton_dev = Button.new()
-	_bouton_dev.custom_minimum_size = Vector2(180, Ecran.CIBLE_TACTILE)
-	_bouton_dev.add_theme_font_size_override("font_size", 23)
-	_bouton_dev.pressed.connect(_basculer_dev)
-	outils.add_child(_bouton_dev)
-	var bouton_reglages := Button.new()
-	bouton_reglages.text = "RÉGLAGES"
-	bouton_reglages.custom_minimum_size = Vector2(190, Ecran.CIBLE_TACTILE)
-	bouton_reglages.add_theme_font_size_override("font_size", 23)
-	StyleInterface.styliser_bouton(bouton_reglages, Palette.TEXTE_ATTENUE, true)
-	bouton_reglages.pressed.connect(_ouvrir_reglages)
-	outils.add_child(bouton_reglages)
-	_rafraichir_bouton_arbre()
-
-	_bouton_grimoire = Button.new()
-	_bouton_grimoire.text = "CHOISIR UN GRIMOIRE\n10 livres • 30 pages chacun"
-	_bouton_grimoire.custom_minimum_size = Vector2(0, 136)
-	_bouton_grimoire.add_theme_font_size_override("font_size", 32)
-	StyleInterface.styliser_bouton(_bouton_grimoire, Palette.OR)
-	_bouton_grimoire.pressed.connect(_ouvrir_bibliotheque)
-	colonne.add_child(_bouton_grimoire)
-
-func _rafraichir_bouton_arbre() -> void:
-	_bouton_arbre.text = "%s NIVEAU %d\nARBRE ✦ %s" % [ReglagesJoueur.titre_heros(),
-		ReglagesJoueur.niveau_heros_effectif(), ReglagesJoueur.gouttes_affichees()]
-	_bouton_dev.text = "DEV\n%s" % ("ON" if ReglagesJoueur.mode_dev else "OFF")
-	StyleInterface.styliser_bouton(_bouton_dev, Palette.DANGER if ReglagesJoueur.mode_dev else Palette.TEXTE_ATTENUE, true)
-
-func _basculer_dev() -> void:
-	ReglagesJoueur.definir_mode_dev(not ReglagesJoueur.mode_dev)
-	Sons.jouer("choix", -12.0)
-	get_tree().reload_current_scene()
-
 func _ouvrir_arbre() -> void:
 	Sons.jouer("choix", -12.0)
 	var arbre := ARBRE.instantiate()
@@ -216,7 +194,7 @@ func _ouvrir_arbre() -> void:
 	arbre.ferme.connect(func() -> void:
 		arbre.queue_free()
 		_panneau_menu = null
-		_changer_page(2, false))
+		_changer_page(1, false))
 
 func _ouvrir_sorts() -> void:
 	Sons.jouer("choix", -12.0)
@@ -228,7 +206,7 @@ func _ouvrir_sorts() -> void:
 	sorts.ferme.connect(func() -> void:
 		sorts.queue_free()
 		_panneau_menu = null
-		_changer_page(2, false))
+		_changer_page(1, false))
 
 func _ouvrir_bibliotheque() -> void:
 	Sons.jouer("choix", -12.0)
@@ -252,23 +230,20 @@ func _notification(quoi: int) -> void:
 	if quoi != NOTIFICATION_WM_GO_BACK_REQUEST:
 		return
 	if _superposition != null and is_instance_valid(_superposition):
-		_superposition.queue_free()
-		_superposition = null
+		var cible := _superposition
+		StyleInterface.sortir_puis(cible, func() -> void:
+			if is_instance_valid(cible):
+				cible.queue_free()
+			if _superposition == cible:
+				_superposition = null)
 	elif _panneau_menu != null and is_instance_valid(_panneau_menu):
-		_changer_page(2, false)
-	elif _page != 2:
-		_changer_page(2, false)
+		_changer_page(1, false)
+	elif _page != 1:
+		_changer_page(1, false)
 	else:
 		# Au centre, Retour laisse Android gérer la mise en arrière-plan via son
 		# geste système ; aucune confirmation minuscule ni fermeture accidentelle.
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MINIMIZED)
-
-func _chapitres_ouverts() -> int:
-	var total := 0
-	for index in Chapitres.nombre():
-		if ReglagesJoueur.chapitre_debloque(index):
-			total += 1
-	return total
 
 func _process(delta: float) -> void:
 	_anim += delta
@@ -289,89 +264,28 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var police := ThemeDB.fallback_font
 	var taille := get_viewport_rect().size
-	draw_rect(Rect2(Vector2.ZERO, taille), Palette.FOND)
+	StyleInterface.dessiner_fond(self, taille, Palette.OR, _anim)
 	if _intro_active:
 		var alpha := clampf(_temps_intro * 4.0, 0.0, 1.0) * clampf((DUREE_INTRO - _temps_intro) * 5.0, 0.0, 1.0)
 		var y := taille.y * 0.46
+		var centre_intro := Vector2(taille.x * 0.5, y - 118.0)
+		Dessin.halo(self, centre_intro, 150.0, Color(Palette.ESSENCE, alpha * 0.32), 6)
+		for index in 3:
+			var rayon := 42.0 + float(index) * 22.0
+			var debut := _temps_intro * (0.8 + index * 0.24) * (-1.0 if index % 2 else 1.0)
+			draw_arc(centre_intro, rayon, debut, debut + PI * 1.15, 28,
+				Color(Palette.OR.lerp(Palette.ESSENCE, float(index) / 2.0), alpha * 0.74), 3.0, true)
+		Dessin.glyphe(self, "fiole", centre_intro, 28.0, Color(Palette.OR, alpha))
 		draw_string(police, Vector2(0.0, y), "ALAMBIC", HORIZONTAL_ALIGNMENT_CENTER,
 			taille.x, 92, Color(Palette.TEXTE, alpha))
+		draw_line(Vector2(taille.x * 0.34, y + 22.0), Vector2(taille.x * 0.66, y + 22.0),
+			Color(Palette.OR, alpha * 0.55), 2.0, true)
 		draw_string(police, Vector2(0.0, y + 72.0), "Plongez dans les grimoires . . .",
 			HORIZONTAL_ALIGNMENT_CENTER, taille.x, 29, Color(Palette.TEXTE_ATTENUE, alpha))
 		return
+	draw_set_transform(Vector2(_glissement_page, 0.0))
 	_dessiner_menu_user(police, taille)
-	return
-
-	# Poussiere d'encre en suspension : le menu respire sans coûter une image.
-	for p in _particules:
-		var scintille: float = 0.25 + 0.25 * sin(_anim * 2.0 + p["phase"])
-		draw_circle(p["position"], p["rayon"], Color(Palette.PARCHEMIN_VEINE, scintille))
-
-	var centre := Vector2(taille.x / 2.0, taille.y * 0.27)
-	Dessin.halo(self, centre, 300.0, Color(Palette.ESSENCE, 0.35), 6)
-
-	# Le grimoire ouvert, vu de face : deux pages et une reliure.
-	var largeur := 380.0
-	var hauteur := 260.0
-	var page_g := PackedVector2Array([
-		centre + Vector2(-largeur, -hauteur * 0.75),
-		centre + Vector2(-14.0, -hauteur * 0.55),
-		centre + Vector2(-14.0, hauteur * 0.75),
-		centre + Vector2(-largeur, hauteur * 0.55)])
-	var page_d := PackedVector2Array([
-		centre + Vector2(largeur, -hauteur * 0.75),
-		centre + Vector2(14.0, -hauteur * 0.55),
-		centre + Vector2(14.0, hauteur * 0.75),
-		centre + Vector2(largeur, hauteur * 0.55)])
-	for page in [page_g, page_d]:
-		draw_colored_polygon(page, Palette.PARCHEMIN_SOMBRE)
-		Dessin.contour(self, page, Palette.BORD_PAGE, 3.0)
-	draw_rect(Rect2(centre.x - 16.0, centre.y - hauteur * 0.62, 32.0, hauteur * 1.32), Color(0.14, 0.11, 0.19))
-
-	# Lignes d'ecriture suggerees, et une goutte qui tombe sur la page droite.
-	for cote: float in [-1.0, 1.0]:
-		for i in 7:
-			var t := float(i) / 6.0
-			var y := centre.y + lerpf(-hauteur * 0.42, hauteur * 0.5, t)
-			var x1 := centre.x + cote * 40.0
-			var x2 := centre.x + cote * (largeur - 50.0)
-			draw_line(Vector2(x1, y), Vector2(x2, y), Color(Palette.PARCHEMIN_VEINE, 0.55), 3.0)
-	# Le personnage est la promesse visuelle du jeu des le premier ecran.
-	var taille_heros := 360.0 + sin(_anim * 2.0) * 5.0
-	if _texture_heros != null:
-		var cellule := Vector2(_texture_heros.get_width() / 4.0, _texture_heros.get_height() / 2.0)
-		var source := Rect2(Vector2(0.0, cellule.y), cellule)
-		draw_texture_rect_region(_texture_heros,
-			Rect2(centre + Vector2(-taille_heros * 0.45, -taille_heros * 0.92), Vector2(taille_heros * 0.9, taille_heros * 1.8)), source)
-	var chute := fmod(_anim * 0.5, 1.0)
-	var goutte := centre + Vector2(largeur * 0.45, lerpf(-hauteur, hauteur * 0.3, chute))
-	draw_colored_polygon(Dessin.goutte(goutte, 12.0, PI / 2.0, 1.4), Color(Palette.ESSENCE, 1.0 - chute * 0.3))
-	Dessin.halo(self, goutte, 40.0, Color(Palette.ESSENCE, 0.6), 3)
-
-	var titre_y := taille.y * 0.57
-	draw_string(police, Vector2(0, titre_y), "ALAMBIC", HORIZONTAL_ALIGNMENT_CENTER, taille.x, 96, Palette.TEXTE)
-	draw_string(police, Vector2(0, titre_y + 54.0), "descente dans un grimoire vivant",
-		HORIZONTAL_ALIGNMENT_CENTER, taille.x, 30, Palette.TEXTE_ATTENUE)
-	var filet := PackedVector2Array()
-	for i in 61:
-		var t := float(i) / 60.0
-		filet.append(Vector2(lerpf(140.0, taille.x - 140.0, t), titre_y + 86.0 + sin(t * 6.0 + _anim) * 4.0))
-	draw_polyline(filet, Color(Palette.OR, 0.4), 2.0, true)
-
-	if ReglagesJoueur.meilleure_salle > 0:
-		draw_string(police, Vector2(0, titre_y + 148.0),
-			"%d chapitre(s) ouvert(s) sur %d" % [_chapitres_ouverts(), Chapitres.nombre()],
-			HORIZONTAL_ALIGNMENT_CENTER, taille.x, 30, Color(Palette.OR, 0.85))
-
-	# Trois lignes de regles : sur telephone, personne ne lit un didacticiel,
-	# mais tout le monde lit trois lignes avant d'appuyer.
-	var regles := [
-		"Le pouce se pose n'importe où en bas de l'écran.",
-		"On tire tout seul, dès qu'on s'arrête.",
-		"Aux alambics, deux réactifs se perdent pour une essence plus forte.",
-	]
-	for i in regles.size():
-		draw_string(police, Vector2(0, titre_y + 212.0 + float(i) * 42.0), regles[i],
-			HORIZONTAL_ALIGNMENT_CENTER, taille.x, 26, Color(Palette.TEXTE_ATTENUE, 0.95))
+	draw_set_transform(Vector2.ZERO)
 
 func _dessiner_menu_user(police: Font, taille: Vector2) -> void:
 	for p in _particules:
@@ -383,13 +297,18 @@ func _dessiner_menu_user(police: Font, taille: Vector2) -> void:
 		draw_arc(centre_heros + Vector2(0.0, 166.0), 132.0, 0.0, TAU, 48, Color(Palette.OR, 0.42), 4.0, true)
 		Dessin.halo(self, centre_heros, 245.0, Color(Palette.ESSENCE, 0.50), 6)
 		_dessiner_heros_menu(centre_heros)
-	var titres := ["BOUTIQUE", "ÉQUIPEMENT", "GRIMOIRES", "MAÎTRISE", "ARSENAL"]
+	var titres := ["ÉQUIPEMENT", "GRIMOIRES", "MAÎTRISE", "ARSENAL"]
+	var cadre_profil := Rect2(28.0, Ecran.marge_haute() + 22.0, taille.x - 56.0, 190.0)
+	draw_rect(cadre_profil, Color(0.025, 0.020, 0.045, 0.72))
+	draw_rect(cadre_profil, Color(Palette.BORD_PAGE, 0.24), false, 2.0)
+	draw_rect(Rect2(cadre_profil.position, Vector2(6.0, cadre_profil.size.y)),
+		Color(Palette.OR, 0.58))
 	draw_string(police, Vector2(54.0, Ecran.marge_haute() + 86.0), titres[_page],
 		HORIZONTAL_ALIGNMENT_LEFT, taille.x - 190.0, 46, Palette.TEXTE)
-	var xp_pourcent := 100 if ReglagesJoueur.est_prestigieux() else roundi(
-		100.0 * float(ReglagesJoueur.experience_heros) / float(maxi(1, ReglagesJoueur.experience_heros_requise())))
+	var xp_pourcent := roundi(100.0 * float(ReglagesJoueur.experience_compte) \
+		/ float(maxi(1, ReglagesJoueur.experience_compte_requise())))
 	draw_string(police, Vector2(54.0, Ecran.marge_haute() + 132.0), "%s  •  NIVEAU %d  •  XP %d %%" % [
-		ReglagesJoueur.titre_heros(), ReglagesJoueur.niveau_heros_effectif(), xp_pourcent],
+		ReglagesJoueur.titre_compte(), ReglagesJoueur.niveau_compte_effectif(), xp_pourcent],
 		HORIZONTAL_ALIGNMENT_LEFT, taille.x - 190.0, 25, Palette.TEXTE_ATTENUE)
 	var barre_xp := Rect2(54.0, Ecran.marge_haute() + 154.0, 430.0, 16.0)
 	draw_rect(barre_xp, Color(0.04, 0.04, 0.07, 0.86))
@@ -402,40 +321,23 @@ func _dessiner_menu_user(police: Font, taille: Vector2) -> void:
 	draw_string(police, centre_monnaie + Vector2(28.0, 10.0), ReglagesJoueur.gouttes_affichees(),
 		HORIZONTAL_ALIGNMENT_LEFT, 72.0, 27, Palette.TEXTE)
 	match PAGES[_page]:
-		"boutique": _dessiner_page_boutique(police, taille)
 		"stuff": _dessiner_page_stuff(police, taille)
 		"grimoire": _dessiner_page_grimoire(police, taille)
 	for index in PAGES.size():
-		var x := taille.x * 0.5 + (float(index) - 2.0) * 28.0
+		var x := taille.x * 0.5 + (float(index) - float(PAGES.size() - 1) / 2.0) * 28.0
 		draw_circle(Vector2(x, taille.y - Ecran.marge_basse() - 340.0), 6.0 if index == _page else 4.0,
 			Palette.OR if index == _page else Color(Palette.TEXTE_ATTENUE, 0.45))
 
 func _dessiner_heros_menu(centre: Vector2) -> void:
-	if _texture_heros == null:
-		draw_colored_polygon(Dessin.goutte(centre, 88.0, PI, 1.2), Palette.HEROS_ROBE)
-		return
-	var cadre := int(_anim * 4.0) % 4
-	var cellule := Vector2(_texture_heros.get_width() / 4.0, _texture_heros.get_height() / 2.0)
-	var source := Rect2(Vector2(float(cadre) * cellule.x, 0.0), cellule)
 	var flottement := sin(_anim * 2.2) * 7.0
-	var destination := Rect2(centre + Vector2(-108.0, -220.0 + flottement), Vector2(216.0, 470.0))
-	draw_texture_rect_region(_texture_heros, destination, source)
-
-func _dessiner_page_boutique(police: Font, taille: Vector2) -> void:
-	var rect := Rect2(92.0, taille.y * 0.31, taille.x - 184.0, 430.0)
-	_dessiner_carte_menu(rect, Palette.OR)
-	draw_colored_polygon(Dessin.etoile(rect.get_center() + Vector2(0.0, -62.0), 64.0, 28.0, 6, -PI / 2.0),
-		Color(Palette.OR, 0.34))
-	Dessin.contour(self, Dessin.etoile(rect.get_center() + Vector2(0.0, -62.0), 64.0, 28.0, 6, -PI / 2.0), Palette.OR, 4.0)
-	draw_string(police, rect.position + Vector2(0.0, 278.0), "L’ÉCHOPPE ARRIVE BIENTÔT",
-		HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 34, Palette.TEXTE)
-	draw_multiline_string(police, rect.position + Vector2(70.0, 332.0),
-		"Aucune monnaie fictive tant que ses récompenses ne sont pas définies.",
-		HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 140.0, 24, 2, Palette.TEXTE_ATTENUE)
+	draw_set_transform(centre + Vector2(0.0, flottement), 0.0, Vector2.ONE * 3.2)
+	Retro16.dessiner_heros(self, _anim, false, Vector2.RIGHT, Palette.OR)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _dessiner_page_stuff(police: Font, taille: Vector2) -> void:
-	var noms := ["ARME", "ROBE", "TALISMAN"]
-	var glyphes := ["lance", "goutte", "cristal"]
+	var noms := ["ANNEAU GAUCHE", "ANNEAU DROIT", "COLLIER"]
+	var glyphes := ["cristal", "cristal", "goutte"]
+	var slots := ["anneau_gauche", "anneau_droit", "collier"]
 	for i in 3:
 		var rect := Rect2(84.0 + float(i) * ((taille.x - 168.0) / 3.0), taille.y * 0.34,
 			(taille.x - 196.0) / 3.0, 330.0)
@@ -445,16 +347,14 @@ func _dessiner_page_stuff(police: Font, taille: Vector2) -> void:
 		Dessin.glyphe(self, glyphes[i], centre, 42.0, [Palette.OR, Palette.ESSENCE, Palette.MOUSSE_MAGIQUE][i])
 		draw_string(police, rect.position + Vector2(0.0, 240.0), noms[i], HORIZONTAL_ALIGNMENT_CENTER,
 			rect.size.x, 27, Palette.TEXTE)
-		var slot: String = ["arme", "robe", "talisman"][i]
-		var nombre := 0
-		for id in ReglagesJoueur.objets:
-			if CatalogueObjets.OBJETS.has(id) and CatalogueObjets.OBJETS[id]["slot"] == slot:
-				nombre += 1
-		draw_string(police, rect.position + Vector2(0.0, 286.0), "%d OBJET%s" % [nombre, "S" if nombre != 1 else ""], HORIZONTAL_ALIGNMENT_CENTER,
+		var slot: String = slots[i]
+		var equipe := str(ReglagesJoueur.equipements.get(slot, ""))
+		var libelle := str(CatalogueObjets.OBJETS.get(equipe, {}).get("nom", "VIDE"))
+		draw_string(police, rect.position + Vector2(0.0, 286.0), libelle, HORIZONTAL_ALIGNMENT_CENTER,
 			rect.size.x, 19, Palette.TEXTE_ATTENUE)
 	if not ReglagesJoueur.dernier_objet_obtenu.is_empty() and CatalogueObjets.OBJETS.has(ReglagesJoueur.dernier_objet_obtenu):
 		var dernier: Dictionary = CatalogueObjets.OBJETS[ReglagesJoueur.dernier_objet_obtenu]
-		draw_string(police, Vector2(60.0, taille.y * 0.34 + 390.0), "DERNIER LOOT  •  %s  •  %s" % [dernier["nom"], CatalogueObjets.bonus_effectif_texte(ReglagesJoueur.dernier_objet_obtenu)],
+		draw_string(police, Vector2(60.0, taille.y * 0.34 + 390.0), "DERNIER OBJET  •  %s  •  PIERRES %d" % [dernier["nom"], ReglagesJoueur.pierres_forge],
 			HORIZONTAL_ALIGNMENT_CENTER, taille.x - 120.0, 24, dernier["teinte"])
 
 func _dessiner_page_grimoire(police: Font, taille: Vector2) -> void:
@@ -471,60 +371,3 @@ func _dessiner_carte_menu(rect: Rect2, teinte: Color) -> void:
 	draw_rect(rect, Color(0.11, 0.09, 0.17, 0.88))
 	draw_rect(rect, Color(teinte, 0.62), false, 3.0)
 	draw_rect(Rect2(rect.position, Vector2(8.0, rect.size.y)), Color(teinte, 0.74))
-
-func _dessiner_page_stats(police: Font, taille: Vector2) -> void:
-	var rangs := ReglagesJoueur.rangs_competences_effectifs()
-	var pv := Reglages.HEROS_PV + ReglagesJoueur.bonus_niveau_pv() + ArbreCompetences.bonus_pv(rangs)
-	var degats := Reglages.TIR_DEGATS * ReglagesJoueur.multiplicateur_niveau_degats() * ArbreCompetences.multiplicateur_degats(rangs)
-	var vitesse := Reglages.HEROS_VITESSE * ReglagesJoueur.multiplicateur_niveau_vitesse() * ArbreCompetences.multiplicateur_vitesse(rangs)
-	var donnees := [["PV", roundi(pv), Palette.DANGER], ["PUISSANCE", roundi(degats), Palette.OR],
-		["VITESSE", roundi(vitesse), Palette.ESSENCE]]
-	for i in donnees.size():
-		var rect := Rect2(58.0 + float(i) * ((taille.x - 116.0) / 3.0), taille.y * 0.67,
-			(taille.x - 140.0) / 3.0, 118.0)
-		_dessiner_carte_menu(rect, donnees[i][2])
-		draw_string(police, rect.position + Vector2(18.0, 38.0), donnees[i][0], HORIZONTAL_ALIGNMENT_LEFT,
-			rect.size.x - 36.0, 20, Palette.TEXTE_ATTENUE)
-		draw_string(police, rect.position + Vector2(18.0, 88.0), str(donnees[i][1]), HORIZONTAL_ALIGNMENT_LEFT,
-			rect.size.x - 36.0, 35, Palette.TEXTE)
-
-func _dessiner_page_sorts(police: Font, taille: Vector2) -> void:
-	var actif := str(Sorts.ACTIFS.get(ReglagesJoueur.sort_actif_effectif(), {}).get("nom", "Aucun sort actif"))
-	var ultime := str(Sorts.ULTIMES.get(ReglagesJoueur.ultime_effectif(), {}).get("nom", "Aucun ultime"))
-	var rect := Rect2(80.0, taille.y * 0.67, taille.x - 160.0, 170.0)
-	_dessiner_carte_menu(rect, Palette.ESSENCE)
-	draw_string(police, rect.position + Vector2(28.0, 46.0), "ACTIF  •  " + actif,
-		HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 56.0, 27, Palette.TEXTE)
-	draw_string(police, rect.position + Vector2(28.0, 94.0), "ULTIME  •  " + ultime,
-		HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 56.0, 27, Palette.TEXTE)
-	draw_string(police, rect.position + Vector2(28.0, 140.0), "PASSIFS  •  %d / 2" % ReglagesJoueur.passifs_equipes.size(),
-		HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 56.0, 25, Palette.TEXTE_ATTENUE)
-
-func _dessiner_page_arbre(police: Font, taille: Vector2) -> void:
-	var acquis := ReglagesJoueur.rangs_competences.size()
-	var rect := Rect2(112.0, taille.y * 0.68, taille.x - 224.0, 150.0)
-	_dessiner_carte_menu(rect, Palette.MOUSSE_MAGIQUE)
-	draw_string(police, rect.position + Vector2(0.0, 58.0), "%d / %d MAÎTRISES" % [acquis, ArbreCompetences.NOEUDS.size()],
-		HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 34, Palette.TEXTE)
-	draw_string(police, rect.position + Vector2(0.0, 108.0), "GOUTTES  %s" % ReglagesJoueur.gouttes_affichees(),
-		HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 27, Palette.ESSENCE)
-
-func _dessiner_page_histoire(police: Font, taille: Vector2) -> void:
-	var chapitre := Chapitres.par_index(ReglagesJoueur.chapitre_choisi)
-	var progression := ReglagesJoueur.meilleure_du_chapitre(ReglagesJoueur.chapitre_choisi)
-	var rect := Rect2(74.0, taille.y * 0.65, taille.x - 148.0, 210.0)
-	_dessiner_carte_menu(rect, chapitre["teinte"])
-	draw_string(police, rect.position + Vector2(26.0, 54.0), chapitre["nom"], HORIZONTAL_ALIGNMENT_LEFT,
-		rect.size.x - 52.0, 31, Palette.TEXTE)
-	draw_multiline_string(police, rect.position + Vector2(26.0, 98.0), chapitre["sous_titre"],
-		HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 52.0, 24, 2, Palette.TEXTE_ATTENUE)
-	draw_string(police, rect.position + Vector2(26.0, 174.0), "PAGE %d / %d" % [progression, chapitre["salles"]],
-		HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 52.0, 28, Palette.OR)
-
-func _dessiner_page_pantheon(police: Font, taille: Vector2) -> void:
-	var rect := Rect2(118.0, taille.y * 0.67, taille.x - 236.0, 170.0)
-	_dessiner_carte_menu(rect, Palette.OR)
-	draw_string(police, rect.position + Vector2(0.0, 58.0), "%d VICTOIRES" % ReglagesJoueur.victoires,
-		HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 34, Palette.TEXTE)
-	draw_string(police, rect.position + Vector2(0.0, 110.0), "%d GRIMOIRES OUVERTS" % _chapitres_ouverts(),
-		HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 26, Palette.TEXTE_ATTENUE)

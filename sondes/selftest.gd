@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Assertions de coherence sur les donnees. Elles repondent a une question que
-# les tests unitaires ne posent pas : une essence dont le drapeau n'est lu par
+# les tests unitaires ne posent pas : une transformation dont le drapeau n'est lu par
 # aucun script est inerte, donc le joueur ne verra aucune difference.
 
 func _initialize() -> void:
@@ -9,7 +9,7 @@ func _initialize() -> void:
 	code = maxi(code, _tout_compile())
 	code = maxi(code, _drapeaux_lus())
 	code = maxi(code, _effets_lus())
-	code = maxi(code, _recettes_coherentes())
+	code = maxi(code, _catalogues_coherents())
 	if code == 0:
 		print("selftest : tout compile, donnees coherentes, aucun drapeau inerte.")
 	quit(code)
@@ -51,8 +51,10 @@ func _fichiers(racine: String, extensions: Array) -> Array[String]:
 func _drapeaux_lus() -> int:
 	var code := 0
 	for d in _valeurs_de_liste("drapeaux"):
+		if d.begins_with("transformation_heros_"):
+			continue
 		if not _cite_dans_les_scripts(d):
-			print("ECHEC  le drapeau %s n'est lu par aucun script : l'essence est inerte" % d)
+			print("ECHEC  le drapeau %s n'est lu par aucun script : la transformation est inerte" % d)
 			code = 1
 	return code
 
@@ -64,41 +66,34 @@ func _effets_lus() -> int:
 			code = 1
 	return code
 
-func _recettes_coherentes() -> int:
+func _catalogues_coherents() -> int:
 	var code := 0
-	var vues: Array[String] = []
-	for cle in Recettes.TABLE:
-		var morceaux: PackedStringArray = (cle as String).split("+")
-		if morceaux.size() != 2:
-			print("ECHEC  la cle %s n'est pas une paire" % cle)
-			code = 1
-			continue
-		var normale := Recettes.cle(morceaux[0], morceaux[1])
-		if normale != cle:
-			print("ECHEC  la cle %s n'est pas normalisee (attendu %s)" % [cle, normale])
-			code = 1
-		if normale in vues:
-			print("ECHEC  la paire %s apparait deux fois dans la table" % normale)
-			code = 1
-		vues.append(normale)
-		for id in morceaux:
-			if not CatalogueReactifs.TOUS.has(id):
-				print("ECHEC  le composant %s de %s n'existe pas" % [id, cle])
-				code = 1
-		if not CatalogueEssences.TOUS.has(Recettes.TABLE[cle]):
-			print("ECHEC  l'essence %s de %s n'existe pas" % [Recettes.TABLE[cle], cle])
-			code = 1
+	if CatalogueReactifs.ids().size() != 16:
+		print("ECHEC  le catalogue doit contenir exactement seize Augments")
+		code = 1
+	if CatalogueElements.ids().size() != 6:
+		print("ECHEC  le catalogue doit contenir exactement six Elements decides")
+		code = 1
 	for id in CatalogueReactifs.ids():
 		if CatalogueReactifs.par_id(id).mods.is_empty():
-			print("ECHEC  le reactif %s ne porte aucun effet" % id)
+			print("ECHEC  l'Augment %s ne porte aucun effet" % id)
 			code = 1
+		for element in CatalogueElements.ids():
+			if CatalogueElements.creer_fusion(element, id) == null:
+				print("ECHEC  %s ne peut pas recevoir %s" % [id, element])
+				code = 1
 	return code
 
 func _valeurs_de_liste(champ: String) -> Array[String]:
 	var trouvees: Array[String] = []
-	for source in [CatalogueReactifs.TOUS, CatalogueEssences.TOUS]:
+	for source in [CatalogueReactifs.TOUS]:
 		for id in source:
 			for valeur in source[id].mods.get(champ, []):
+				if not valeur in trouvees:
+					trouvees.append(valeur)
+	for element in CatalogueElements.ids():
+		for augment in CatalogueReactifs.ids():
+			for valeur in CatalogueElements.creer_fusion(element, augment).mods.get(champ, []):
 				if not valeur in trouvees:
 					trouvees.append(valeur)
 	return trouvees

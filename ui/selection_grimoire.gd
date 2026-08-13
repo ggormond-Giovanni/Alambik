@@ -8,12 +8,19 @@ var _lancement := false
 var _choix_modes: VBoxContainer
 var _catalogue: ScrollContainer
 var _aide: Label
+var _anim := 0.0
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_construire()
 	StyleInterface.animer_entree(self, 12.0)
+	call_deferred("_animer_choix")
+	Capture.programmer(self)
+
+func _animer_choix() -> void:
+	if is_instance_valid(_choix_modes):
+		StyleInterface.animer_liste(_choix_modes, 0.045)
 
 func _construire() -> void:
 	var marge := MarginContainer.new()
@@ -35,18 +42,25 @@ func _construire() -> void:
 	colonne.add_child(_aide)
 	_choix_modes = VBoxContainer.new()
 	_choix_modes.alignment = BoxContainer.ALIGNMENT_CENTER
-	_choix_modes.add_theme_constant_override("separation", 28)
+	_choix_modes.add_theme_constant_override("separation", 18)
 	_choix_modes.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	colonne.add_child(_choix_modes)
 	var grimoires := Button.new()
-	grimoires.text = "FEUILLETER UN GRIMOIRE\n30 paliers • progression longue"
+	grimoires.text = "PARCOURIR LA CAMPAGNE\n10 mondes • 3 chapitres • 20 salles"
 	grimoires.custom_minimum_size = Vector2(0, 170)
 	grimoires.add_theme_font_size_override("font_size", 29)
 	StyleInterface.styliser_bouton(grimoires, Palette.OR)
 	grimoires.pressed.connect(_ouvrir_grimoires)
 	_choix_modes.add_child(grimoires)
+	var mine := Button.new()
+	mine.text = "MINE\nSurvie 5 min • XP • Boss • Pierres de forge"
+	mine.custom_minimum_size = Vector2(0, 150)
+	mine.add_theme_font_size_override("font_size", 28)
+	StyleInterface.styliser_bouton(mine, Palette.MOUSSE_MAGIQUE)
+	mine.pressed.connect(_lancer_mine)
+	_choix_modes.add_child(mine)
 	var epreuve := Button.new()
-	epreuve.text = "RELEVER UN DÉFI\n12 paliers • plus dense et plus rapide"
+	epreuve.text = "ÉPREUVES RITUELLES\n5 miniboss • Sorts, Passifs et Ultimes"
 	epreuve.custom_minimum_size = Vector2(0, 170)
 	epreuve.add_theme_font_size_override("font_size", 29)
 	StyleInterface.styliser_bouton(epreuve, Palette.ESSENCE)
@@ -72,7 +86,7 @@ func _construire() -> void:
 		bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bouton.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		bouton.add_theme_font_size_override("font_size", 21)
-		bouton.text = "%s\n%s\n%s" % [livre["nom"], "page %d / 30" % page if ouvert else "VERROUILLÉ", livre["sous_titre"]]
+		bouton.text = "%s\n%s\n%s" % [livre["nom"], "salle %d / 20" % page if ouvert else "VERROUILLÉ", livre["sous_titre"]]
 		StyleInterface.styliser_bouton(bouton, livre["teinte"], not ouvert)
 		bouton.disabled = not ouvert
 		bouton.pressed.connect(func() -> void: _lancer_grimoire(index, livre))
@@ -86,17 +100,17 @@ func _construire() -> void:
 	colonne.add_child(retour)
 
 func _ouvrir_grimoires() -> void:
-	_choix_modes.visible = false
-	_catalogue.visible = true
-	_aide.text = "30 pages • boss en 10/20/30 • alambic juste avant chaque boss"
+	_aide.text = "20 salles • 6 Augments • Alambics avant 5/10/15"
+	StyleInterface.basculer_contenu(_choix_modes, _catalogue, 1.0)
+	StyleInterface.animer_rafraichissement(_aide)
 
 func _sur_retour() -> void:
 	if _catalogue.visible:
-		_catalogue.visible = false
-		_choix_modes.visible = true
 		_aide.text = "Choisissez votre manière d'entrer dans l'Alambic"
+		StyleInterface.basculer_contenu(_catalogue, _choix_modes, -1.0)
+		StyleInterface.animer_rafraichissement(_aide)
 	else:
-		ferme.emit()
+		StyleInterface.sortir_puis(self, func() -> void: ferme.emit())
 
 func _lancer_grimoire(index: int, livre: Dictionary) -> void:
 	if _lancement:
@@ -125,9 +139,25 @@ func _lancer_epreuve_sorts() -> void:
 	transition.terminee.connect(func() -> void:
 		get_tree().change_scene_to_file("res://scenes/run.tscn"))
 
+func _lancer_mine() -> void:
+	if _lancement:
+		return
+	_lancement = true
+	ReglagesJoueur.choisir_mode_run("mine")
+	Sons.jouer("choix", -10.0)
+	Sons.demarrer_musique_combat()
+	var transition := TRANSITION.instantiate()
+	transition.configurer({"nom": "Mine"})
+	add_child(transition)
+	transition.terminee.connect(func() -> void:
+		get_tree().change_scene_to_file("res://scenes/run.tscn"))
+
+func _process(delta: float) -> void:
+	_anim += delta
+	queue_redraw()
+
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.010, 0.025, 0.99))
-	var police := ThemeDB.fallback_font
+	StyleInterface.dessiner_fond(self, size, Palette.OR, _anim)
 	var haut := Ecran.marge_haute() + 105.0
-	Dessin.halo(self, Vector2(size.x * 0.5, haut), 250.0, Color(Palette.OR, 0.24), 6)
-	draw_string(police, Vector2(0, haut), "CHOISISSEZ VOTRE DESCENTE", HORIZONTAL_ALIGNMENT_CENTER, size.x, 42, Palette.TEXTE)
+	StyleInterface.dessiner_entete(self, size, "DESTINATION", "Choisissez votre descente",
+		"Campagne, survie ou épreuves rituelles", Palette.OR, haut)

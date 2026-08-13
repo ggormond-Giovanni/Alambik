@@ -1,50 +1,61 @@
 extends Node2D
 
-# Une salle est une page du grimoire : arene fermee, deux ou trois vagues,
-# puis une porte. Les compositions sont des donnees (data/vagues.gd), jamais
+# Une salle est une arene fermee a plusieurs vagues. Les compositions sont des donnees
+# (data/vagues.gd), jamais
 # du code.
 
 signal terminee
-signal ennemi_abattu
+signal ennemi_abattu(experience: int)
 
 const PROJECTILE := preload("res://scenes/projectile.tscn")
 const ENNEMI := preload("res://scenes/ennemi.tscn")
 const BOSS := preload("res://scenes/boss.tscn")
-const PORTE_DISTANCE_MARCHE := 110.0
-const PORTE_DISTANCE_APPUI := 165.0
 
 var effets: Node2D
-var zones: Node2D
 var limites := Rect2()
 var numero := 1
 
 var _vagues: Array = []
 var _vague_courante := -1
-var _porte_ouverte := false
-var _porte_position := Vector2.ZERO
 var _finie := false
+var _portail_ouvert := false
+var _portail: Area2D
 var _obstacles: Array[Rect2] = []
 var _anim := 0.0
 var _attente_vague := 0.0
+var _mine_active := false
+var _mine_temps := 0.0
+var _mine_prochain_spawn := 0.0
+var _mine_boss_apparu := false
 
 func _ready() -> void:
 	add_to_group("salle")
 
-func position_de_la_porte() -> Vector2:
-	return _porte_position
-
 func obstacles() -> Array[Rect2]:
 	return _obstacles
+
+func portail_ouvert() -> bool:
+	return _portail_ouvert
+
+func position_portail() -> Vector2:
+	return Vector2(limites.get_center().x, limites.position.y + 105.0)
 
 func demarrer(numero_: int, limites_: Rect2) -> void:
 	numero = numero_
 	limites = limites_
-	_porte_position = Vector2((limites.position.x + limites.end.x) / 2.0, limites.position.y - 70.0)
 	_vagues = Vagues.pour_salle(numero, Jeu.chapitre, Jeu.graine, Jeu.mode_run)
 	_vague_courante = -1
-	_porte_ouverte = false
 	_finie = false
+	_portail_ouvert = false
+	_portail = null
+	_mine_active = false
+	_mine_temps = 0.0
+	_mine_prochain_spawn = 0.0
+	_mine_boss_apparu = false
 	_construire_obstacles()
+	if Jeu.mode_run == "mine":
+		_demarrer_mine()
+		return
 	if _vagues.is_empty():
 		# Un alambic n'est pas une arene : la salle se termine aussitot et
 		# l'orchestrateur ouvre le panneau.
@@ -68,7 +79,7 @@ func _construire_obstacles() -> void:
 	# de nos tirs tout en laissant le heros se cacher de ses barrages, ce qui
 	# neutraliserait le combat ; la regle vaut pour chacun des trois boss.
 	var combat_de_boss := Jeu.mode_run == "grimoire" and Chapitres.est_boss(Jeu.chapitre, numero) \
-		or (Jeu.mode_run == "epreuve_sorts" and numero % 4 == 0)
+		or Jeu.mode_run in ["epreuve_sorts", "retro"]
 	var nombre := 0 if combat_de_boss else alea.randi_range(0, 2)
 	for i in nombre:
 		var taille := Vector2(alea.randf_range(90.0, 200.0), alea.randf_range(50.0, 110.0))
@@ -91,54 +102,96 @@ func _construire_obstacles() -> void:
 func _process(delta: float) -> void:
 	_anim += delta
 	queue_redraw()
+	if _mine_active:
+		_avancer_mine(delta)
+		return
 	if _attente_vague > 0.0:
 		_attente_vague -= delta
 		if _attente_vague <= 0.0:
 			_vague_suivante()
-	if not _porte_ouverte or _finie:
-		return
-	var heros := get_tree().get_first_node_in_group("heros")
-	if heros != null and heros.global_position.distance_to(_porte_position) < PORTE_DISTANCE_MARCHE:
-		_franchir_porte()
 
-func _unhandled_input(evenement: InputEvent) -> void:
-	if not _porte_ouverte or _finie:
-		return
-	var position_appui := Vector2.ZERO
-	var appui := false
-	if evenement is InputEventScreenTouch:
-		appui = (evenement as InputEventScreenTouch).pressed
-		position_appui = (evenement as InputEventScreenTouch).position
-	elif evenement is InputEventMouseButton:
-		var souris := evenement as InputEventMouseButton
-		appui = souris.pressed and souris.button_index == MOUSE_BUTTON_LEFT
-		position_appui = souris.position
-	var fleche := Vector2(_porte_position.x, limites.position.y + 118.0)
-	if appui and (position_appui.distance_to(_porte_position) <= PORTE_DISTANCE_APPUI \
-			or position_appui.distance_to(fleche) <= PORTE_DISTANCE_APPUI):
-		get_viewport().set_input_as_handled()
-		_franchir_porte()
+func _demarrer_mine() -> void:
+	_mine_active = true
+	Jeu.temps_mine_restant = Reglages.MINE_DUREE
+	# Quelques adversaires installent immediatement la boucle de combat, sans
+	# transformer le depart en mur compact.
+	for i in Reglages.MINE_PLAFOND_DEBUT:
+		faire_apparaitre(Vagues.ennemi_mine(Jeu.rng, 0.0), _position_d_apparition())
+	_mine_prochain_spawn = Reglages.MINE_INTERVALLE_DEBUT
 
-func _franchir_porte() -> void:
-	if _finie or not _porte_ouverte:
+func _avancer_mine(delta: float) -> void:
+	if _mine_boss_apparu:
 		return
-	_finie = true
-	Sons.jouer("porte", -12.0)
-	terminee.emit()
+	_mine_temps = minf(Reglages.MINE_DUREE, _mine_temps + delta)
+	Jeu.temps_mine_restant = maxf(0.0, Reglages.MINE_DUREE - _mine_temps)
+	var progression := clampf(_mine_temps / Reglages.MINE_DUREE, 0.0, 1.0)
+	if _mine_temps >= Reglages.MINE_DUREE:
+		# A 0:00, la horde cesse. Le boss obtient ensuite sa propre phase lisible,
+		# des que les derniers survivants ont ete nettoyes.
+		if get_tree().get_nodes_in_group("ennemis").is_empty():
+			_apparaitre_boss_mine()
+		return
+	_mine_prochain_spawn -= delta
+	if _mine_prochain_spawn > 0.0:
+		return
+	var plafond := _plafond_mine()
+	if get_tree().get_nodes_in_group("ennemis").size() < plafond:
+		faire_apparaitre(Vagues.ennemi_mine(Jeu.rng, progression), _position_d_apparition())
+	_mine_prochain_spawn = lerpf(Reglages.MINE_INTERVALLE_DEBUT,
+		Reglages.MINE_INTERVALLE_FIN, progression)
+
+func _apparaitre_boss_mine() -> void:
+	if _mine_boss_apparu:
+		return
+	_mine_boss_apparu = true
+	Jeu.temps_mine_restant = 0.0
+	var id := Vagues.boss_mine(Jeu.graine)
+	faire_apparaitre(id,
+		Vector2(limites.get_center().x, limites.position.y + 180.0))
+	if Jeu.mode_auto:
+		print("mine : boss final %s" % id)
+	Sons.musique_boss()
 
 func _vague_suivante() -> void:
 	_vague_courante += 1
 	if _vague_courante >= _vagues.size():
-		_ouvrir_la_porte()
+		_attente_vague = -1.0
+		if get_tree().get_nodes_in_group("ennemis").is_empty():
+			_ouvrir_portail()
 		return
 	for id in _vagues[_vague_courante]:
 		faire_apparaitre(id, _position_d_apparition())
+	_attente_vague = -1.0 if Jeu.est_retro() else (
+		Reglages.DELAI_VAGUE_FORCE if _vague_courante < _vagues.size() - 1 else -1.0)
 
-func _ouvrir_la_porte() -> void:
-	_porte_ouverte = true
-	Sons.jouer("porte", -16.0, 1.2)
+func _ouvrir_portail() -> void:
+	if _finie or _portail_ouvert:
+		return
+	_portail_ouvert = true
+	if Jeu.mode_auto:
+		print("salle %d nettoyee : portail ouvert" % numero)
+	_portail = Area2D.new()
+	_portail.name = "PortailSortie"
+	_portail.collision_layer = 0
+	_portail.collision_mask = 1
+	_portail.global_position = position_portail()
+	var collision := CollisionShape2D.new()
+	var cercle := CircleShape2D.new()
+	cercle.radius = Reglages.PORTAIL_RAYON
+	collision.shape = cercle
+	_portail.add_child(collision)
+	_portail.body_entered.connect(_sur_corps_dans_portail)
+	add_child(_portail)
 	if effets != null:
-		effets.onde(_porte_position, 180.0, Palette.OR, 0.8)
+		effets.onde(position_portail(), 180.0, Palette.OR, 0.35)
+	Sons.jouer("portail", -14.0, 1.1)
+	queue_redraw()
+
+func _sur_corps_dans_portail(corps: Node) -> void:
+	if _finie or not corps.is_in_group("heros"):
+		return
+	_finie = true
+	terminee.emit()
 
 func faire_apparaitre(id: String, position: Vector2) -> void:
 	var donnees: Dictionary = CatalogueEnnemis.par_id(id)
@@ -160,17 +213,31 @@ func faire_apparaitre(id: String, position: Vector2) -> void:
 	noeud.touche.connect(_sur_ennemi_touche)
 	add_child(noeud)
 	if effets != null:
-		effets.onde(position, donnees["rayon"] * 2.5, donnees["couleur"], 0.5)
+		effets.apparition(noeud.global_position, donnees["couleur"], donnees["rayon"],
+			donnees["cerveau"] == "boss")
 
-# La creature d'une page 45 est plus lourde que celle d'une page 5, et celle du
+# La creature d'une salle avancee est plus lourde que celle d'une salle 5, et celle du
 # troisieme chapitre plus que celle du premier. Le catalogue reste la reference :
 # on n'y touche pas, on met a l'echelle une copie.
-func _mis_a_l_echelle(donnees: Dictionary, _id: String) -> Dictionary:
+func _mis_a_l_echelle(donnees: Dictionary, id: String) -> Dictionary:
 	var copie := donnees.duplicate(true)
+	copie["id"] = id
 	if Jeu.mode_run == "epreuve_sorts":
-		var progression_defi := clampf(float(numero - 1) / 11.0, 0.0, 1.0)
+		var progression_defi := clampf(float(numero - 1) / 4.0, 0.0, 1.0)
 		copie["pv"] = float(donnees["pv"]) * Reglages.DEFI_PV_BASE * pow(1.0 + Reglages.DEFI_MONTEE_PV, progression_defi)
 		copie["degats"] = float(donnees["degats"]) * Reglages.DEFI_DEGATS_BASE * pow(1.0 + Reglages.DEFI_MONTEE_DEGATS, progression_defi)
+	elif Jeu.mode_run == "mine":
+		var progression_mine := clampf(_mine_temps / Reglages.MINE_DUREE, 0.0, 1.0)
+		copie["pv"] = float(donnees["pv"]) * Reglages.MINE_PV_MULT \
+			* pow(1.0 + Reglages.MINE_MONTEE_PV, progression_mine)
+		copie["degats"] = float(donnees["degats"]) * Reglages.MINE_DEGATS_MULT \
+			* pow(1.0 + Reglages.MINE_MONTEE_DEGATS, progression_mine)
+		if donnees["cerveau"] == "boss":
+			copie["pv"] *= Reglages.MINE_BOSS_PV_MULT
+			copie["degats"] *= Reglages.MINE_BOSS_DEGATS_MULT
+	elif Jeu.est_retro():
+		copie["pv"] = float(donnees["pv"]) * Reglages.RETRO_PV_MULT
+		copie["degats"] = float(donnees["degats"]) * Reglages.RETRO_DEGATS_MULT
 	else:
 		copie["pv"] = float(donnees["pv"]) * Chapitres.facteur_pv(Jeu.chapitre, numero)
 		copie["degats"] = float(donnees["degats"]) * Chapitres.facteur_degats(Jeu.chapitre, numero)
@@ -182,9 +249,7 @@ func _sur_ennemi_touche(position: Vector2, couleur: Color) -> void:
 
 func _sur_mort_ennemi(qui: Node, position: Vector2, couleur: Color) -> void:
 	Jeu.ennemis_abattus += 1
-	# Les éliminations ne sont plus une monnaie ni une jauge cachée : la
-	# récompense arrive une fois, clairement, à la fin de chaque étage.
-	ennemi_abattu.emit()
+	ennemi_abattu.emit(int(qui.donnees.get("experience", 1)))
 	if effets != null:
 		effets.mort(position, couleur)
 	# Le noeud mort est encore dans l'arbre a cet instant : on attend une frame
@@ -192,10 +257,29 @@ func _sur_mort_ennemi(qui: Node, position: Vector2, couleur: Color) -> void:
 	await get_tree().process_frame
 	if _finie or not is_inside_tree():
 		return
-	if get_tree().get_nodes_in_group("ennemis").is_empty() and _attente_vague <= 0.0:
-		_attente_vague = Reglages.DELAI_ENTRE_VAGUES
+	if Jeu.mode_run == "mine":
+		if _mine_boss_apparu and get_tree().get_nodes_in_group("ennemis").is_empty():
+			_mine_active = false
+			_ouvrir_portail()
+		elif not _mine_boss_apparu and _mine_temps >= Reglages.MINE_DUREE \
+				and get_tree().get_nodes_in_group("ennemis").is_empty():
+			_apparaitre_boss_mine()
+		return
+	if get_tree().get_nodes_in_group("ennemis").is_empty():
+		if Jeu.mode_auto:
+			print("derniere creature retiree salle %d vague %d/%d" % [numero,
+				_vague_courante + 1, _vagues.size()])
+		if _vague_courante < _vagues.size() - 1:
+			_attente_vague = 0.0
+			_vague_suivante()
+		else:
+			_ouvrir_portail()
 
 func _sur_invocation(id: String, position: Vector2) -> void:
+	if Jeu.mode_run == "mine" and _mine_temps >= Reglages.MINE_DUREE:
+		return
+	if Jeu.mode_run == "mine" and get_tree().get_nodes_in_group("ennemis").size() >= _plafond_mine():
+		return
 	var p := position
 	p.x = clampf(p.x, limites.position.x, limites.end.x)
 	p.y = clampf(p.y, limites.position.y, limites.end.y)
@@ -203,8 +287,20 @@ func _sur_invocation(id: String, position: Vector2) -> void:
 		p = _position_d_apparition()
 	faire_apparaitre(id, p)
 
+func _plafond_mine() -> int:
+	var progression := clampf(_mine_temps / Reglages.MINE_DUREE, 0.0, 1.0)
+	return roundi(lerpf(float(Reglages.MINE_PLAFOND_DEBUT),
+		float(Reglages.MINE_PLAFOND_FIN), progression))
+
 func _position_d_apparition() -> Vector2:
 	var marge := 120.0
+	if Jeu.mode_run == "mine":
+		var cote := Jeu.rng.randi_range(0, 3)
+		match cote:
+			0: return Vector2(Jeu.rng.randf_range(limites.position.x + marge, limites.end.x - marge), limites.position.y + marge)
+			1: return Vector2(Jeu.rng.randf_range(limites.position.x + marge, limites.end.x - marge), limites.end.y - marge)
+			2: return Vector2(limites.position.x + marge, Jeu.rng.randf_range(limites.position.y + marge, limites.end.y - marge))
+			_: return Vector2(limites.end.x - marge, Jeu.rng.randf_range(limites.position.y + marge, limites.end.y - marge))
 	var candidate := Vector2.ZERO
 	# Un ennemi apparu dans un bloc d'encre est intouchable : les projectiles
 	# heurtent le bloc avant lui, et la salle ne se vide jamais.
@@ -232,9 +328,8 @@ func tirer(tir_source: Tir, origine: Vector2, direction: Vector2, hostile := fal
 		p.direction = direction.rotated(angles[i])
 		p.global_position = origine + direction.orthogonal() * decalages[i]
 		p.fragments_demandes.connect(_sur_fragments)
-		p.chaine_demandee.connect(_sur_chaine)
-		p.zone_demandee.connect(_sur_zone)
 		p.impact_visuel.connect(_sur_impact)
+		p.soin_demande.connect(_sur_soin_demande)
 		add_child(p)
 
 func _sur_tir_ennemi(tir_ennemi: Tir, origine: Vector2, direction: Vector2) -> void:
@@ -244,9 +339,10 @@ func _sur_impact(position: Vector2, couleur: Color, ampleur: float) -> void:
 	if effets != null:
 		effets.impact(position, couleur, ampleur)
 
-func _sur_zone(position: Vector2, genre: String) -> void:
-	if zones != null:
-		zones.ajouter(position, genre)
+func _sur_soin_demande(montant: float) -> void:
+	var heros := get_tree().get_first_node_in_group("heros")
+	if heros != null:
+		heros.stats.soigner(montant)
 
 func _sur_fragments(origine: Vector2, direction: Vector2, tir_source: Tir, hostile: bool) -> void:
 	# Un fragment ne se refragmente pas : sinon un seul tir peut saturer la scene.
@@ -269,59 +365,27 @@ func _tirer_fragments(eclat: Tir, nombre: int, origine: Vector2, direction: Vect
 		var angle := TAU * float(i) / float(nombre) + randf() * 0.3
 		tirer(eclat, origine, direction.rotated(angle), hostile)
 
-func _sur_chaine(depuis: Vector2, cible: Node, tir_source: Tir) -> void:
-	var portee := Reglages.FOUDRE_PORTEE_CHAINE
-	if "chaine_longue" in tir_source.drapeaux:
-		portee *= 2.0
-	var positions: Array[Vector2] = []
-	var noeuds: Array[Node] = []
-	for noeud in get_tree().get_nodes_in_group("ennemis"):
-		if not is_instance_valid(noeud) or noeud == cible:
-			continue
-		if noeud.global_position.distance_to(depuis) > portee:
-			continue
-		noeuds.append(noeud)
-		positions.append(noeud.global_position)
-	var index := Ciblage.plus_proche(depuis, positions)
-	if index == -1:
-		return
-	var voisin := noeuds[index]
-	var effets_chaine: Array[String] = ["foudre"]
-	if "acide" in tir_source.effets:
-		effets_chaine.append("acide")
-	voisin.recevoir_degats(tir_source.degats * Reglages.FOUDRE_PART_DEGATS, effets_chaine)
-	if effets != null:
-		effets.eclair(depuis, voisin.global_position)
-
 func _draw() -> void:
-	# Le fond de page est dessine par le noeud Fond, sous les zones au sol ;
-	# ici on ne dessine que ce qui doit passer par-dessus.
+	# Le fond de l'arene est dessine par le noeud Fond ; ici on ne dessine que ce
+	# qui doit passer par-dessus.
 	for index in _obstacles.size():
 		var rect: Rect2 = _obstacles[index]
 		match (numero + index) % 3:
 			0: _dessiner_muret(rect)
 			1: _dessiner_bosquet(rect, index)
 			_: _dessiner_rochers(rect, index)
+	if _portail_ouvert:
+		_dessiner_portail()
 
-	if _porte_ouverte and not _finie:
-		var pulsation := 0.6 + 0.4 * sin(_anim * 3.0)
-		var fleche := Vector2(_porte_position.x, limites.position.y + 118.0)
-		Dessin.halo(self, fleche, 150.0 * pulsation, Palette.OR, 5)
-		var arc := Dessin.polygone_regulier(fleche, 74.0, 8, _anim * 0.5)
-		Dessin.contour(self, arc, Color(Palette.OR, 0.9), 4.0)
-		draw_colored_polygon(Dessin.polygone_regulier(fleche, 52.0, 8, -_anim * 0.7),
-			Color(Palette.OR, 0.25))
-		# Flèche vers le haut : toute la forme et son halo constituent la cible
-		# tactile, pas seulement quelques pixels du glyphe.
-		var pointe := PackedVector2Array([
-			fleche + Vector2(0.0, -48.0), fleche + Vector2(42.0, -4.0),
-			fleche + Vector2(18.0, -4.0), fleche + Vector2(18.0, 42.0),
-			fleche + Vector2(-18.0, 42.0), fleche + Vector2(-18.0, -4.0),
-			fleche + Vector2(-42.0, -4.0)])
-		draw_colored_polygon(pointe, Color(Palette.OR, 0.92))
-		var police := ThemeDB.fallback_font
-		draw_string(police, fleche + Vector2(-180, 120), "TOUCHER — PAGE SUIVANTE",
-			HORIZONTAL_ALIGNMENT_CENTER, 360, 29, Color(Palette.TEXTE, 0.90))
+func _dessiner_portail() -> void:
+	var centre := position_portail()
+	var pulsation := 1.0 + sin(_anim * 4.0) * 0.08
+	Dessin.halo(self, centre, 145.0 * pulsation, Color(Palette.OR, 0.72), 6)
+	draw_circle(centre, Reglages.PORTAIL_RAYON * pulsation, Color(0.12, 0.04, 0.24, 0.88))
+	draw_arc(centre, Reglages.PORTAIL_RAYON * pulsation, 0.0, TAU, 48, Palette.OR, 8.0, true)
+	draw_arc(centre, Reglages.PORTAIL_RAYON * 0.62, -_anim, TAU - _anim, 40,
+		Color(Palette.ESSENCE, 0.92), 5.0, true)
+	Dessin.glyphe(self, "cristal", centre, 31.0, Palette.TEXTE)
 
 func _dessiner_muret(rect: Rect2) -> void:
 	draw_rect(rect.grow(7.0), Color(0.05, 0.07, 0.08, 0.24))

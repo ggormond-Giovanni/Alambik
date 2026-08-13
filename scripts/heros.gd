@@ -1,19 +1,15 @@
 extends CharacterBody2D
 
-const CHEMIN_SPRITES := "res://assets/characters/sheets/hero_alchemist_sheet.png"
-
 # L'alchimiste. Elle ne lit jamais Input : joystick et bot headless passent par
 # la meme porte, definir_intention(). Piloter des entrees simulees a deja fait
 # rapporter des succes faux ailleurs.
 
 signal tir_demande(tir_courant: Tir, origine: Vector2, direction: Vector2)
 signal touchee(position: Vector2)
-signal bouclier_brise(position: Vector2, explosif: bool)
+signal bouclier_brise(position: Vector2)
 signal morte
-signal sillage_depose(position: Vector2, gelant: bool)
 
-var stats := Stats.depuis_reglages(ReglagesJoueur.rangs_competences_effectifs(), ReglagesJoueur.bonus_niveau_pv(),
-	ReglagesJoueur.multiplicateur_niveau_degats(), ReglagesJoueur.multiplicateur_niveau_vitesse(), ReglagesJoueur.passifs_equipes_effectifs(),
+var stats := Stats.depuis_reglages(ReglagesJoueur.rangs_competences_effectifs(), ReglagesJoueur.passifs_equipes_effectifs(),
 	ReglagesJoueur.bonus_objets_effectifs())
 var tir_courant: Tir
 var bouclier := 0
@@ -24,8 +20,6 @@ var _intensite := 0.0
 var _temps_immobile := 0.0
 var _recharge := 0.0
 var _invulnerable := 0.0
-var _fiole_appliquee := false
-var _sillage_minuterie := 0.0
 var _rafale_restante := 0
 var _rafale_minuterie := 0.0
 var _rafale_direction := Vector2.RIGHT
@@ -35,12 +29,17 @@ var _secousse := 0.0
 var _inclinaison := 0.0
 var _attaque := 0.0
 var _seconde_chance_disponible := true
-var _texture_heros: Texture2D
-
+var _transformations_initialisees: Array[String] = []
+var _resurrections_feu := 0
+var _resurrections_eau := 0
+var _resurrections_air := 0
+var _resurrections_terre := 0
+var _resurrections_lumiere := 0
+var _protection_terre := 0.0
+var _aureole_lumiere := 0.0
 func _ready() -> void:
 	add_to_group("heros")
-	if ResourceLoader.exists(CHEMIN_SPRITES):
-		_texture_heros = load(CHEMIN_SPRITES)
+	add_to_group("cibles_ennemis")
 	tir_courant = Tir.de_base(stats)
 	recalculer()
 
@@ -53,20 +52,18 @@ func definir_intention(direction: Vector2, intensite := 1.0) -> void:
 func recalculer() -> void:
 	tir_courant = Mods.appliquer(Tir.de_base(stats), Jeu.mods())
 	var drapeaux := tir_courant.drapeaux
-	stats.vitesse = Reglages.HEROS_VITESSE * ReglagesJoueur.multiplicateur_niveau_vitesse() \
-		* ArbreCompetences.multiplicateur_vitesse(ReglagesJoueur.rangs_competences_effectifs()) \
+	stats.vitesse = Reglages.HEROS_VITESSE * ArbreCompetences.multiplicateur_vitesse(ReglagesJoueur.rangs_competences_effectifs()) \
 		* Sorts.multiplicateur_vitesse(ReglagesJoueur.passifs_equipes_effectifs()) \
-		* (1.0 + float(ReglagesJoueur.bonus_objets_effectifs()["vitesse"])) \
-		* (Reglages.PAS_DE_CHAT_FACTEUR if "pas_de_chat" in drapeaux else 1.0)
-	if "fiole_de_vie" in drapeaux and not _fiole_appliquee:
-		_fiole_appliquee = true
-		stats.pv_max += Reglages.FIOLE_PV
-		stats.soigner(Reglages.FIOLE_PV * ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
-	bouclier = 1 if "bouclier_de_sel" in drapeaux or ArbreCompetences.donne_bouclier(ReglagesJoueur.rangs_competences_effectifs()) or Sorts.donne_bouclier(ReglagesJoueur.passifs_equipes_effectifs()) else 0
+		* (1.0 + float(ReglagesJoueur.bonus_objets_effectifs()["vitesse"]))
+	bouclier = 1 if "egide" in drapeaux or ArbreCompetences.donne_bouclier(ReglagesJoueur.rangs_competences_effectifs()) or Sorts.donne_bouclier(ReglagesJoueur.passifs_equipes_effectifs()) else 0
+	_initialiser_transformations(drapeaux)
 
-func preparer_nouvelle_page() -> void:
+func preparer_nouvelle_salle() -> void:
 	recalculer()
-	var soin := ArbreCompetences.soin_par_page(ReglagesJoueur.rangs_competences_effectifs()) + Sorts.soin_par_page(ReglagesJoueur.passifs_equipes_effectifs())
+	if "regeneration" in tir_courant.drapeaux:
+		stats.soigner(stats.pv_max * Reglages.REGENERATION_PART \
+			* ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
+	var soin := ArbreCompetences.soin_par_salle(ReglagesJoueur.rangs_competences_effectifs()) + Sorts.soin_par_salle(ReglagesJoueur.passifs_equipes_effectifs())
 	if soin > 0.0:
 		stats.soigner(stats.pv_max * soin * ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
 
@@ -77,8 +74,6 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	global_position.x = clampf(global_position.x, limites.position.x, limites.end.x)
 	global_position.y = clampf(global_position.y, limites.position.y, limites.end.y)
-	if _intention != Vector2.ZERO:
-		_deposer_sillage(delta)
 
 func _process(delta: float) -> void:
 	_flottement += delta
@@ -87,6 +82,8 @@ func _process(delta: float) -> void:
 	_inclinaison = lerpf(_inclinaison, inclinaison_visee, minf(1.0, delta * 10.0))
 	_secousse = maxf(0.0, _secousse - delta * 4.0)
 	_invulnerable = maxf(0.0, _invulnerable - delta)
+	_protection_terre = maxf(0.0, _protection_terre - delta)
+	_aureole_lumiere = maxf(0.0, _aureole_lumiere - delta)
 	_recharge = maxf(0.0, _recharge - delta)
 	_avancer_rafale(delta)
 	var immobile := _intention == Vector2.ZERO
@@ -94,8 +91,7 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 	# Le tir automatique est la grammaire du genre : on s'arrete, on tire.
-	var peut_tirer := immobile or "tir_en_course" in tir_courant.drapeaux
-	if not peut_tirer:
+	if not immobile:
 		return
 	if immobile and _temps_immobile < Reglages.TIR_DELAI_ARRET:
 		return
@@ -107,7 +103,9 @@ func _process(delta: float) -> void:
 		return
 	var direction := global_position.direction_to(_point_vise(index))
 	_visee = direction
-	_recharge = 1.0 / maxf(0.2, tir_courant.cadence)
+	var cadence_effective := tir_courant.cadence * (Reglages.MANNEQUIN_CADENCE_MULT \
+		if "mannequin" in tir_courant.drapeaux and _temps_immobile >= Reglages.MANNEQUIN_DELAI else 1.0)
+	_recharge = 1.0 / maxf(0.2, cadence_effective)
 	if "rafale" in tir_courant.drapeaux:
 		_rafale_restante = Reglages.RAFALE_NOMBRE
 		_rafale_minuterie = 0.0
@@ -137,15 +135,6 @@ func _avancer_rafale(delta: float) -> void:
 	_attaque = 0.42
 	tir_demande.emit(tir_courant, global_position, _rafale_direction)
 	Sons.jouer("tir", -22.0, randf_range(1.0, 1.15))
-
-func _deposer_sillage(delta: float) -> void:
-	if not "sillage" in tir_courant.drapeaux:
-		return
-	_sillage_minuterie -= delta
-	if _sillage_minuterie > 0.0:
-		return
-	_sillage_minuterie = Reglages.SILLAGE_INTERVALLE
-	sillage_depose.emit(global_position, "sillage_gelant" in tir_courant.drapeaux)
 
 func cibles_visibles() -> Array[Vector2]:
 	var positions: Array[Vector2] = []
@@ -180,19 +169,21 @@ func recevoir_degats(montant: float, _effets: Array = []) -> void:
 	if bouclier > 0:
 		bouclier -= 1
 		_invulnerable = Reglages.HEROS_INVULNERABILITE
-		bouclier_brise.emit(global_position, "bouclier_explosif" in tir_courant.drapeaux)
+		bouclier_brise.emit(global_position)
 		Sons.jouer("impact", -8.0, 0.7)
 		return
 	_invulnerable = Reglages.HEROS_INVULNERABILITE
 	_secousse = 1.0
 	var ratio_pv := stats.pv / maxf(1.0, stats.pv_max)
-	stats.blesser(montant * (1.0 - ArbreCompetences.reduction_degats(ReglagesJoueur.rangs_competences_effectifs())) \
-		* (1.0 - Jeu.reduction_degats_run()) \
+	stats.blesser(montant * (Reglages.TERRE_PROTECTION_MULT if _protection_terre > 0.0 else 1.0) \
+		* (1.0 - ArbreCompetences.reduction_degats(ReglagesJoueur.rangs_competences_effectifs())) \
 		* Sorts.multiplicateur_degats_recus(ReglagesJoueur.passifs_equipes_effectifs()) \
 		* Sorts.multiplicateur_degats_recus_conditionnel(ReglagesJoueur.passifs_equipes_effectifs(), ratio_pv))
 	touchee.emit(global_position)
 	Sons.jouer("degat", -6.0)
 	if stats.est_mort():
+		if _essayer_resurrection_elementaire():
+			return
 		if _seconde_chance_disponible and ReglagesJoueur.passifs_equipes_effectifs().has("seconde_chance"):
 			_seconde_chance_disponible = false
 			stats.pv = stats.pv_max * 0.35 * float(ReglagesJoueur.passifs_equipes_effectifs()["seconde_chance"])
@@ -202,8 +193,57 @@ func recevoir_degats(montant: float, _effets: Array = []) -> void:
 		morte.emit()
 
 func multiplicateur_degats_passif() -> float:
-	return Sorts.multiplicateur_degats_conditionnel(ReglagesJoueur.passifs_equipes_effectifs(),
-		stats.pv / maxf(1.0, stats.pv_max))
+	var ratio := stats.pv / maxf(1.0, stats.pv_max)
+	var resultat := Sorts.multiplicateur_degats_conditionnel(ReglagesJoueur.passifs_equipes_effectifs(), ratio)
+	if "courageux" in tir_courant.drapeaux:
+		resultat *= 1.0 + (1.0 - ratio) * Reglages.COURAGEUX_BONUS_MAX
+	if "mannequin" in tir_courant.drapeaux and _temps_immobile >= Reglages.MANNEQUIN_DELAI:
+		resultat *= Reglages.MANNEQUIN_DEGATS_MULT
+	if "transformation_heros_tenebres" in tir_courant.drapeaux:
+		resultat *= Reglages.TENEBRES_HEROS_DEGATS_MULT
+	if _aureole_lumiere > 0.0:
+		resultat *= Reglages.LUMIERE_AUREOLE_DEGATS_MULT
+	return resultat
+
+func _initialiser_transformations(drapeaux: Array[String]) -> void:
+	for element in CatalogueElements.ids():
+		var drapeau := "transformation_heros_%s" % element
+		if drapeau not in drapeaux or drapeau in _transformations_initialisees:
+			continue
+		_transformations_initialisees.append(drapeau)
+		match element:
+			"feu": _resurrections_feu = Reglages.PHENIX_RESURRECTIONS
+			"eau": _resurrections_eau = Reglages.EAU_RESURRECTIONS
+			"air": _resurrections_air = Reglages.AIR_RESURRECTIONS
+			"terre": _resurrections_terre = Reglages.TERRE_RESURRECTIONS
+			"lumiere": _resurrections_lumiere = Reglages.LUMIERE_RESURRECTIONS
+
+func _essayer_resurrection_elementaire() -> bool:
+	var part := 0.0
+	if _resurrections_eau > 0:
+		_resurrections_eau -= 1
+		part = 1.0
+	elif _resurrections_feu > 0:
+		_resurrections_feu -= 1
+		part = Reglages.PHENIX_PV_PART
+	elif _resurrections_terre > 0:
+		_resurrections_terre -= 1
+		part = Reglages.TERRE_RESURRECTION_PV_PART
+		_protection_terre = Reglages.TERRE_PROTECTION_DUREE
+	elif _resurrections_lumiere > 0:
+		_resurrections_lumiere -= 1
+		part = Reglages.LUMIERE_RESURRECTION_PV_PART
+		_aureole_lumiere = Reglages.LUMIERE_AUREOLE_DUREE
+	elif _resurrections_air > 0:
+		_resurrections_air -= 1
+		part = Reglages.AIR_RESURRECTION_PV_PART
+	if part <= 0.0:
+		return false
+	stats.pv = stats.pv_max * part
+	bouclier = 1
+	_invulnerable = Reglages.HEROS_INVULNERABILITE
+	Sons.jouer("fusion", -6.0)
+	return true
 
 func _draw() -> void:
 	var r := Reglages.HEROS_RAYON
@@ -225,29 +265,11 @@ func _draw() -> void:
 	# Lueur du reactif en main : c'est la couleur de ce que le joueur a construit.
 	Dessin.halo(self, centre + vers * r * 0.5, r * 2.4, Color(teinte, 0.9), 5)
 
-	# Le sprite peint remplace la silhouette primitive. Sa taille depasse un peu
-	# la collision pour rester lisible sur un ecran de telephone.
-	var taille := r * 4.65
-	var modulation := Color.WHITE
-	if _invulnerable > 0.0:
-		modulation = Color(1.0, 0.72, 0.76) if fmod(_invulnerable, 0.16) < 0.08 else Color.WHITE
 	# Une compression tres legere et l'inclinaison donnent du poids aux changements
 	# de direction sans deplacer la collision ni ralentir la commande.
 	var echelle := Vector2(1.0 + vitesse_relative * 0.035, 1.0 - vitesse_relative * 0.025)
 	draw_set_transform(centre + Vector2(0, vitesse_relative * 3.0), _inclinaison, echelle)
-	if _texture_heros != null:
-		var cadre := 4 if vitesse_relative < 0.08 else int(_flottement * 10.0) % 4
-		if _attaque > 0.0:
-			cadre = 4 + clampi(int((1.0 - _attaque / 0.42) * 4.0), 0, 3)
-		var cellule := Vector2(_texture_heros.get_width() / 4.0, _texture_heros.get_height() / 2.0)
-		var source := Rect2(Vector2(float(cadre % 4) * cellule.x, float(cadre / 4) * cellule.y), cellule)
-		# Les poses de course sont plus basses dans leur ligne source que les poses
-		# de tir. Deux ancres compensent cet ecart pour garder les pieds au meme point.
-		var ancre_y := -0.89 if cadre >= 4 else -1.30
-		var destination := Rect2(Vector2(-taille * 0.46, taille * ancre_y), Vector2(taille * 0.92, taille * 2.14))
-		draw_texture_rect_region(_texture_heros, destination, source, modulation)
-	else:
-		_dessiner_repli(r, teinte)
+	Retro16.dessiner_heros(self, _flottement, _attaque > 0.0, vers, teinte)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	# La couleur du tir reste visible au niveau de la fiole, meme si le sprite

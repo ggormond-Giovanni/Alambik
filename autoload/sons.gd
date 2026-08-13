@@ -10,7 +10,8 @@ const DUREE_FONDU := 2.2
 const DUREE_BLANC_COMBAT := 0.14
 const BUS_MUSIQUE := "Musique"
 const BUS_EFFETS := "Effets"
-const MUSIQUE_COMBAT := preload("res://assets/audio/firstarcade.ogg")
+const MUSIQUE_FIRST_ARCADE := preload("res://assets/audio/firstarcade.ogg")
+const MUSIQUE_DYNAMIC_ARCADE := preload("res://assets/audio/dynamic_arcade.ogg")
 
 var _banque := {}
 var _voix: Array[AudioStreamPlayer] = []
@@ -18,6 +19,13 @@ var _prochaine := 0
 var actif := true
 var _musiques: Array[AudioStreamPlayer] = []
 var _volumes_vises := PackedFloat32Array([-80.0, -80.0])
+var _piste_chargee := ""
+
+func pistes_disponibles() -> Array[Dictionary]:
+	return [
+		{"id": "first_arcade", "nom": "FIRST ARCADE"},
+		{"id": "dynamic_arcade", "nom": "DYNAMIC ARCADE"},
+	]
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -33,7 +41,8 @@ func _ready() -> void:
 	_banque["degat"] = _impact_heros()
 	_banque["choix"] = _souffle(0.12, 620.0, 900.0, 0.15, 0.45)
 	_banque["fusion"] = _souffle(0.55, 300.0, 1100.0, 0.2, 0.6)
-	_banque["porte"] = _souffle(0.35, 420.0, 620.0, 0.25, 0.5)
+	_banque["coffre"] = _souffle(0.72, 180.0, 1320.0, 0.12, 0.42)
+	_banque["portail"] = _souffle(0.48, 260.0, 980.0, 0.18, 0.55)
 	_banque["boss"] = _souffle(0.7, 140.0, 70.0, 0.7, 0.7)
 	for i in VOIX:
 		var lecteur := AudioStreamPlayer.new()
@@ -46,9 +55,8 @@ func _ready() -> void:
 			var musique := AudioStreamPlayer.new()
 			musique.bus = BUS_MUSIQUE
 			if ambiance == 1:
-				var piste_combat: AudioStreamOggVorbis = MUSIQUE_COMBAT.duplicate()
-				piste_combat.loop = true
-				musique.stream = piste_combat
+				musique.stream = _creer_flux_combat("first_arcade")
+				_piste_chargee = "first_arcade"
 			else:
 				musique.stream = _composer_boucle_menu()
 			musique.volume_db = -80.0
@@ -106,6 +114,28 @@ func _preparer_bus(nom: String) -> void:
 func appliquer_reglages() -> void:
 	_appliquer_volume_bus(BUS_MUSIQUE, ReglagesJoueur.volume_musique)
 	_appliquer_volume_bus(BUS_EFFETS, ReglagesJoueur.volume_effets)
+	_appliquer_piste_selectionnee()
+
+func _appliquer_piste_selectionnee() -> void:
+	if not actif or _musiques.size() < 2:
+		return
+	var id := str(ReglagesJoueur.piste_musique)
+	if id == _piste_chargee:
+		return
+	_musiques[1].stop()
+	_musiques[1].stream = _creer_flux_combat(id)
+	_piste_chargee = id
+	_musiques[1].play(0.0)
+	# Si les reglages sont ouverts pendant une run, le choix s'entend sans
+	# devoir quitter l'ecran ni recommencer la salle.
+	_musiques[1].volume_db = _volumes_vises[1]
+
+func _creer_flux_combat(id: String) -> AudioStreamOggVorbis:
+	var source: AudioStreamOggVorbis = MUSIQUE_DYNAMIC_ARCADE \
+		if id == "dynamic_arcade" else MUSIQUE_FIRST_ARCADE
+	var flux: AudioStreamOggVorbis = source.duplicate()
+	flux.loop = true
+	return flux
 
 func _appliquer_volume_bus(nom: String, volume: float) -> void:
 	var index := AudioServer.get_bus_index(nom)

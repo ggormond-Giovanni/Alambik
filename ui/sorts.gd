@@ -15,6 +15,7 @@ var _liste: VBoxContainer
 var _resume: Label
 var _message: Label
 var integre_menu := false
+var _anim := 0.0
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -22,6 +23,7 @@ func _ready() -> void:
 	_construire()
 	_afficher("Actif")
 	StyleInterface.animer_entree(self, 12.0)
+	Capture.programmer(self)
 
 func _construire() -> void:
 	var marge := MarginContainer.new()
@@ -76,7 +78,8 @@ func _construire() -> void:
 		retour.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
 		retour.add_theme_font_size_override("font_size", 29)
 		StyleInterface.styliser_bouton(retour, Palette.TEXTE_ATTENUE, true)
-		retour.pressed.connect(func() -> void: ferme.emit())
+		retour.pressed.connect(func() -> void:
+			StyleInterface.sortir_puis(self, func() -> void: ferme.emit()))
 		colonne.add_child(retour)
 
 func _catalogue() -> Dictionary:
@@ -86,6 +89,35 @@ func _catalogue() -> Dictionary:
 	return Sorts.ACTIFS
 
 func _afficher(categorie: String) -> void:
+	if categorie != _categorie and _liste.get_child_count() > 0:
+		_transitionner_categorie(categorie)
+		return
+	_remplir_categorie(categorie)
+
+func _transitionner_categorie(categorie: String) -> void:
+	if _liste.has_meta("transition_categorie"):
+		return
+	_liste.set_meta("transition_categorie", true)
+	var sortie := _liste.create_tween().set_parallel(true)
+	sortie.set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_IN)
+	sortie.tween_property(_liste, "modulate:a", 0.0,
+		0.08 if ReglagesJoueur.effets_reduits else 0.16)
+	sortie.tween_property(_liste, "position:x", -24.0,
+		0.08 if ReglagesJoueur.effets_reduits else 0.16)
+	await sortie.finished
+	_remplir_categorie(categorie)
+	_liste.position.x = 24.0
+	_liste.modulate.a = 0.0
+	var entree := _liste.create_tween().set_parallel(true)
+	entree.set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
+	entree.tween_property(_liste, "modulate:a", 1.0,
+		0.12 if ReglagesJoueur.effets_reduits else 0.28)
+	entree.tween_property(_liste, "position:x", 0.0,
+		0.12 if ReglagesJoueur.effets_reduits else 0.28)
+	await entree.finished
+	_liste.remove_meta("transition_categorie")
+
+func _remplir_categorie(categorie: String) -> void:
 	_categorie = categorie
 	for nom in _onglets:
 		(_onglets[nom] as Button).set_pressed_no_signal(nom == categorie)
@@ -94,16 +126,19 @@ func _afficher(categorie: String) -> void:
 	for id in _catalogue():
 		_ajouter_choix(id, _catalogue()[id])
 	_rafraichir_resume()
+	call_deferred("_animer_liste")
+
+func _animer_liste() -> void:
+	if is_instance_valid(_liste):
+		StyleInterface.animer_liste(_liste, 0.035)
 
 func _ajouter_choix(id: String, donnees: Dictionary) -> void:
 	var ouvert := ReglagesJoueur.sort_debloque(id)
-	var decouvert := ReglagesJoueur.sort_decouvert(id)
 	var rang := ReglagesJoueur.rang_sort(id)
 	var equipe := id == ReglagesJoueur.sort_actif_equipe or id == ReglagesJoueur.ultime_equipe or id in ReglagesJoueur.passifs_equipes
-	var etat := "ÉQUIPÉ • NIVEAU %d/5 • %d %%" % [rang, roundi(ReglagesJoueur.efficacite_sort(id) * 100.0)] if equipe \
-		else "NIVEAU %d/5 • %d %% • TOUCHER POUR ÉQUIPER" % [rang, roundi(ReglagesJoueur.efficacite_sort(id) * 100.0)] if ouvert \
-		else "NIVEAU 0/5 • À OBTENIR EN DÉFI" if decouvert \
-		else "DÉBLOCAGE AU NIVEAU HÉROS %d" % int(donnees["niveau"])
+	var etat := "ÉQUIPÉ • RANG %d/%d • %d %%" % [rang, Reglages.CAPACITE_RANG_MAX, roundi(ReglagesJoueur.efficacite_sort(id) * 100.0)] if equipe \
+		else "RANG %d/%d • %d %% • TOUCHER POUR ÉQUIPER" % [rang, Reglages.CAPACITE_RANG_MAX, roundi(ReglagesJoueur.efficacite_sort(id) * 100.0)] if ouvert \
+		else "RANG 0/%d • À OBTENIR EN ÉPREUVE" % Reglages.CAPACITE_RANG_MAX
 	var bouton := Button.new()
 	bouton.text = "%s\n%s\n%s" % [donnees["nom"], donnees["description"], etat]
 	bouton.custom_minimum_size = Vector2(0, 150)
@@ -133,10 +168,15 @@ func _choisir(id: String) -> void:
 func _rafraichir_resume() -> void:
 	var actif: String = str(Sorts.ACTIFS.get(ReglagesJoueur.sort_actif_effectif(), {}).get("nom", "Aucun"))
 	var ultime: String = str(Sorts.ULTIMES.get(ReglagesJoueur.ultime_effectif(), {}).get("nom", "Aucun"))
-	_resume.text = "BUILD — ACTIF : %s  •  PASSIFS : %d/2  •  ULTIME : %s" % [actif, ReglagesJoueur.passifs_equipes.size(), ultime]
+	_resume.text = "BUILD — SORT : %s  •  PASSIFS : %d/%d  •  ULTIME : %s" % [actif,
+		ReglagesJoueur.passifs_equipes.size(), ReglagesJoueur.nombre_slots_passifs(), ultime]
+
+func _process(delta: float) -> void:
+	_anim += delta
+	queue_redraw()
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.010, 0.025, 0.99))
+	StyleInterface.dessiner_fond(self, size, COULEURS[_categorie], _anim)
 	var haut := Ecran.marge_haute() + 102.0
-	Dessin.halo(self, Vector2(size.x * 0.5, haut), 235.0, Color(Palette.OR, 0.22), 6)
-	draw_string(ThemeDB.fallback_font, Vector2(0, haut), "ARSENAL DE SORTS", HORIZONTAL_ALIGNMENT_CENTER, size.x, 43, Palette.TEXTE)
+	StyleInterface.dessiner_entete(self, size, "LOADOUT", "Arsenal de sorts",
+		"Composez vos trois capacités avant la descente", COULEURS[_categorie], haut)

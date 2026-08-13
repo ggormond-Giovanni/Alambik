@@ -6,7 +6,7 @@ const CARTE_BRANCHE := preload("res://ui/carte_branche.gd")
 const COULEURS := {
 	"Offensif": Color(1.0, 0.45, 0.30),
 	"Défensif": Color(0.35, 0.70, 1.0),
-	"Passif": Color(0.38, 0.82, 0.72),
+	"Utilitaire": Color(0.38, 0.82, 0.72),
 }
 
 var _statut: Label
@@ -16,6 +16,7 @@ var _carte: Control
 var _branche := "Offensif"
 var _message := ""
 var integre_menu := false
+var _anim := 0.0
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -23,6 +24,7 @@ func _ready() -> void:
 	_construire()
 	_afficher_branche(_branche)
 	StyleInterface.animer_entree(self, 12.0)
+	Capture.programmer(self)
 
 func _construire() -> void:
 	var marge := MarginContainer.new()
@@ -79,7 +81,8 @@ func _construire() -> void:
 		fermer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		fermer.add_theme_font_size_override("font_size", 27)
 		StyleInterface.styliser_bouton(fermer, Palette.TEXTE_ATTENUE, true)
-		fermer.pressed.connect(func() -> void: ferme.emit())
+		fermer.pressed.connect(func() -> void:
+			StyleInterface.sortir_puis(self, func() -> void: ferme.emit()))
 		actions.add_child(fermer)
 
 func _reinitialiser() -> void:
@@ -106,6 +109,7 @@ func _afficher_branche(branche: String) -> void:
 		_creer_noeud(ids[index], index)
 	_zone.scroll_vertical = 0
 	_rafraichir()
+	StyleInterface.animer_rafraichissement(_carte)
 
 func _creer_noeud(id: String, index: int) -> void:
 	var bouton := Button.new()
@@ -138,12 +142,9 @@ func _sur_noeud(id: String) -> void:
 	_rafraichir()
 
 func _rafraichir() -> void:
-	var base := "%s %d • PRESTIGE • GOUTTES %s" % [ReglagesJoueur.titre_heros(),
-		ReglagesJoueur.niveau_heros_effectif(), ReglagesJoueur.gouttes_affichees()]
-	if not ReglagesJoueur.est_prestigieux():
-		var xp := "%d/%d" % [ReglagesJoueur.experience_heros, ReglagesJoueur.experience_heros_requise()]
-		base = "%s %d • XP %s • GOUTTES %s" % [ReglagesJoueur.titre_heros(),
-			ReglagesJoueur.niveau_heros_effectif(), xp, ReglagesJoueur.gouttes_affichees()]
+	var xp := "%d/%d" % [ReglagesJoueur.experience_compte, ReglagesJoueur.experience_compte_requise()]
+	var base := "%s %d • XP %s • GOUTTES %s" % [ReglagesJoueur.titre_compte(),
+		ReglagesJoueur.niveau_compte_effectif(), xp, ReglagesJoueur.gouttes_affichees()]
 	_statut.text = _message if not _message.is_empty() else base
 	_statut.add_theme_color_override("font_color", Palette.OR if not _message.is_empty() else Palette.TEXTE_ATTENUE)
 	for id in ArbreCompetences.BRANCHES[_branche]:
@@ -161,9 +162,12 @@ func _rafraichir() -> void:
 		bouton.disabled = false
 		bouton.modulate = Color.WHITE if disponible else Color(0.62, 0.62, 0.68)
 
+func _process(delta: float) -> void:
+	_anim += delta
+	queue_redraw()
+
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.010, 0.025, 0.99))
-	var police := ThemeDB.fallback_font
+	StyleInterface.dessiner_fond(self, size, COULEURS[_branche], _anim)
 	var haut := Ecran.marge_haute() + 102.0
-	Dessin.halo(self, Vector2(size.x * 0.5, haut), 235.0, Color(Palette.ESSENCE, 0.24), 6)
-	draw_string(police, Vector2(0, haut), "ARBRE DE MAÎTRISE", HORIZONTAL_ALIGNMENT_CENTER, size.x, 43, Palette.TEXTE)
+	StyleInterface.dessiner_entete(self, size, "PROGRESSION PERMANENTE", "Arbre de maîtrise",
+		"Investissez vos Gouttes dans une spécialisation", COULEURS[_branche], haut)

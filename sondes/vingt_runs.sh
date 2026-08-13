@@ -5,12 +5,13 @@
 cd "$(dirname "$0")/.." || exit 1
 GODOT="${GODOT:-$HOME/Téléchargements/Godot_v4.7.1-stable_linux.x86_64}"
 RUNS="${RUNS:-20}"
-IMAGES="${IMAGES:-400000}"   # cinquante pages tiennent large dedans
+IMAGES="${IMAGES:-220000}"   # vingt salles et leurs panneaux tiennent large dedans
 ECHECS=0
 
 for GRAINE in $(seq 1 "$RUNS"); do
     SORTIE=$("$GODOT" --headless --path . --audio-driver Dummy --fixed-fps 60 \
-        --quit-after "$IMAGES" scenes/run.tscn -- --auto --graine="$GRAINE" --chapitre="${CHAPITRE:-1}" 2>&1)
+        --quit-after "$IMAGES" scenes/run.tscn -- --auto --mode=grimoire \
+        --graine="$GRAINE" --chapitre="${CHAPITRE:-1}" 2>&1)
     if echo "$SORTIE" | grep -q "SCRIPT ERROR"; then
         echo "graine $GRAINE : SCRIPT ERROR"
         echo "$SORTIE" | grep -A3 "SCRIPT ERROR" | head -8

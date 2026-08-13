@@ -10,3 +10,8 @@ static func apres_impact(rebonds_restants: int, perforations_restantes: int) -> 
 	if perforations_restantes > 0:
 		return "perforation"
 	return "fin"
+
+static func apres_mur(_rebonds_restants: int) -> String:
+	# Les murs terminent toujours le tir. Les rebonds ne se consomment que sur
+	# les ennemis, sinon le projectile peut repartir depuis l'interieur du mur.
+	return "fin"

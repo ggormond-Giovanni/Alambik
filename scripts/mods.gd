@@ -58,7 +58,8 @@ static func depuis_l_inventaire(inventaire: Array) -> Array:
 	for id in inventaire:
 		var reactif := CatalogueReactifs.par_id(id)
 		if reactif == null:
-			reactif = CatalogueEssences.par_id(id)
+			reactif = CatalogueElements.creer_fusion(CatalogueElements.element_de_fusion(id),
+				CatalogueElements.augment_de_fusion(id))
 		if reactif == null:
 			continue
 		var deja: int = vus.get(id, 0)

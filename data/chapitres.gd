@@ -1,25 +1,54 @@
 class_name Chapitres
 extends RefCounted
 
-# Un chapitre est une descente de trente pages. Tout ce qui le distingue est
-# ici : sa longueur, ou se trouvent ses alambics, son boss, et de combien ses
-# creatures sont plus dures que celles du chapitre precedent.
-#
-# Ajouter un chapitre, c'est ajouter une entree dans cette liste. Aucun code
-# n'a besoin de connaitre leur nombre.
+# Les dix identites de monde existantes sont declinees en trois chapitres. Les
+# contenus sont reutilises entre les trois, tandis que densite et statistiques
+# montent. Le troisieme porte le boss signature du monde.
 
-const TOUS := [
-	{"id": "encres", "nom": "I — Grimoire des Encres", "sous_titre": "Les créatures quittent leurs lignes.", "salles": 30, "alambics": [9, 19, 29], "bosses": [10, 20, 30], "boss": "le_correcteur", "pv_mult": 1.00, "degats_mult": 1.00, "teinte": Color(0.60, 0.50, 0.92)},
-	{"id": "braises", "nom": "II — Grimoire des Braises", "sous_titre": "Chaque page conserve une étincelle.", "salles": 30, "alambics": [9, 19, 29], "bosses": [10, 20, 30], "boss": "la_rature", "pv_mult": 1.55, "degats_mult": 1.22, "teinte": Color(1.00, 0.55, 0.28)},
-	{"id": "givre", "nom": "III — Grimoire du Givre", "sous_titre": "Le papier craque sous le froid.", "salles": 30, "alambics": [9, 19, 29], "bosses": [10, 20, 30], "boss": "l_errata", "pv_mult": 2.40, "degats_mult": 1.49, "teinte": Color(0.52, 0.86, 1.00)},
-	{"id": "orages", "nom": "IV — Grimoire des Orages", "sous_titre": "Les phrases grondent avant de frapper.", "salles": 30, "alambics": [9, 19, 29], "bosses": [10, 20, 30], "boss": "le_correcteur", "pv_mult": 3.72, "degats_mult": 1.82, "teinte": Color(0.98, 0.90, 0.35)},
-	{"id": "venins", "nom": "V — Grimoire des Venins", "sous_titre": "L’encre ronge ceux qui la lisent.", "salles": 30, "alambics": [9, 19, 29], "bosses": [10, 20, 30], "boss": "la_rature", "pv_mult": 5.77, "degats_mult": 2.22, "teinte": Color(0.52, 0.94, 0.38)},
-	{"id": "echos", "nom": "VI — Grimoire des Échos", "sous_titre": "Chaque attaque revient une seconde fois.", "salles": 30, "alambics": [9, 19, 29], "bosses": [10, 20, 30], "boss": "l_errata", "pv_mult": 8.94, "degats_mult": 2.71, "teinte": Color(0.70, 0.56, 0.98)},
-	{"id": "ombres", "nom": "VII — Grimoire des Ombres", "sous_titre": "Les mots se déplacent quand on détourne les yeux.", "salles": 30, "alambics": [9, 19, 29], "bosses": [10, 20, 30], "boss": "le_correcteur", "pv_mult": 13.86, "degats_mult": 3.31, "teinte": Color(0.46, 0.42, 0.68)},
-	{"id": "runes", "nom": "VIII — Grimoire des Runes", "sous_titre": "Des signes anciens défendent leurs secrets.", "salles": 30, "alambics": [9, 19, 29], "bosses": [10, 20, 30], "boss": "la_rature", "pv_mult": 21.48, "degats_mult": 4.04, "teinte": Color(0.35, 0.92, 0.76)},
-	{"id": "neant", "nom": "IX — Grimoire du Néant", "sous_titre": "Certaines pages auraient dû rester blanches.", "salles": 30, "alambics": [9, 19, 29], "bosses": [10, 20, 30], "boss": "l_errata", "pv_mult": 33.30, "degats_mult": 4.93, "teinte": Color(0.82, 0.38, 0.82)},
-	{"id": "alambic", "nom": "X — Grimoire de l’Alambic", "sous_titre": "Toutes les formules convergent ici.", "salles": 30, "alambics": [9, 19, 29], "bosses": [10, 20, 30], "boss": "le_correcteur", "pv_mult": 51.62, "degats_mult": 6.01, "teinte": Color(1.00, 0.74, 0.24)},
+const MONDES := [
+	{"id": "encres", "numero": "I", "nom": "Encres", "sous_titre": "Les créatures quittent leurs lignes.", "boss_signature": "archiscribe_encres", "pv_mult": 1.00, "degats_mult": 1.00, "teinte": Color(0.60, 0.50, 0.92)},
+	{"id": "braises", "numero": "II", "nom": "Braises", "sous_titre": "Chaque salle conserve une étincelle.", "boss_signature": "roi_braises", "pv_mult": 1.35, "degats_mult": 1.15, "teinte": Color(1.00, 0.55, 0.28)},
+	{"id": "givre", "numero": "III", "nom": "Givre", "sous_titre": "Le papier craque sous le froid.", "boss_signature": "reine_givre", "pv_mult": 1.82, "degats_mult": 1.32, "teinte": Color(0.52, 0.86, 1.00)},
+	{"id": "orages", "numero": "IV", "nom": "Orages", "sous_titre": "Les phrases grondent avant de frapper.", "boss_signature": "maitre_orages", "pv_mult": 2.46, "degats_mult": 1.52, "teinte": Color(0.98, 0.90, 0.35)},
+	{"id": "venins", "numero": "V", "nom": "Venins", "sous_titre": "L’encre ronge ceux qui la lisent.", "boss_signature": "hydre_venins", "pv_mult": 3.32, "degats_mult": 1.75, "teinte": Color(0.52, 0.94, 0.38)},
+	{"id": "echos", "numero": "VI", "nom": "Échos", "sous_titre": "Chaque attaque revient une seconde fois.", "boss_signature": "choeur_infini", "pv_mult": 4.48, "degats_mult": 2.01, "teinte": Color(0.70, 0.56, 0.98)},
+	{"id": "ombres", "numero": "VII", "nom": "Ombres", "sous_titre": "Les mots se déplacent quand on détourne les yeux.", "boss_signature": "souverain_ombres", "pv_mult": 6.05, "degats_mult": 2.31, "teinte": Color(0.46, 0.42, 0.68)},
+	{"id": "runes", "numero": "VIII", "nom": "Runes", "sous_titre": "Des signes anciens défendent leurs secrets.", "boss_signature": "gardien_runes", "pv_mult": 8.17, "degats_mult": 2.66, "teinte": Color(0.35, 0.92, 0.76)},
+	{"id": "neant", "numero": "IX", "nom": "Néant", "sous_titre": "Certaines salles auraient dû rester scellées.", "boss_signature": "devoreur_neant", "pv_mult": 11.03, "degats_mult": 3.06, "teinte": Color(0.82, 0.38, 0.82)},
+	{"id": "alambic", "numero": "X", "nom": "Alambic", "sous_titre": "Toutes les formules convergent ici.", "boss_signature": "grand_alambic", "pv_mult": 14.89, "degats_mult": 3.52, "teinte": Color(1.00, 0.74, 0.24)},
 ]
+
+const MINIBOSS_FINAUX := ["la_rature", "l_errata", "le_correcteur", "reliure_affamee",
+	"virgule_noire", "index_brise", "marge_hurlante", "enlumineur_fou",
+	"signet_sanglant", "copiste_aveugle"]
+
+static var TOUS: Array[Dictionary] = _construire_chapitres()
+
+static func _construire_chapitres() -> Array[Dictionary]:
+	var resultat: Array[Dictionary] = []
+	for index_monde in MONDES.size():
+		var monde: Dictionary = MONDES[index_monde]
+		for index_chapitre in 3:
+			var chapitre_monde := index_chapitre + 1
+			var est_signature := chapitre_monde == 3
+			var boss_final: String = str(monde["boss_signature"]) if est_signature \
+				else MINIBOSS_FINAUX[(index_monde * 2 + index_chapitre) % MINIBOSS_FINAUX.size()]
+			resultat.append({
+				"id": "%s_%d" % [monde["id"], chapitre_monde],
+				"nom": "Monde %s — %s · Chapitre %d" % [monde["numero"], monde["nom"], chapitre_monde],
+				"sous_titre": monde["sous_titre"],
+				"monde": index_monde,
+				"chapitre_monde": chapitre_monde,
+				"salles": Reglages.SALLES_PAR_RUN,
+				"alambics": [4, 9, 14],
+				"bosses": [5, 10, 15, 20],
+				"boss": boss_final,
+				"boss_signature": est_signature,
+				"pv_mult": float(monde["pv_mult"]) * pow(1.10, index_chapitre),
+				"degats_mult": float(monde["degats_mult"]) * pow(1.05, index_chapitre),
+				"teinte": monde["teinte"],
+			})
+	return resultat
 
 static func nombre() -> int:
 	return TOUS.size()
@@ -42,10 +71,6 @@ static func est_alambic(index: int, salle: int) -> bool:
 static func est_boss(index: int, salle: int) -> bool:
 	return salle in par_index(index)["bosses"]
 
-# Montee en puissance des creatures : leur chapitre, puis leur profondeur dans
-# ce chapitre. La courbe est geometrique, pas lineaire — la puissance du heros
-# l'est aussi, et une montee lineaire donnait un debut infernal suivi d'une fin
-# ou plus rien ne le menacait.
 static func progression(index: int, salle: int) -> float:
 	var chapitre := par_index(index)
 	return clampf(float(salle - 1) / maxf(1.0, float(chapitre["salles"] - 1)), 0.0, 1.0)

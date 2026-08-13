@@ -25,7 +25,6 @@ const TIR_ENNEMI_HALO = Color(0.95, 0.32, 0.46)
 
 const BRAISE = Color(1.00, 0.48, 0.22)
 const GIVRE = Color(0.56, 0.90, 1.00)
-const FOUDRE = Color(0.98, 0.94, 0.45)
 const ACIDE = Color(0.62, 0.98, 0.42)
 
 const TEXTE = Color(0.94, 0.91, 0.84)
@@ -36,10 +35,13 @@ const DANGER = Color(0.98, 0.36, 0.42)
 
 static func effet(nom: String) -> Color:
 	match nom:
+		"feu": return BRAISE
+		"eau": return GIVRE
 		"braise": return BRAISE
 		"givre": return GIVRE
-		"foudre": return FOUDRE
 		"acide": return ACIDE
+		"terre": return Color(0.66, 0.50, 0.28)
+		"lumiere": return Color(1.00, 0.92, 0.58)
 	return TEXTE
 
 # Teinte du tir a partir de ses effets : le joueur voit ce qu'il a construit.

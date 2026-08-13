@@ -3,13 +3,13 @@ extends RefCounted
 func test_meilleur_resultat_progresse(v: Verif) -> void:
 	var r: Node = load("res://autoload/reglages_joueur.gd").new()
 	r.sauvegarde_active = false
-	r.meilleure_salle = 0
-	r.enregistrer_resultat(4, false)
-	v.egal(r.meilleure_salle, 4, "un premier resultat s'enregistre")
-	r.enregistrer_resultat(2, false)
-	v.egal(r.meilleure_salle, 4, "un resultat moins bon ne remplace pas le meilleur")
-	r.enregistrer_resultat(9, false)
-	v.egal(r.meilleure_salle, 9, "un meilleur resultat remplace")
+	r.meilleures_par_chapitre = {}
+	r.enregistrer_resultat(4, false, 2)
+	v.egal(r.meilleure_du_chapitre(2), 4, "un premier resultat s'enregistre")
+	r.enregistrer_resultat(2, false, 2)
+	v.egal(r.meilleure_du_chapitre(2), 4, "un resultat moins bon ne remplace pas le meilleur")
+	r.enregistrer_resultat(9, false, 2)
+	v.egal(r.meilleure_du_chapitre(2), 9, "un meilleur resultat remplace")
 	r.free()
 
 func test_victoires_comptees(v: Verif) -> void:
@@ -23,43 +23,58 @@ func test_victoires_comptees(v: Verif) -> void:
 	v.egal(r.runs, 2, "les deux runs sont comptees")
 	r.free()
 
-func test_le_niveau_vingt_est_un_prestige_et_le_plafond(v: Verif) -> void:
+func test_une_annexe_ne_modifie_pas_la_campagne(v: Verif) -> void:
 	var r: Node = load("res://autoload/reglages_joueur.gd").new()
 	r.sauvegarde_active = false
-	r.niveau_heros = Reglages.NIVEAU_HEROS_MAX - 1
-	r.experience_heros = r.experience_heros_requise() - 1
-	r.ajouter_experience_heros(1)
-	v.egal(r.niveau_heros, Reglages.NIVEAU_HEROS_MAX, "le dernier gain atteint le prestige")
-	v.egal(r.experience_heros, 0, "la jauge disparait au niveau maximal")
-	r.ajouter_experience_heros(100000)
-	v.egal(r.niveau_heros, Reglages.NIVEAU_HEROS_MAX, "aucun niveau vingt-et-un n'existe")
-	v.vrai(r.est_prestigieux(), "le palier maximal active l'etoile")
-	v.egal(r.titre_heros(), "HÉROS ★", "le prestige est visible dans le titre")
-	v.presque(r.bonus_niveau_pv(), 19.0 + Reglages.PRESTIGE_PV, "le prestige donne son gros bonus de PV")
-	v.presque(r.multiplicateur_niveau_degats(), 1.095 * Reglages.PRESTIGE_DEGATS,
-		"le prestige multiplie les degats acquis")
-	v.presque(r.multiplicateur_niveau_vitesse(), 1.0475 * Reglages.PRESTIGE_VITESSE,
-		"le prestige multiplie la vitesse acquise")
+	r.meilleures_par_chapitre = {"0": 3}
+	r.runs = 0
+	r.enregistrer_resultat_annexe(true)
+	v.egal(r.meilleure_du_chapitre(0), 3, "la Mine et les Epreuves ne touchent pas au chapitre")
+	v.egal(r.runs, 1, "la tentative annexe compte dans l'activite globale")
+	r.free()
+
+func test_le_niveau_de_compte_ne_donne_aucune_statistique(v: Verif) -> void:
+	var r: Node = load("res://autoload/reglages_joueur.gd").new()
+	r.sauvegarde_active = false
+	r.niveau_compte = 1
+	r.experience_compte = r.experience_compte_requise() - 1
+	r.ajouter_experience_compte(1)
+	v.egal(r.niveau_compte, 2, "le gain fait progresser le compte")
+	v.egal(r.experience_compte, 0, "le surplus est reporte proprement au niveau suivant")
+	v.egal(r.titre_compte(), "COMPTE", "le niveau est clairement un niveau de compte")
+	var stats := Stats.depuis_reglages()
+	v.presque(stats.pv_max, Reglages.HEROS_PV, "le compte n'ajoute aucun PV")
+	v.presque(stats.degats, Reglages.TIR_DEGATS, "le compte n'ajoute aucun degat")
 	r.free()
 
 func test_les_niveaux_demandent_un_vrai_farm(v: Verif) -> void:
 	var r: Node = load("res://autoload/reglages_joueur.gd").new()
 	r.sauvegarde_active = false
-	r.niveau_heros = 1
-	v.vrai(r.experience_heros_requise() >= 70, "le tout premier niveau n'arrive plus gratuitement")
-	r.niveau_heros = 10
-	v.vrai(r.experience_heros_requise() >= 500, "la courbe devient franchement exigeante")
+	r.niveau_compte = 1
+	v.vrai(r.experience_compte_requise() >= 70, "le tout premier niveau n'arrive plus gratuitement")
+	r.niveau_compte = 10
+	v.vrai(r.experience_compte_requise() >= 500, "la courbe devient franchement exigeante")
 	r.free()
 
-func test_monter_de_niveau_revele_le_sort_au_rang_zero(v: Verif) -> void:
+func test_le_choix_de_musique_est_valide_et_persistant(v: Verif) -> void:
 	var r: Node = load("res://autoload/reglages_joueur.gd").new()
 	r.sauvegarde_active = false
-	r.niveau_heros = 1
-	r.experience_heros = 0
+	r.piste_musique = "first_arcade"
+	r.definir_piste_musique("dynamic_arcade")
+	v.egal(r.piste_musique, "dynamic_arcade", "Dynamic Arcade peut etre selectionnee")
+	r.definir_piste_musique("piste_inconnue")
+	v.egal(r.piste_musique, "dynamic_arcade", "une piste inconnue ne remplace pas le choix")
+	r.free()
+
+func test_l_arsenal_ne_depend_pas_du_niveau_de_compte(v: Verif) -> void:
+	var r: Node = load("res://autoload/reglages_joueur.gd").new()
+	r.sauvegarde_active = false
+	r.niveau_compte = 1
+	r.experience_compte = 0
 	r.rangs_sorts = {}
-	r.ajouter_experience_heros(r.experience_heros_requise())
-	v.egal(r.niveau_heros, 2, "le heros atteint le niveau deux")
-	v.vrai(r.sort_decouvert("onde_alchimique"), "son sort est revele")
+	r.ajouter_experience_compte(r.experience_compte_requise())
+	v.egal(r.niveau_compte, 2, "le compte atteint le niveau deux")
+	v.vrai(r.sort_decouvert("onde_alchimique"), "les Epreuves peuvent proposer le sort a tout niveau")
 	v.egal(r.rang_sort("onde_alchimique"), 0, "mais attend toujours son premier drop de defi")
 	v.vrai(not r.sort_debloque("onde_alchimique"), "le rang zero ne peut pas etre equipe")
 	r.free()

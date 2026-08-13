@@ -5,9 +5,8 @@ extends Area2D
 # disperse dans le combat.
 
 signal fragments_demandes(origine: Vector2, direction: Vector2, tir_source: Tir, hostile: bool)
-signal chaine_demandee(depuis: Vector2, cible: Node, tir_source: Tir)
-signal zone_demandee(position: Vector2, genre: String)
 signal impact_visuel(position: Vector2, couleur: Color, ampleur: float)
+signal soin_demande(montant: float)
 
 const RAYON := 13.0
 const MEMOIRE_TRAINEE := 9
@@ -24,6 +23,8 @@ var _perforations_restantes := 0
 var _deja_touches: Array[int] = []
 var _trainee: Array[Vector2] = []
 var _age := 0.0
+var _facteur_tenebres := 1.0
+var _termine := false
 
 func _ready() -> void:
 	# Le rendu suit les positions entre deux ticks physiques, indispensable sur
@@ -31,6 +32,8 @@ func _ready() -> void:
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_ON
 	_rebonds_restants = tir.rebonds
 	_perforations_restantes = tir.perforations
+	if not hostile and "tenebres" in tir.drapeaux and Jeu.rng.randf() < Reglages.TENEBRES_CHANCE_SURCHARGE:
+		_facteur_tenebres = Reglages.TENEBRES_SURCHARGE_MULT
 	couleur = Palette.TIR_ENNEMI_HALO if hostile else Palette.teinte_du_tir(tir.effets)
 	if hostile:
 		add_to_group("tirs_ennemis")
@@ -44,8 +47,6 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_appliquer_trajectoire_fusion(delta)
 	var pas := direction * tir.vitesse * delta
-	if "fusion_surcharge" in tir.drapeaux:
-		pas *= 0.48 + minf(1.85, _age * 1.15)
 	position += pas
 	_distance_parcourue += pas.length()
 	_age += delta
@@ -59,6 +60,8 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 func _sur_contact(corps: Node) -> void:
+	if _termine:
+		return
 	if not corps.has_method("recevoir_degats"):
 		_heurter_un_mur(corps)
 		return
@@ -71,29 +74,19 @@ func _sur_contact(corps: Node) -> void:
 		Jeu.tirs_touches += 1
 	# Le Tir est partage entre tous les projectiles d'une salve : on ne le mute
 	# jamais, la perte de puissance vit dans le projectile.
-	var facteur_fusion := 1.0
-	if "fusion_surcharge" in tir.drapeaux:
-		facteur_fusion = 0.55 + minf(1.75, _age * 1.20)
-	corps.recevoir_degats(tir.degats * _facteur_degats * facteur_fusion, tir.effets)
+	var degats_infliges := tir.degats * _facteur_degats * _facteur_tenebres
+	corps.recevoir_degats(degats_infliges, tir.effets)
+	if not hostile and "lumiere" in tir.effets:
+		soin_demande.emit(degats_infliges * Reglages.LUMIERE_VOL_DE_VIE)
 	impact_visuel.emit(global_position, couleur, 1.0)
 	Sons.jouer("impact", -18.0, randf_range(0.9, 1.2))
 
-	if "gel_bref" in tir.drapeaux and corps.has_method("geler"):
-		corps.geler(Reglages.GEL_BREF_DUREE)
-	if "foudre" in tir.effets:
-		chaine_demandee.emit(global_position, corps, tir)
-
 	if "perfore_tout" in tir.drapeaux:
-		return
-	if "fusion_fragile" in tir.drapeaux:
-		_finir()
 		return
 	match PrioriteProjectile.apres_impact(_rebonds_restants, _perforations_restantes):
 		"rebond":
 			_rebonds_restants -= 1
 			_facteur_degats *= 1.0 - Reglages.REBOND_PERTE
-			if "flaque_au_rebond" in tir.drapeaux:
-				zone_demandee.emit(global_position, "flaque")
 			_rebondir_vers_une_autre_cible()
 		"perforation":
 			_perforations_restantes -= 1
@@ -104,23 +97,11 @@ func _sur_contact(corps: Node) -> void:
 func _heurter_un_mur(_mur: Node) -> void:
 	if not hostile:
 		Jeu.tirs_dans_un_mur += 1
-	if "rebond_murs_infini" in tir.drapeaux:
-		_distance_parcourue = 0.0
-		_rebondir_vers_une_autre_cible()
-		global_position += direction * RAYON * 2.2
-		impact_visuel.emit(global_position, couleur, 0.8)
-		return
-	if _rebonds_restants > 0:
-		_rebonds_restants -= 1
-		_facteur_degats *= 1.0 - Reglages.REBOND_PERTE
-		if "flaque_au_rebond" in tir.drapeaux:
-			zone_demandee.emit(global_position, "flaque")
-		# Sans normale de contact fiable sur une Area2D, on repart vers la cible
-		# la plus proche : le rebond reste utile au lieu d'etre aleatoire.
-		_rebondir_vers_une_autre_cible()
-		return
+	# Ricochet ne concerne que les impacts sur une creature. Rediriger un tir
+	# depuis l'interieur de la collision d'un mur le faisait ressortir de l'autre
+	# cote sans nouveau body_entered.
 	impact_visuel.emit(global_position, couleur, 0.6)
-	_finir()
+	_finir(false)
 
 func _rebondir_vers_une_autre_cible() -> void:
 	var positions: Array[Vector2] = []
@@ -141,7 +122,7 @@ func _rebondir_vers_une_autre_cible() -> void:
 func _appliquer_trajectoire_fusion(delta: float) -> void:
 	if hostile:
 		return
-	if "fusion_predatrice" in tir.drapeaux:
+	if "homing" in tir.drapeaux:
 		var positions: Array[Vector2] = []
 		for cible in get_tree().get_nodes_in_group("ennemis"):
 			if is_instance_valid(cible) and not cible.get_instance_id() in _deja_touches:
@@ -149,37 +130,14 @@ func _appliquer_trajectoire_fusion(delta: float) -> void:
 		var index := Ciblage.plus_proche(global_position, positions)
 		if index != -1:
 			direction = direction.lerp(global_position.direction_to(positions[index]), minf(1.0, delta * 4.5)).normalized()
-	elif "fusion_instable" in tir.drapeaux:
-		direction = direction.rotated(sin(_age * 17.0) * delta * 2.8).normalized()
-	elif "fusion_capricieuse" in tir.drapeaux:
-		# Changements brusques mais espacés : mauvais à viser, jamais illisible.
-		var avant := int(_age / 0.22)
-		var apres := int((_age + delta) / 0.22)
-		if apres != avant:
-			direction = direction.rotated(randf_range(-0.62, 0.62)).normalized()
 
-func _finir() -> void:
-	if tir.fragments > 0:
+func _finir(creer_fragments := true) -> void:
+	if _termine:
+		return
+	_termine = true
+	if creer_fragments and tir.fragments > 0:
 		fragments_demandes.emit(global_position, direction, tir, hostile)
-	if "nuage_a_la_mort" in tir.drapeaux:
-		zone_demandee.emit(global_position, "nuage")
 	queue_free()
 
 func _draw() -> void:
-	# Trainee : quelques segments derriere le noyau, d'autant plus fins qu'ils
-	# sont vieux. Ce que le joueur suit des yeux, c'est ce sillage.
-	for i in range(_trainee.size() - 1, 0, -1):
-		var t := float(i) / float(MEMOIRE_TRAINEE)
-		var a := _trainee[i] - position
-		var b := _trainee[i - 1] - position
-		var c := couleur
-		c.a = (1.0 - t) * 0.55
-		draw_line(a, b, c, RAYON * 1.6 * (1.0 - t), true)
-	Dessin.halo(self, Vector2.ZERO, RAYON * 3.2, couleur, 4)
-	draw_circle(Vector2.ZERO, RAYON, couleur)
-	draw_circle(Vector2.ZERO, RAYON * 0.55, Palette.TIR_ENNEMI_NOYAU if hostile else Palette.TIR_NOYAU)
-	if tir.perforations > 0:
-		# Un projectile perforant s'etire : sa forme dit ce qu'il fait.
-		draw_set_transform(Vector2.ZERO, direction.angle(), Vector2.ONE)
-		draw_colored_polygon(Dessin.dard(RAYON * 2.6, RAYON * 0.8), couleur)
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	Retro16.dessiner_projectile(self, _trainee, position, couleur, hostile)

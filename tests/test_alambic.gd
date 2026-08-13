@@ -1,48 +1,59 @@
 extends RefCounted
 
-func test_aucune_paire_dans_un_inventaire_vide(v: Verif) -> void:
-	v.egal(AlambicLogique.paires_possibles([]).size(), 0, "rien a fusionner sans reactif")
+func test_six_elements_hors_du_pool(v: Verif) -> void:
+	v.egal(CatalogueElements.ids().size(), 6, "l'Alambic genere les six Elements decides")
+	for id in CatalogueElements.ids():
+		v.vrai(id not in CatalogueReactifs.ids(), "%s n'est pas un Augment de draft" % id)
+
+func test_fusion_conserve_l_augment(v: Verif) -> void:
+	Jeu.demarrer_run(7)
+	Jeu.ajouter_reactif("tir_multiple")
+	v.vrai(Jeu.ajouter_fusion_elementaire("feu", "tir_multiple"), "la fusion est creee")
+	v.vrai("tir_multiple" in Jeu.inventaire, "l'Augment original n'est pas consomme")
+	v.vrai(CatalogueElements.id_fusion("feu", "tir_multiple") in Jeu.inventaire,
+		"la transformation est ajoutee separement")
+	v.vrai(Jeu.augment_deja_fusionne("tir_multiple"),
+		"l'Augment est marque comme deja combine")
+	v.vrai(not Jeu.ajouter_fusion_elementaire("eau", "tir_multiple"),
+		"un Augment combine ne peut pas recevoir un second Element")
+	v.vrai(CatalogueElements.id_fusion("eau", "tir_multiple") not in Jeu.inventaire,
+		"la seconde Fusion refusee n'entre pas dans l'inventaire")
+
+func test_les_alambics_tirent_des_elements_differents(v: Verif) -> void:
+	Jeu.demarrer_run(91)
+	var tires: Array[String] = []
+	for palier in 3:
+		var element := Jeu.tirer_element_alambic()
+		v.vrai(element in CatalogueElements.ids(), "l'Alambic tire un Element valide")
+		v.vrai(element not in tires, "un Element ne revient pas dans la meme run")
+		tires.append(element)
+	v.egal(Jeu.elements_alambic_tires.size(), 3,
+		"les trois Alambics memorisent leurs trois Elements distincts")
+
+func test_fusion_applique_original_et_element(v: Verif) -> void:
+	var inventaire: Array[String] = ["tir_multiple", CatalogueElements.id_fusion("feu", "tir_multiple")]
+	var tir := Mods.appliquer(Tir.de_base(Stats.depuis_reglages()), Mods.depuis_l_inventaire(inventaire))
+	v.egal(tir.nb_projectiles, 2, "Tir multiple reste actif")
+	v.vrai("feu" in tir.effets, "le Feu ajoute sa brulure")
+
+func test_toutes_les_combinaisons_sont_valides(v: Verif) -> void:
+	for element in CatalogueElements.ids():
+		for augment in CatalogueReactifs.ids():
+			var fusion := CatalogueElements.creer_fusion(element, augment)
+			v.vrai(fusion != null and fusion.est_transformation, "%s transforme %s" % [element, augment])
+
+func test_un_element_depend_de_la_famille(v: Verif) -> void:
+	var projectile := CatalogueElements.creer_fusion("feu", "ricochet")
+	var heros := CatalogueElements.creer_fusion("feu", "egide")
+	var phenomene := CatalogueElements.creer_fusion("feu", "meteores")
+	v.vrai("feu" in projectile.mods.get("effets", []), "le projectile applique une brulure")
+	v.vrai("transformation_heros_feu" in heros.mods.get("drapeaux", []),
+		"l'Augment du Heros devient une transformation")
+	v.vrai(phenomene.famille == CatalogueReactifs.PHENOMENE \
+		and phenomene.mods.get("effets", []).is_empty(),
+		"le Phenomene porte l'Element sans devenir un projectile")
 
 func test_une_carte_est_un_vrai_bouton_tactile(v: Verif) -> void:
 	var carte := CarteReactif.new()
 	v.vrai(carte is Button, "le choix ne depend d'aucun bouton secondaire de souris")
 	carte.free()
-
-func test_paire_detectee(v: Verif) -> void:
-	var paires := AlambicLogique.paires_possibles(["braise", "ricochet", "perforation"])
-	v.egal(paires.size(), 3, "toutes les paires sont fusionnables")
-	v.vrai(["braise", "ricochet", "trainee_etincelles"] in paires, "la recette majeure reste disponible")
-
-func test_toute_paire_de_reactifs_est_acceptee(v: Verif) -> void:
-	v.vrai(AlambicLogique.peut_fusionner(["braise", "perforation"], "braise", "perforation"),
-		"une paire sans recette majeure produit un amalgame")
-
-func test_reactif_absent_refuse(v: Verif) -> void:
-	v.egal(AlambicLogique.peut_fusionner(["braise"], "braise", "ricochet"), false,
-		"on ne fusionne pas un reactif qu'on ne possede pas")
-
-func test_essence_non_refusionnable(v: Verif) -> void:
-	var paires := AlambicLogique.paires_possibles(["trainee_etincelles", "givre", "sillage"])
-	for paire in paires:
-		v.vrai(not CatalogueEssences.TOUS.has(paire[0]), "une essence n'est jamais un composant")
-		v.vrai(not CatalogueEssences.TOUS.has(paire[1]), "une essence n'est jamais un composant")
-
-func test_pas_de_doublon_de_paire(v: Verif) -> void:
-	var paires := AlambicLogique.paires_possibles(["braise", "ricochet", "givre", "sillage"])
-	var cles: Array[String] = []
-	for paire in paires:
-		var c := Recettes.cle(paire[0], paire[1])
-		v.vrai(not c in cles, "la paire %s ne doit apparaitre qu'une fois" % c)
-		cles.append(c)
-
-func test_partenaires_d_un_reactif(v: Verif) -> void:
-	var inventaire: Array[String] = ["givre", "sillage", "encre_lourde", "perforation"]
-	var partenaires := AlambicLogique.partenaires(inventaire, "givre")
-	v.vrai("sillage" in partenaires, "Givre + Sillage donne la Piste de gel")
-	v.vrai("encre_lourde" in partenaires, "Givre + Encre lourde donne le Marteau de glace")
-	v.vrai("perforation" in partenaires, "Givre peut aussi fusionner avec Perforation")
-
-func test_fiole_de_vie_se_combine_avec_tout(v: Verif) -> void:
-	var inventaire := CatalogueReactifs.ids()
-	v.egal(AlambicLogique.partenaires(inventaire, "fiole_de_vie").size(), inventaire.size() - 1,
-		"Fiole de vie se combine avec chaque autre augment")

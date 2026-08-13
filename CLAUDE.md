@@ -19,10 +19,9 @@ l'état courant dans `ETAT.md`, l'historique dans `JOURNAL.md`.
 - **Aucun chiffre de performance ou d'équilibrage annoncé sans mesure.**
 - **Rien qui vienne d'un jeu existant** : aucun nom, texte, icône, sprite ou son
   repris. Le son est synthétisé au démarrage, aucun fichier audio dans le dépôt.
-- **Repli géométrique** : le jeu doit pouvoir tourner de bout en bout sans un
-  seul sprite. Les sprites de `assets/characters/` sont un plus, pas un socle ;
-  un `preload` dur sur un PNG absent casse le lancement, et c'est exactement ce
-  que cette règle interdit.
+- **Direction 16-bit procédurale** : le jeu tourne de bout en bout sans sprite
+  peint. Les personnages, projectiles et décors passent par `Retro16` et sa
+  grille de quatre pixels ; aucun PNG de personnage ne doit redevenir un socle.
 
 ## Pièges GDScript rencontrés ici
 

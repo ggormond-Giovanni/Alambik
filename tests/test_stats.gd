@@ -22,11 +22,13 @@ func test_soigner_ne_depasse_pas_le_max(v: Verif) -> void:
 	s.soigner(50.0)
 	v.presque(s.pv, s.pv_max, "le soin plafonne aux PV max")
 
-func test_le_stuff_est_un_vrai_facteur_de_progression(v: Verif) -> void:
-	var bonus := CatalogueObjets.bonus_effectifs(["plume_encres", "robe_enluminee", "sceau_scribe"])
-	v.presque(float(bonus["degats"]), 0.12, "l'arme du premier grimoire donne douze pour cent de degats")
-	v.presque(float(bonus["pv"]), 32.0, "la robe du premier grimoire donne trente-deux PV")
-	v.presque(float(bonus["collecte"]), 0.20, "le talisman accelere le farm des maitrises")
-	var s := Stats.depuis_reglages({}, 0.0, 1.0, 1.0, {}, bonus)
-	v.presque(s.degats, Reglages.TIR_DEGATS * 1.12, "le bonus d'arme est applique en combat")
-	v.presque(s.pv_max, Reglages.HEROS_PV + 32.0, "la robe est appliquee en combat")
+func test_la_forge_apporte_les_stats_brutes(v: Verif) -> void:
+	var id := CatalogueObjets.objet_du_chapitre(0)
+	var bonus := CatalogueObjets.bonus_effectifs({"anneau_gauche": id}, {"anneau_gauche": 2})
+	v.presque(float(bonus["degats"]), 2.0 * Reglages.FORGE_DEGATS_PAR_NIVEAU,
+		"la Forge du slot apporte les degats bruts")
+	v.presque(float(bonus["pv"]), 2.0 * Reglages.FORGE_PV_PAR_NIVEAU,
+		"la Forge du slot apporte les PV bruts")
+	var s := Stats.depuis_reglages({}, {}, bonus)
+	v.presque(s.degats, Reglages.TIR_DEGATS * (1.0 + 2.0 * Reglages.FORGE_DEGATS_PAR_NIVEAU),
+		"la Forge est appliquee en combat")

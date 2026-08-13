@@ -19,6 +19,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	Jeu.inventaire_change.connect(rafraichir)
+	Jeu.experience_run_change.connect(rafraichir)
 	ReglagesJoueur.maitrise_changee.connect(rafraichir)
 	_style_compact = StyleInterface.panneau(Color(0.035, 0.045, 0.060, 0.94), Color(Palette.BORD_PAGE, 0.42), 20, 7)
 	_bouton_pause = Button.new()
@@ -106,12 +107,24 @@ func _draw() -> void:
 		draw_rect(Rect2(0.0, hauteur_ecran - epaisseur, largeur, epaisseur), Color(Palette.DANGER, alpha))
 		draw_rect(Rect2(0.0, 0.0, epaisseur, hauteur_ecran), Color(Palette.DANGER, alpha))
 		draw_rect(Rect2(largeur - epaisseur, 0.0, epaisseur, hauteur_ecran), Color(Palette.DANGER, alpha))
-	# Plus de niveau de run ni de grande barre : le centre reste libre. La page
-	# actuelle demeure lisible dans une petite capsule sous la safe area.
+	# La progression de run tient dans une capsule compacte : niveau, XP et salle
+	# restent visibles sans prendre l'espace d'esquive.
 	var panneau_progression := Rect2(Vector2(largeur * 0.5 - 105.0, haut - 8.0) + tremble, Vector2(210.0, 70.0))
 	draw_style_box(_style_compact, panneau_progression)
-	draw_string(police, Vector2(panneau_progression.position.x, haut + 35.0), "PAGE %02d / %02d" % [Jeu.salle_courante, Jeu.salles_du_chapitre()],
-		HORIZONTAL_ALIGNMENT_CENTER, panneau_progression.size.x, 27, Palette.TEXTE)
+	var texte_progression := "SALLE %02d / %02d  •  NIV %d" % [Jeu.salle_courante, Jeu.salles_du_chapitre(), Jeu.niveau_run]
+	if Jeu.est_retro():
+		texte_progression = "STAGE 1  •  16-BIT"
+	if Jeu.mode_run == "mine":
+		var secondes := ceili(Jeu.temps_mine_restant)
+		texte_progression = "MINE %02d:%02d  •  NIV %d" % [secondes / 60, secondes % 60, Jeu.niveau_run]
+	draw_string(police, Vector2(panneau_progression.position.x, haut + 24.0), texte_progression,
+		HORIZONTAL_ALIGNMENT_CENTER, panneau_progression.size.x, 20, Palette.TEXTE)
+	var xp := Jeu.experience_vers_prochain_niveau()
+	var barre_xp := Rect2(panneau_progression.position + Vector2(14.0, 46.0), Vector2(panneau_progression.size.x - 28.0, 8.0))
+	draw_rect(barre_xp, Color(0.02, 0.02, 0.04, 0.8))
+	var remplie := barre_xp
+	remplie.size.x *= clampf(float(xp["actuelle"]) / maxf(1.0, float(xp["requise"])), 0.0, 1.0)
+	draw_rect(remplie, Palette.ESSENCE)
 
 	# Deux symboles alchimiques remplacent l'ancien compteur carre : la fiole
 	# compte le build de la run, la goutte la monnaie permanente.
@@ -120,7 +133,7 @@ func _draw() -> void:
 	Dessin.glyphe(self, "fiole", centre_fiole, 17.0, Palette.ESSENCE)
 	draw_string(police, centre_fiole + Vector2(25.0, 10.0), str(Jeu.inventaire.size()),
 		HORIZONTAL_ALIGNMENT_LEFT, 32.0, 25, Palette.TEXTE)
-	var centre_goutte := Vector2(largeur - 62.0, haut + 25.0) + tremble
+	var centre_goutte := Vector2(largeur - 78.0, haut + 25.0) + tremble
 	draw_colored_polygon(Dessin.goutte(centre_goutte, 18.0, PI, 1.2), Palette.ESSENCE)
 	draw_string(police, centre_goutte + Vector2(23.0, 10.0), ReglagesJoueur.gouttes_affichees(),
 		HORIZONTAL_ALIGNMENT_LEFT, 42.0, 24, Palette.TEXTE)
@@ -140,7 +153,7 @@ func _draw() -> void:
 		if r == null:
 			continue
 		var centre := Vector2(x, y)
-		if r.est_essence:
+		if r.est_transformation:
 			Dessin.halo(self, centre, 34.0, Palette.ESSENCE, 3)
 			Dessin.contour(self, Dessin.polygone_regulier(centre, 26.0, 6, _anim * 0.4), Palette.ESSENCE, 2.5)
 		else:

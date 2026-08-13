@@ -45,14 +45,14 @@ func test_un_projectile_sans_decalage(v: Verif) -> void:
 func test_eventail_reste_serre(v: Verif) -> void:
 	# Un eventail large fait rater les deux projectiles a distance : la sonde a
 	# vu une sentinelle survivre a trois cents tirs pour cette raison.
-	var t := Mods.appliquer(Tir.de_base(Stats.depuis_reglages()), [CatalogueReactifs.par_id("fleche_double").mods])
+	var t := Mods.appliquer(Tir.de_base(Stats.depuis_reglages()), [CatalogueReactifs.par_id("tir_multiple").mods])
 	var ecart_a_600 := tan(t.angle_eventail / 2.0) * 600.0 + t.ecart_lateral / 2.0
 	v.vrai(ecart_a_600 < 45.0, "a 600 px, chaque projectile reste a portee du rayon d'un ennemi")
 
 func test_copie_independante(v: Verif) -> void:
 	var t := Tir.de_base(Stats.depuis_reglages())
 	var c := t.copie()
-	c.effets.append("braise")
+	c.effets.append("feu")
 	c.degats = 999.0
 	v.egal(t.effets.size(), 0, "la copie ne partage pas la liste d'effets")
 	v.presque(t.degats, Reglages.TIR_DEGATS, "la copie ne modifie pas l'original")

@@ -1,6 +1,6 @@
 extends Node
 
-# Orchestrateur : enchaine les dix salles, ouvre draft ou alambic entre elles,
+# Orchestrateur : enchaine vingt salles, six niveaux et trois alambics,
 # et pose le boss a la derniere. Le heros lui appartient, pas a la salle : ses
 # PV et son inventaire traversent la run.
 
@@ -14,9 +14,9 @@ const JOYSTICK := preload("res://ui/joystick.tscn")
 const PAUSE := preload("res://ui/pause.tscn")
 const RECOMPENSE_SORTS := preload("res://ui/recompense_sorts.tscn")
 const BOT := preload("res://sondes/bot.gd")
+const VOILE_TRANSITION := preload("res://scripts/voile_transition.gd")
 
 var _fond: Node2D
-var _zones: Node2D
 var _salle: Node2D
 var _heros: CharacterBody2D
 var _effets: Node2D
@@ -32,15 +32,29 @@ var _recharge_sort_actif := 0.0
 var _charge_ultime := 0
 var _compteur_moisson := 0
 var _compteur_sang_froid := 0
+var _niveaux_en_attente := 0
+var _familier_minuterie := 0.0
+var _meteore_minuterie := 0.0
+var _zone_minuterie := 0.0
+var _orbe_minuterie := 0.0
+var _orbes_chargees := 0
+var _gardien: Gardien
+var _fin_salle_en_attente := false
+var _camera: Camera2D
+var _voile_salle: Control
+var _titre_voile: Label
+var _sous_titre_voile: Label
+var _transition_salle := false
 
 func _ready() -> void:
 	if OS.get_name() == "Android":
 		get_tree().set_auto_accept_quit(false)
 	var arguments := OS.get_cmdline_user_args()
 	Jeu.mode_auto = "--auto" in arguments
+	var mode_argument := _texte_argument(arguments, "--mode=")
 	Jeu.demarrer_run(_valeur_argument(arguments, "--graine="), maxi(1, _valeur_argument(arguments, "--salle=")),
 		maxi(0, _valeur_argument(arguments, "--chapitre=") - 1) if _valeur_argument(arguments, "--chapitre=") > 0 else ReglagesJoueur.chapitre_choisi,
-		ReglagesJoueur.mode_run_choisi)
+		mode_argument if not mode_argument.is_empty() else ReglagesJoueur.mode_run_choisi)
 	# --dote=N remplit l'inventaire : c'est ce qui permet d'aller regarder
 	# l'alambic ou le boss sans rejouer huit salles a chaque essai.
 	var dote := _valeur_argument(arguments, "--dote=")
@@ -58,16 +72,16 @@ func _ready() -> void:
 			Jeu.ajouter_reactif(heritage[Jeu.rng.randi_range(0, heritage.size() - 1)])
 	Jeu.run_terminee.connect(_sur_run_terminee)
 
+	_camera = Camera2D.new()
+	_camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
+	_camera.enabled = Jeu.mode_run == "mine"
+	add_child(_camera)
 	_calculer_limites()
 	get_tree().get_root().size_changed.connect(_calculer_limites)
 
 	_fond = Node2D.new()
 	_fond.set_script(load("res://scripts/fond.gd"))
 	add_child(_fond)
-
-	_zones = Node2D.new()
-	_zones.set_script(load("res://scripts/zones.gd"))
-	add_child(_zones)
 
 	_salle = SALLE.instantiate()
 	add_child(_salle)
@@ -79,7 +93,6 @@ func _ready() -> void:
 	_heros.tir_demande.connect(_sur_tir_heros)
 	_heros.touchee.connect(_sur_heros_touche)
 	_heros.bouclier_brise.connect(_sur_bouclier_brise)
-	_heros.sillage_depose.connect(_sur_sillage)
 	_heros.morte.connect(func(): Jeu.terminer_run(false))
 
 	_effets = Node2D.new()
@@ -99,6 +112,10 @@ func _ready() -> void:
 	_joystick = JOYSTICK.instantiate()
 	_couche.add_child(_joystick)
 	_joystick.intention_changee.connect(_sur_intention)
+	var cadre_retro := Control.new()
+	cadre_retro.set_script(load("res://scripts/cadre_retro.gd"))
+	_couche.add_child(cadre_retro)
+	_construire_voile_salle()
 
 	if Jeu.mode_auto:
 		var bot := Node.new()
@@ -107,8 +124,7 @@ func _ready() -> void:
 		add_child(bot)
 
 	_entrer_dans_la_salle()
-	if Jeu.mode_run == "epreuve_sorts" and Jeu.salle_courante == 1:
-		_ouvrir_serie_reactifs(3, func() -> void: pass)
+	_animer_entree_salle()
 	Capture.programmer(self)
 
 # En mode auto, une salle qui ne se termine pas est un blocage, pas une
@@ -121,6 +137,7 @@ func _process(delta: float) -> void:
 	_recharge_sort_actif = maxf(0.0, _recharge_sort_actif - delta)
 	if _hud != null:
 		_hud.rafraichir_sorts(_recharge_sort_actif, _charge_ultime)
+	_avancer_phenomenes(delta)
 	_musique_minuterie -= delta
 	if _musique_minuterie <= 0.0 and not _terminee and _panneau == null:
 		_musique_minuterie = 0.35
@@ -132,7 +149,8 @@ func _process(delta: float) -> void:
 	if not Jeu.mode_auto or _terminee or _panneau != null:
 		return
 	_temps_dans_la_salle += delta
-	if _temps_dans_la_salle < 120.0:
+	var delai_blocage := Reglages.MINE_DUREE + 120.0 if Jeu.mode_run == "mine" else 120.0
+	if _temps_dans_la_salle < delai_blocage:
 		return
 	var restants := get_tree().get_nodes_in_group("ennemis")
 	var ou := ""
@@ -151,8 +169,29 @@ func _valeur_argument(arguments: PackedStringArray, prefixe: String) -> int:
 			return int(argument.substr(prefixe.length()))
 	return 0
 
+func _texte_argument(arguments: PackedStringArray, prefixe: String) -> String:
+	for argument in arguments:
+		if argument.begins_with(prefixe):
+			return argument.substr(prefixe.length())
+	return ""
+
 func _calculer_limites() -> void:
 	var taille := get_viewport().get_visible_rect().size
+	if Jeu.mode_run == "mine":
+		var zoom := Reglages.MINE_CAMERA_ZOOM
+		var taille_monde := taille / zoom
+		var haut_mine := (Reglages.ARENE_HAUT + Ecran.marge_haute()) / zoom
+		var bas_mine := (Reglages.ARENE_BAS + Ecran.marge_basse()) / zoom
+		_limites = Rect2(
+			Vector2(Reglages.ARENE_MARGE_LATERALE / zoom, haut_mine),
+			Vector2(taille_monde.x - 2.0 * Reglages.ARENE_MARGE_LATERALE / zoom,
+				maxf(850.0, taille_monde.y - haut_mine - bas_mine)))
+		if _camera != null:
+			_camera.zoom = Vector2.ONE * zoom
+			_camera.global_position = taille_monde / 2.0
+		if _heros != null:
+			_heros.limites = _limites
+		return
 	var haut := Reglages.ARENE_HAUT + Ecran.marge_haute()
 	var bas := Reglages.ARENE_BAS + Ecran.marge_basse()
 	_limites = Rect2(
@@ -162,24 +201,22 @@ func _calculer_limites() -> void:
 		_heros.limites = _limites
 
 func _entrer_dans_la_salle() -> void:
-	_zones.vider()
 	for enfant in _salle.get_children():
 		enfant.queue_free()
 	_calculer_limites()
 	_fond.preparer(_limites, Jeu.salle_courante)
 	_salle.effets = _effets
-	_salle.zones = _zones
 	if not _salle.terminee.is_connected(_sur_salle_terminee):
 		_salle.terminee.connect(_sur_salle_terminee)
 	_heros.global_position = Vector2((_limites.position.x + _limites.end.x) / 2.0, _limites.end.y - 120.0)
-	_heros.preparer_nouvelle_page()
+	_heros.preparer_nouvelle_salle()
 	if ReglagesJoueur.passifs_equipes_effectifs().has("reserve_ultime"):
 		_charge_ultime += maxi(1, roundi(5.0 * float(ReglagesJoueur.passifs_equipes_effectifs()["reserve_ultime"])))
 	_hud.rafraichir()
 	_temps_dans_la_salle = 0.0
 	if Jeu.mode_auto:
 		print("salle %d/%d (%s) : inventaire=%d pv=%d" % [Jeu.salle_courante, Jeu.salles_du_chapitre(),
-			Jeu.chapitre_courant()["nom"], Jeu.inventaire.size(), roundi(_heros.stats.pv)])
+			Jeu.nom_run(), Jeu.inventaire.size(), roundi(_heros.stats.pv)])
 	_salle.demarrer(Jeu.salle_courante, _limites)
 
 func _sur_salle_terminee() -> void:
@@ -187,20 +224,92 @@ func _sur_salle_terminee() -> void:
 		return
 	_heros.definir_intention(Vector2.ZERO, 0.0)
 	_joystick.annuler()
+	# Le dernier ennemi peut donner un niveau. Le choix immediat a priorite sur
+	# l'Alambic ou la salle suivante, sinon deux panneaux se volent leur etat.
+	if _panneau != null or _niveaux_en_attente > 0:
+		_fin_salle_en_attente = true
+		return
+	_traiter_fin_salle()
+
+func _traiter_fin_salle() -> void:
 	if Jeu.mode_run == "epreuve_sorts":
 		_sur_palier_defi_termine()
 		return
 	if Jeu.salle_courante >= Jeu.salles_du_chapitre():
 		Jeu.terminer_run(true)
 		return
-	_ouvrir_recompense_etage()
+	if Chapitres.est_alambic(Jeu.chapitre, Jeu.salle_courante):
+		_ouvrir_alambic_apres_salle()
+	else:
+		_avancer_salle()
 
-func _avancer_page() -> void:
+func _avancer_salle() -> void:
+	if _transition_salle:
+		return
+	_transition_salle = true
+	_heros.definir_intention(Vector2.ZERO, 0.0)
+	_joystick.annuler()
+	_voile_salle.visible = true
+	_voile_salle.mouse_filter = Control.MOUSE_FILTER_STOP
+	_titre_voile.text = "SALLE %02d" % (Jeu.salle_courante + 1)
+	_sous_titre_voile.text = Jeu.nom_run().to_upper()
+	var fermeture := create_tween()
+	fermeture.set_trans(Tween.TRANS_QUINT)
+	fermeture.set_ease(Tween.EASE_IN)
+	fermeture.tween_property(_voile_salle, "modulate:a", 1.0,
+		0.12 if ReglagesJoueur.effets_reduits else 0.26)
+	await fermeture.finished
 	Jeu.salle_courante += 1
-	_continuer_apres_porte()
-
-func _continuer_apres_porte() -> void:
 	_entrer_dans_la_salle()
+	await get_tree().create_timer(0.04 if ReglagesJoueur.effets_reduits else 0.16).timeout
+	var ouverture := create_tween()
+	ouverture.set_trans(Tween.TRANS_QUINT)
+	ouverture.set_ease(Tween.EASE_OUT)
+	ouverture.tween_property(_voile_salle, "modulate:a", 0.0,
+		0.16 if ReglagesJoueur.effets_reduits else 0.42)
+	await ouverture.finished
+	_voile_salle.visible = false
+	_voile_salle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_transition_salle = false
+
+func _construire_voile_salle() -> void:
+	_voile_salle = VOILE_TRANSITION.new()
+	_voile_salle.mouse_filter = Control.MOUSE_FILTER_STOP
+	_voile_salle.process_mode = Node.PROCESS_MODE_ALWAYS
+	_couche.add_child(_voile_salle)
+	_voile_salle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_titre_voile = Label.new()
+	_titre_voile.set_anchors_preset(Control.PRESET_CENTER)
+	_titre_voile.position = Vector2(-260.0, -62.0)
+	_titre_voile.size = Vector2(520.0, 76.0)
+	_titre_voile.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_titre_voile.add_theme_font_size_override("font_size", 54)
+	_titre_voile.add_theme_color_override("font_color", Palette.TEXTE)
+	_voile_salle.add_child(_titre_voile)
+	_sous_titre_voile = Label.new()
+	_sous_titre_voile.set_anchors_preset(Control.PRESET_CENTER)
+	_sous_titre_voile.position = Vector2(-300.0, 18.0)
+	_sous_titre_voile.size = Vector2(600.0, 48.0)
+	_sous_titre_voile.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_sous_titre_voile.add_theme_font_size_override("font_size", 24)
+	_sous_titre_voile.add_theme_color_override("font_color", Palette.OR)
+	_voile_salle.add_child(_sous_titre_voile)
+
+func _animer_entree_salle() -> void:
+	_titre_voile.text = "SALLE %02d" % Jeu.salle_courante if Jeu.mode_run == "grimoire" else Jeu.nom_run().to_upper()
+	_sous_titre_voile.text = Jeu.nom_run().to_upper() if Jeu.mode_run == "grimoire" else (
+			"SURVIVEZ 5 MINUTES" if Jeu.mode_run == "mine" else "UNE SALLE D'ESSAI" if Jeu.mode_run == "retro" else "CINQ RITUELS")
+	_voile_salle.visible = true
+	_voile_salle.modulate.a = 1.0
+	await get_tree().create_timer(0.10 if ReglagesJoueur.effets_reduits else 0.38).timeout
+	var ouverture := create_tween()
+	ouverture.set_trans(Tween.TRANS_QUINT)
+	ouverture.set_ease(Tween.EASE_OUT)
+	ouverture.tween_property(_voile_salle, "modulate:a", 0.0,
+		0.16 if ReglagesJoueur.effets_reduits else 0.52)
+	await ouverture.finished
+	_voile_salle.visible = false
+	_voile_salle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _ouvrir_recompense_etage() -> void:
 	if _terminee or _panneau != null:
@@ -208,65 +317,28 @@ func _ouvrir_recompense_etage() -> void:
 	get_tree().paused = true
 	Sons.musique_calme()
 	_panneau = DRAFT.instantiate()
-	_panneau.etage_recompense = Jeu.salle_courante
+	_panneau.etage_recompense = Jeu.niveau_run
 	_panneau.process_mode = Node.PROCESS_MODE_ALWAYS
 	_couche.add_child(_panneau)
 	_panneau.termine.connect(func() -> void:
 		_panneau.queue_free()
 		_panneau = null
 		_heros.recalculer()
+		if Jeu.mode_run == "mine":
+			_heros.stats.soigner(_heros.stats.pv_max * Reglages.MINE_SOIN_NIVEAU)
+			_effets.onde(_heros.global_position, 150.0, Color(0.42, 1.0, 0.66), 0.45)
 		_hud.rafraichir()
 		get_tree().paused = false
-		if Chapitres.est_alambic(Jeu.chapitre, Jeu.salle_courante):
-			_ouvrir_alambic_apres_page()
-		else:
-			_avancer_page())
+		_niveaux_en_attente = maxi(0, _niveaux_en_attente - 1)
+		if _niveaux_en_attente > 0:
+			_ouvrir_recompense_etage()
+		elif _fin_salle_en_attente:
+			_fin_salle_en_attente = false
+			_traiter_fin_salle())
 
 func _sur_palier_defi_termine() -> void:
-	var boss := Jeu.est_boss_courant()
 	var dernier := Jeu.salle_courante >= Jeu.salles_du_chapitre()
-	if boss:
-		if dernier:
-			_ouvrir_recompense_sorts(true)
-		else:
-			# Le boss ouvre immediatement trois choix capables d'alimenter la
-			# prochaine fusion, puis livre sa recompense permanente.
-			_ouvrir_serie_reactifs(3, func() -> void: _ouvrir_recompense_sorts(false))
-		return
-	_ouvrir_bonus_defi()
-
-func _ouvrir_bonus_defi() -> void:
-	_ouvrir_draft_force(false, func() -> void:
-		if Jeu.salle_courante in [3, 7, 11]:
-			_ouvrir_alambic_apres_page()
-		else:
-			_avancer_page())
-
-func _ouvrir_serie_reactifs(nombre: int, suite: Callable) -> void:
-	if nombre <= 0:
-		suite.call()
-		return
-	_ouvrir_draft_force(true, func() -> void:
-		_ouvrir_serie_reactifs(nombre - 1, suite))
-
-func _ouvrir_draft_force(reactif: bool, suite: Callable) -> void:
-	if _terminee or _panneau != null:
-		return
-	get_tree().paused = true
-	Sons.musique_calme()
-	_panneau = DRAFT.instantiate()
-	_panneau.etage_recompense = Jeu.salle_courante
-	_panneau.forcer_reactif = reactif
-	_panneau.forcer_basique = not reactif
-	_panneau.process_mode = Node.PROCESS_MODE_ALWAYS
-	_couche.add_child(_panneau)
-	_panneau.termine.connect(func() -> void:
-		_panneau.queue_free()
-		_panneau = null
-		_heros.recalculer()
-		_hud.rafraichir()
-		get_tree().paused = false
-		suite.call())
+	_ouvrir_recompense_sorts(dernier)
 
 func _ouvrir_recompense_sorts(derniere: bool) -> void:
 	get_tree().paused = true
@@ -282,9 +354,11 @@ func _ouvrir_recompense_sorts(derniere: bool) -> void:
 		if derniere:
 			Jeu.terminer_run(true)
 		else:
-			_avancer_page())
+			_avancer_salle())
 
-func _ouvrir_alambic_apres_page() -> void:
+func _ouvrir_alambic_apres_salle() -> void:
+	if _panneau != null:
+		return
 	get_tree().paused = true
 	Sons.musique_calme()
 	_heros.stats.soigner(_heros.stats.pv_max * Reglages.SOIN_ALAMBIC \
@@ -297,7 +371,7 @@ func _ouvrir_alambic_apres_page() -> void:
 		_panneau = null
 		get_tree().paused = false
 		Sons.musique_combat(0.35)
-		_avancer_page())
+		_avancer_salle())
 
 func _ouvrir_pause() -> void:
 	get_tree().paused = true
@@ -334,6 +408,110 @@ func _sur_tir_heros(tir_courant: Tir, origine: Vector2, direction: Vector2) -> v
 	var tir_effectif := tir_courant.copie()
 	tir_effectif.degats *= _heros.multiplicateur_degats_passif()
 	_salle.tirer(tir_effectif, origine, direction, false)
+	if _orbes_chargees > 0 and "orbes_chargees" in tir_courant.drapeaux:
+		for i in _orbes_chargees:
+			var angle := (float(i) - float(_orbes_chargees - 1) * 0.5) * 0.13
+			_tirer_phenomene("orbes_chargees", Reglages.ORBE_PART_DEGATS, origine,
+				direction.rotated(angle))
+		_orbes_chargees = 0
+
+func _avancer_phenomenes(delta: float) -> void:
+	if _heros == null or _terminee or _panneau != null or _heros.tir_courant == null:
+		return
+	var drapeaux: Array[String] = _heros.tir_courant.drapeaux
+	if "familier_tireur" in drapeaux:
+		_familier_minuterie -= delta
+		if _familier_minuterie <= 0.0:
+			_familier_minuterie = _intervalle_phenomene(Reglages.FAMILIER_TIR_INTERVALLE, "familier_tireur")
+			var cible := _ennemi_plus_proche(_heros.global_position)
+			if cible != null:
+				_tirer_phenomene("familier_tireur", Reglages.FAMILIER_TIR_PART_DEGATS,
+					_heros.global_position + Vector2(72.0, -36.0),
+					_heros.global_position.direction_to(cible.global_position))
+	if "meteores" in drapeaux:
+		_meteore_minuterie -= delta
+		if _meteore_minuterie <= 0.0:
+			_meteore_minuterie = _intervalle_phenomene(Reglages.METEORE_INTERVALLE, "meteores")
+			_declencher_meteore()
+	if "zone_heros" in drapeaux:
+		_zone_minuterie -= delta
+		if _zone_minuterie <= 0.0:
+			_zone_minuterie = _intervalle_phenomene(Reglages.ZONE_HEROS_INTERVALLE, "zone_heros")
+			_frapper_zone_heros()
+	if "orbes_chargees" in drapeaux:
+		_orbe_minuterie -= delta
+		if _orbe_minuterie <= 0.0:
+			_orbe_minuterie = _intervalle_phenomene(Reglages.ORBE_INTERVALLE, "orbes_chargees")
+			_orbes_chargees = mini(Reglages.ORBE_MAX, _orbes_chargees + 1)
+	if "familier_gardien" in drapeaux and (_gardien == null or not is_instance_valid(_gardien)):
+		_gardien = Gardien.new()
+		_gardien.heros = _heros
+		_gardien.global_position = _heros.global_position + Vector2(-70.0, -25.0)
+		add_child(_gardien)
+
+func _tirer_phenomene(id: String, part_degats: float, origine: Vector2, direction: Vector2) -> void:
+	var tir := Tir.de_base(_heros.stats)
+	tir.degats *= part_degats
+	_appliquer_element_phenomene(tir, id)
+	_salle.tirer(tir, origine, direction, false)
+
+func _intervalle_phenomene(base: float, id: String) -> float:
+	return base * (Reglages.PHENOMENE_AIR_INTERVALLE_MULT \
+		if "air" in Jeu.elements_de_augment(id) else 1.0)
+
+func _appliquer_element_phenomene(tir: Tir, id: String) -> void:
+	for element in Jeu.elements_de_augment(id):
+		match element:
+			"feu": tir.effets.append("feu")
+			"eau": tir.effets.append("eau")
+			"air": tir.vitesse *= 1.35
+			"terre":
+				tir.effets.append("terre")
+				tir.degats *= Reglages.TERRE_DEGATS_MULT
+				tir.vitesse *= Reglages.TERRE_VITESSE_MULT
+			"lumiere": tir.effets.append("lumiere")
+			"tenebres": tir.drapeaux.append("tenebres")
+
+func _declencher_meteore() -> void:
+	var cible := _ennemi_plus_proche(_heros.global_position)
+	if cible == null:
+		return
+	var tir := Tir.de_base(_heros.stats)
+	tir.degats *= Reglages.METEORE_PART_DEGATS
+	_appliquer_element_phenomene(tir, "meteores")
+	_effets.onde(cible.global_position, Reglages.METEORE_RAYON, Palette.BRAISE, 0.65)
+	for ennemi in get_tree().get_nodes_in_group("ennemis"):
+		if is_instance_valid(ennemi) and ennemi.global_position.distance_to(cible.global_position) <= Reglages.METEORE_RAYON:
+			_infliger_phenomene(ennemi, tir)
+
+func _frapper_zone_heros() -> void:
+	var tir := Tir.de_base(_heros.stats)
+	tir.degats *= Reglages.ZONE_HEROS_PART_DEGATS
+	_appliquer_element_phenomene(tir, "zone_heros")
+	_effets.onde(_heros.global_position, Reglages.ZONE_HEROS_RAYON, Palette.MOUSSE_MAGIQUE, 0.32)
+	for ennemi in get_tree().get_nodes_in_group("ennemis"):
+		if is_instance_valid(ennemi) and ennemi.global_position.distance_to(_heros.global_position) <= Reglages.ZONE_HEROS_RAYON:
+			_infliger_phenomene(ennemi, tir)
+
+func _infliger_phenomene(ennemi: Node, tir: Tir) -> void:
+	var degats := tir.degats
+	if "tenebres" in tir.drapeaux and Jeu.rng.randf() < Reglages.TENEBRES_CHANCE_SURCHARGE:
+		degats *= Reglages.TENEBRES_SURCHARGE_MULT
+	ennemi.recevoir_degats(degats, tir.effets)
+	if "lumiere" in tir.effets:
+		_heros.stats.soigner(degats * Reglages.LUMIERE_VOL_DE_VIE)
+
+func _ennemi_plus_proche(origine: Vector2) -> Node2D:
+	var resultat: Node2D = null
+	var distance := INF
+	for ennemi in get_tree().get_nodes_in_group("ennemis"):
+		if not is_instance_valid(ennemi):
+			continue
+		var d := origine.distance_squared_to(ennemi.global_position)
+		if d < distance:
+			distance = d
+			resultat = ennemi
+	return resultat
 
 func _sur_heros_touche(position: Vector2) -> void:
 	_effets.impact(position, Palette.DANGER, 1.6)
@@ -345,27 +523,15 @@ func _sur_heros_touche(position: Vector2) -> void:
 				ennemi.recevoir_degats(_heros.tir_courant.degats * 1.5 \
 					* float(ReglagesJoueur.passifs_equipes_effectifs()["riposte_alchimique"]), [])
 
-func _sur_bouclier_brise(position: Vector2, explosif: bool) -> void:
+func _sur_bouclier_brise(position: Vector2) -> void:
 	_effets.onde(position, 200.0, Color(0.85, 0.92, 1.0), 0.5)
-	if not explosif:
-		return
-	# Aura de cristal : le bouclier brise explose en eclats gelants.
-	_effets.onde(position, Reglages.BOUCLIER_EXPLOSION_RAYON, Palette.GIVRE, 0.7)
-	_effets.eclats(position, Palette.GIVRE, 22, 420.0, 0.5)
-	for ennemi in get_tree().get_nodes_in_group("ennemis"):
-		if not is_instance_valid(ennemi):
-			continue
-		if ennemi.global_position.distance_to(position) > Reglages.BOUCLIER_EXPLOSION_RAYON:
-			continue
-		ennemi.recevoir_degats(_heros.tir_courant.degats * 1.5, ["givre"])
-		if ennemi.has_method("geler"):
-			ennemi.geler(Reglages.GEL_BREF_DUREE)
 
-func _sur_sillage(position: Vector2, gelant: bool) -> void:
-	_zones.ajouter(position, "sillage_gelant" if gelant else "sillage")
-
-func _sur_ennemi_abattu() -> void:
+func _sur_ennemi_abattu(experience: int) -> void:
 	_charge_ultime += 1
+	if Jeu.mode_run in ["grimoire", "mine"]:
+		_niveaux_en_attente += Jeu.gagner_experience_run(experience)
+		if _niveaux_en_attente > 0 and _panneau == null and not _terminee:
+			_ouvrir_recompense_etage()
 	var passifs := ReglagesJoueur.passifs_equipes_effectifs()
 	if passifs.has("moisson_vitale"):
 		_compteur_moisson += 1

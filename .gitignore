@@ -6,6 +6,6 @@ tmp/
 *.aab
 *.keystore
 
-# Exception : l'APK a telecharger est suivi, c'est tout l'interet de dist/.
-!dist/*.apk
+# Une seule APK courante est suivie, directement a la racine du depot.
+!/alambic.apk
 *.idsig

@@ -1,9 +1,8 @@
 class_name CarteReactif
 extends Button
 
-# Une carte de reactif, entierement dessinee : cadre, glyphe, nom, description.
-# Le cadre distingue une essence d'un reactif, comme le demande la spec, et la
-# cible tactile ne descend jamais sous ce qu'un pouce atteint sans viser.
+# Une carte d'Augment entierement dessinee. Une transformation elementaire
+# conserve une double bordure pour rester identifiable dans l'inventaire.
 
 signal choisie(id: String)
 
@@ -16,7 +15,6 @@ var desactivee := false:
 		desactivee = valeur
 		disabled = valeur
 		queue_redraw()
-var montrer_composants := false
 
 var _survol := 0.0
 var _anim := 0.0
@@ -69,11 +67,10 @@ func _draw() -> void:
 	if selectionnee or _pulsation > 0.0:
 		var lueur := maxf(_survol, _pulsation)
 		draw_rect(Rect2(r.position, Vector2(7.0, r.size.y)), Color(teinte, 0.85 * lueur))
-	if reactif.est_essence:
-		# Une essence porte un double cadre et une teinte propre : elle ne doit
-		# jamais se confondre avec un reactif ordinaire.
+	if reactif.est_transformation:
+		# Une transformation elementaire porte un double cadre.
 		draw_arc(Vector2(r.end.x - 38.0, r.position.y + 38.0), 18.0, 0.0, TAU, 24, Color(Palette.ESSENCE, 0.75 * alpha), 2.0, true)
-		draw_string(police, Vector2(r.size.x - 190.0, 34.0), "ESSENCE",
+		draw_string(police, Vector2(r.size.x - 190.0, 34.0), "ÉLÉMENT",
 			HORIZONTAL_ALIGNMENT_RIGHT, 170, 22, Color(Palette.ESSENCE, 0.9 * alpha))
 
 	# Vignette du glyphe, a gauche : une icone dessinee, pas un fichier image.
@@ -94,13 +91,3 @@ func _draw() -> void:
 		r.size.x - x - 24.0, 40, Color(Palette.TEXTE, alpha))
 	draw_multiline_string(police, Vector2(x, r.position.y + 108.0), reactif.description, HORIZONTAL_ALIGNMENT_LEFT,
 		r.size.x - x - 24.0, 28, 3, Color(Palette.TEXTE_ATTENUE, alpha))
-
-	if montrer_composants and reactif.est_essence:
-		var composants := Recettes.composants_de(reactif.id)
-		if composants.size() == 2:
-			var a := CatalogueReactifs.par_id(composants[0])
-			var b := CatalogueReactifs.par_id(composants[1])
-			if a != null and b != null:
-				# On annonce ce qu'on perd avant le clic, jamais apres.
-				draw_string(police, Vector2(x, r.size.y - 24.0), "consomme %s + %s" % [a.nom, b.nom],
-					HORIZONTAL_ALIGNMENT_LEFT, r.size.x - x - 24.0, 24, Color(Palette.ESSENCE, 0.8 * alpha))

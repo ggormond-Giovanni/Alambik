@@ -1,160 +1,118 @@
-# État — Alambic
+# État de la refonte guidée par `design.txt`
 
-*Mis à jour le 2026-08-07.*
-
-La V1 est jouable de bout en bout : menu, **trois chapitres de cinquante pages**,
-quatre alambics et un mi-chapitre par chapitre, un boss propre à chacun, écran
-de fin. Elle tourne sur PC et s'exporte en APK Android signé. Ce qui manque est
-listé plus bas, sans arrondi.
+`design.txt` est la source de vérité. Ce fichier décrit seulement ce qui est
+déjà jouable et distingue explicitement les prototypes des décisions finales.
 
 ## Où chercher quoi
 
-| Je veux… | C'est ici |
+| Besoin | Source |
 |---|---|
-| régler PV, dégâts, cadence, durées, tailles d'arène | `data/reglages.gd` — **seule** source d'équilibrage |
-| ajouter ou modifier un réactif | `data/catalogue_reactifs.gd` |
-| ajouter ou modifier une essence | `data/catalogue_essences.gd` |
-| changer une fusion | `data/recettes.gd` — source unique, paire triée → essence |
-| régler un ennemi | `data/catalogue_ennemis.gd` |
-| changer la composition d'une page | `data/vagues.gd` — paliers, pas cinquante listes |
-| ajouter un chapitre, déplacer un alambic, régler la montée | `data/chapitres.gd` |
-| chiffrer ce que vaut une main ou une fusion | `scripts/puissance.gd` |
-| comprendre comment un réactif agit sur le tir | `scripts/mods.gd` puis `scripts/tir.gd` |
-| toucher au comportement d'un ennemi | `scripts/cerveaux.gd` (décision pure) puis `scripts/ennemi.gd` (exécution) |
-| toucher au boss | `scripts/boss.gd` |
-| toucher au dessin d'une créature ou d'une icône | `scripts/dessin.gd` (formes) et `scripts/palette.gd` (couleurs) |
-| modifier les cycles animés des personnages | `assets/characters/sheets/` puis `heros.gd`, `ennemi.gd` et `boss.gd` |
-| modifier le langage visuel commun de l'interface | `scripts/style_interface.gd` |
-| toucher à l'enchaînement des pages | `scripts/run.gd` |
-| toucher à une page de combat | `scripts/salle.gd` |
-| toucher à l'interface | `ui/` : `hud.gd`, `draft.gd`, `alambic.gd`, `carte_reactif.gd`, `joystick.gd`, `fin_de_run.gd` |
-| modifier la pause en combat | `ui/pause.gd` puis `_ouvrir_pause()` dans `scripts/run.gd` |
-| lancer sur PC | `./lancer.sh` |
-| installer sur le téléphone | `./deploy.sh` (voir `MOBILE.md`) |
-| produire l'APK à télécharger | `./publier.sh` → `dist/alambic.apk` |
-| vérifier | `./verifier.sh` puis `./sondes/vingt_runs.sh` |
-| voir l'équilibrage chiffré | `godot --headless --path . --script sondes/equilibrage.gd` |
+| Régler les valeurs provisoires | `data/reglages.gd` |
+| Modifier les 16 Augments | `data/catalogue_reactifs.gd` |
+| Modifier les 6 Éléments et leurs Fusions | `data/catalogue_elements.gd` |
+| Modifier mondes, chapitres et paliers | `data/chapitres.gd` |
+| Modifier les rencontres | `data/vagues.gd` |
+| Modifier coffres et récompenses d'Épreuve | `data/recompenses.gd` |
+| Modifier l'équipement | `data/catalogue_objets.gd`, `ui/equipement.gd` |
+| Changer l'enchaînement d'une run | `scripts/run.gd` |
+| Vérifier le dépôt | `./verifier.sh`, puis `./sondes/vingt_runs.sh` |
 
-Arguments de développement (après `--`) : `--graine=N` (run rejouable),
-`--salle=N` (démarrer à une page), `--chapitre=N` (1 à 3), `--dote=N` (N réactifs
-au départ), `--auto` (bot), `--bavard` (traces du bot),
-`--capture=<fichier> --capture-apres=<s>`.
+## Boucle jouable actuelle
 
-## Mesures relevées
+- Campagne de 10 mondes × 3 chapitres × 20 salles.
+- Rencontres décrites salle par salle, avec seulement des variations d'ordre
+  contrôlées ; la vague suivante arrive immédiatement après un clean ou après
+  le délai de pression provisoire.
+- Miniboss aux salles 5, 10 et 15 ; boss final à la salle 20. Les dix miniboss
+  tournent sans répétition consécutive, possèdent chacun une silhouette et une
+  attaque signature télégraphiée. Les
+  chapitres 1 et 2 se ferment sur un miniboss ; le chapitre 3 de chaque monde
+  utilise l'un des dix boss signature uniques.
+- Après le nettoyage, un portail apparaît dans l'arène ; le héros doit le
+  rejoindre pour quitter la salle. Un voile à sceau alchimique fond vers la
+  salle suivante ; les panneaux de niveau gardent la priorité.
+- XP de run et choix immédiat parmi 3 cartes, avec 6 choix maximum. La courbe
+  testée place environ 2/4/5/6 Augments avant 5/10/15/20.
+- Pool actuel strict de 16 Augments : 6 Projectile, 5 Héros, 5 Phénomène.
+- Alambics après 4/9/14 : soin de 20 %, trois Éléments aléatoires distincts sur
+  la run, puis Fusion avec un Augment choisi sans perdre son effet original.
+  Un Augment déjà fusionné est retiré des choix suivants.
+- Six Éléments actifs : Feu, Eau, Air, Terre, Lumière et Ténèbres. Leur effet
+  dépend de la famille de l'Augment. Foudre n'est pas implémentée.
+- Un coffre évolutif unique par tentative, fondé sur le meilleur palier vaincu,
+  avec arrivée, verrou, ouverture lumineuse et révélation de la récompense avant
+  le retour automatique ; le Grand coffre conserve sa garantie d'équipement.
+- Équipement : deux Anneaux et un Collier ; un objet de prototype par chapitre,
+  Forge permanente par slot, aucun doublon requis.
+- Mine : grande arène dézoomée, survie de 5 minutes à apparitions progressives,
+  XP de run, soin à chaque niveau et boss final dans une phase séparée,
+  récompensée en Pierres de forge.
+- Épreuves rituelles : cinq miniboss consécutifs ; chaque victoire donne ou
+  améliore une capacité tant que l'Arsenal n'est pas complet.
+- Direction 16-bit généralisée : campagne, Mine, Épreuves, menus et transitions
+  utilisent la même grille de 4 pixels, la même palette resserrée et des poses
+  discrètes. Les onze créatures, dix miniboss et dix boss signature possèdent
+  des silhouettes procédurales distinctes.
+- Loadout : un Sort, un Passif et un Ultime. La Maîtrise Utilitaire peut ouvrir
+  le deuxième Passif et un reroll d'Augments.
+- Les interfaces partagent les mêmes entrées/sorties quintiques. Les listes de
+  choix apparaissent en cascade, les rerolls se remplacent par fondu et les
+  pages principales glissent latéralement. Boutons et onglets ont des réactions
+  tactiles amorties. Les fonds, en-têtes, surfaces, sélecteurs, cases et curseurs
+  suivent un langage commun 16-bit sombre et alchimique ; les changements de catalogue
+  sont directionnels plutôt qu'instantanés. « Effets réduits » raccourcit tous
+  ces mouvements.
+- Le niveau de compte donne de l'avancement, aucune statistique et aucun Sort.
+  Les annexes sont séparées de la progression de campagne.
 
-Mesurées, pas estimées. Machine de développement, Godot 4.7.1, headless.
+## Prototypes assumés, pas décisions finales
 
-| Quoi | Valeur | Comment |
-|---|---|---|
-| Suites de tests | 17 suites, 3 220 assertions, 0 échec | `./verifier.sh` |
-| Runs du bot, six descentes | **0 blocage sur 6**, deux par chapitre | `CHAPITRE=n ./sondes/vingt_runs.sh` |
-| Pages atteintes, chapitre 1 | 50/50 et 14/50 | idem |
-| Pages atteintes, chapitre 2 | 25/50 et 9/50 | idem |
-| Pages atteintes, chapitre 3 | 25/50 et 13/50 | idem |
-| Durée d'un chapitre | ~10 s par page, soit **8 à 9 min** pour 50 pages | compteur d'images de jeu, run graine 5 |
-| Écart meilleure main / médiane | 1,96 (2,35 avant correction) | `sondes/equilibrage.gd` |
-| Fusions perdantes | 0 sur 10 (3 avant correction) | `sondes/equilibrage.gd` |
-| Rapport héros / créatures, chapitre 1 | 1,0 page 1 → 2,5 page 40 → 2,0 page 50 | `sondes/equilibrage.gd` |
-| Taille de l'APK debug | 30 Mo (arm64-v8a seul, sprites inclus) | `ls -lh build/alambic.apk` |
-| Taille de l'APK release | 28 Mo (version 0.2), signé `CN=Alambic` | `apksigner verify --print-certs` |
-| Durée d'un export APK | 18,2 s | `/usr/bin/time` sur `--export-debug` |
+- Les chiffres de combat, d'XP, de Forge, de coffres, de Maîtrises et de rangs
+  de capacité sont centralisés ; leur première courbe complète est jouable mais
+  reste à ajuster avec les retours de parties.
+- L'arbre compte trente Maîtrises : dix paliers Offensifs, Défensifs et
+  Utilitaires, avec une montée volontairement forte jusqu'au dernier monde.
+- Les Gouttes des coffres progressent sur les trente chapitres. Une campagne à
+  grands coffres moyens finance statistiquement l'arbre sans le rendre gratuit
+  dans les premiers mondes.
+- Les identifiants des trente anciens objets sont conservés uniquement pour la
+  migration des sauvegardes ; aucun effet spécial d'équipement n'est inventé.
+- Onze créatures communes composent les rencontres : contact/crachat, salve,
+  charge, invocation, orbite, bélier, harcèlement et onde radiale. Les
+  Cachets phaseurs changent de côté, les Fuseaux tissent des lignes parallèles
+  et les Fioles volatiles annoncent leur explosion. Les compositions restent
+  ajustables après retours de parties.
 
-**Non mesuré à ce jour : tout ce qui demande l'appareil.** Images par seconde
-réelles, confort du pouce, lisibilité, durée d'une run jouée à la main, durée
-d'un cycle `deploy.sh` complet. Aucun appareil n'était branché (`adb devices`
-vide). Ces lignes restent vides tant que le téléphone n'a pas parlé.
+## Vérification du 13 août 2026
 
-## Critères d'acceptation de la spec
+- `./verifier.sh` : 23 suites, 8 000 assertions, 0 échec ; tous les scripts et
+  scènes chargent sans erreur.
+- Captures réelles du menu et d'une salle contrôlées après généralisation du
+  rendu 16-bit ; aucun visuel peint n'est chargé par le projet.
+- Captures téléphone contrôlées sur le menu, deux silhouettes de miniboss et
+  une rencontre contenant une Fiole volatile.
+- La sonde de vingt graines termine ses vingt processus sans erreur de script,
+  mais 8 restent bloqués après nettoyage parce que le bot n'entre pas dans le
+  portail (`ennemis restants=0`). Le problème est dans le pilotage de sonde et
+  survient avant l'introduction des trois nouvelles créatures.
 
-1. **APK debug s'installe et se lance** — *non vérifié* : l'APK est produit et
-   signé (`build/alambic.apk`), mais aucun appareil n'était connecté.
-2. **Run complète jouable au doigt** — *partiellement* : la run complète
-   s'enchaîne (bot headless jusqu'au boss, 20/20), le pouce n'a pas été testé.
-3. **Quinze réactifs, dix recettes, essences observables** — vérifié par les
-   tests et par `sondes/selftest.gd`, qui échoue si un drapeau d'essence n'est
-   lu par aucun script.
-4. **Vingt runs headless sans crash ni blocage** — *partiellement rejoué* : les
-   vingt runs dataient des chapitres à dix pages. Depuis le passage à cinquante,
-   seules **six** descentes ont été relancées (deux par chapitre), sans aucun
-   blocage. Une descente prenant huit à neuf minutes de jeu, vingt runs
-   demandent près d'une heure de sonde : à relancer avant de considérer le
-   critère tenu.
-5. **`verifier.sh` vert, aucun `SCRIPT ERROR`** — vérifié.
-6. **Performances mesurées** — *non fait*, faute d'appareil.
+## Toujours à concevoir selon `design.txt`
 
-## Écarts assumés par rapport au plan
+- Mécanique environnementale et bestiaire propres à chacun des dix mondes.
+- Variantes de bestiaire propres aux dix mondes et polissage final des boss.
+- Effets finaux des équipements et rattrapage des anciens objets.
+- Ajustement fin de l'économie et paliers supérieurs des modes annexes.
+- Identité finale de l'Air, détails finaux des transformations et éventuelle
+  Foudre.
+- Contrôle mobile définitif et post-game.
 
-- Les réactifs sont un catalogue GDScript, pas des `.tres` (justifié dans le plan).
-- `Reglages` est une classe de constantes, pas un autoload : les suites headless
-  doivent lire l'équilibrage sans monter de SceneTree.
-- Le héros appartient à `Run`, pas à `Salle` : ses PV et son inventaire doivent
-  traverser les pages.
-- Une essence prise au draft consomme ses composants, exactement comme à
-  l'alambic : la fusion est un échange, jamais un cadeau.
+## Vérification du 11 août 2026
 
-## Équilibrage — ce qui a été mesuré et corrigé
-
-Trois reproches de jeu, trois corrections, chacune chiffrée par
-`sondes/equilibrage.gd` avant et après.
-
-**Les fusions ne valaient pas leurs composants.** Trois essences sur dix étaient
-plus faibles que les deux réactifs gardés séparément — Rafale d'alambic valait
-0,56 fois ses composants. Elles ont été réécrites ; les dix passent maintenant,
-avec une marge d'au moins 15 %, et `tests/test_puissance.gd` échoue si l'une
-d'elles repasse sous la barre.
-
-**Des combinaisons cassées.** La meilleure main sur cinq réactifs valait 2,35
-fois la médiane et près de six fois la plus faible. Trois causes, toutes
-corrigées : les multiplicateurs se composaient en produit (ils s'additionnent
-désormais), les éclats frappaient à 45 % du tir d'origine (28 %), et un
-projectile traversait quatre ennemis à pleine puissance (il perd 35 % par
-traversée, 25 % par rebond). Écart ramené à **1,96×**, plafonné par un test.
-
-**La difficulté s'effondrait sur cinquante pages.** À la page 50, le héros valait
-16 fois ce que la page pouvait lui opposer. La montée des créatures est passée
-d'une droite à une courbe géométrique (×16 en PV sur un chapitre), les copies
-d'un même réactif rendent moins à chaque exemplaire, et le draft n'arrive plus
-qu'une page sur deux. Rapport héros/créatures sur le premier chapitre : entre
-1,0 et 2,5 du début à la fin.
-
-## Décisions de conception prises pendant l'implémentation
-
-- **Une fusion consomme toujours ses composants**, à l'alambic comme au draft.
-  Prendre une essence sans rien perdre retirait tout son sel à la décision.
-- **Un réactif se reprend, mais pas indéfiniment** : trois copies au plus, deux
-  pour ceux qui ajoutent des projectiles ou des rebonds, une seule pour ceux qui
-  ne posent qu'un effet — un second exemplaire de Braise n'ajouterait rien.
-  Quand tout est au plafond, le draft offre une page de repos qui soigne.
-- **Réserve d'encre finie** : un scribe essaimeur ne produit que six rampants sur
-  sa vie, et personne n'invoque au-delà de dix ennemis présents. Sans cette
-  borne, une page dont on ne prend jamais l'invocateur pour cible est infinie —
-  la sonde l'a montré deux fois.
-- **Tirs presque parallèles** plutôt qu'en éventail large : à 14°, les deux
-  projectiles de Flèche double passaient de chaque côté d'un ennemi lointain.
-- **Anticipation du tir** : on vise où la cible sera. Sans cela, un scribe qui
-  recule survivait à trois cents projectiles.
-- **Les blocs d'encre ne reçoivent pas d'ennemi** : une créature apparue dedans
-  était intouchable.
-- **Contournement** : ennemis et bot dévient quand ils n'avancent plus. Un
-  ennemi qui pousse contre un bloc bloque la page pour toujours.
-- **HUD lié à l'action** : la vie suit le mage ; le haut de l'écran porte la
-  progression, la pause et les réactifs. Aucune monnaie fictive n'est affichée.
-
-## Ce qui reste à faire
-
-- Brancher un téléphone et remplir les mesures manquantes.
-- Relancer les vingt runs complètes par chapitre (voir critère 4).
-- Le bot bute deux fois sur six au mi-chapitre (page 25) dans les chapitres 2
-  et 3. C'est peut-être un mur, c'est peut-être un bot qui ne sait pas lire les
-  motifs d'un boss — il ne les a jamais appris. À trancher en jouant, pas en
-  regardant la sonde.
-- Régler l'équilibrage une fois qu'un humain a joué : le bot traverse un chapitre
-  et meurt au boss, ce qui est le profil recherché, mais ne dit rien de la
-  difficulté ressentie au pouce.
-- La spec annonce des sessions de cinq à sept minutes ; un chapitre de cinquante
-  pages en demande huit à neuf. Soit la spec change, soit le chapitre raccourcit.
-- Valider au téléphone le mix de la musique adaptative et le temps de synthèse
-  au premier lancement ; le rendu headless ne dispose pas de sortie audio.
-- Valider sur appareil la taille apparente et la cadence des nouvelles
-  spritesheets ; le mode headless vérifie leur import mais pas leur confort visuel.
-- Le nom « Alambic » n'a pas été vérifié sur les registres de marques.
+- `./verifier.sh` : 23 suites, 7 888 assertions, 0 échec.
+- Chargement exhaustif : aucune erreur de script ou de scène, aucun drapeau
+  inerte.
+- Smoke tests headless : Mine terminée après 5:00, horde nettoyée, boss abattu
+  et portail traversé ; campagne passée de la salle 1 à la salle 3 par ses
+  portails ; aucun `SCRIPT ERROR`.
+- Sonde de 20 graines sans dotation : 20 fins de run observées, 0 blocage et
+  0 erreur de script.

@@ -9,12 +9,14 @@ var _description_detail: Label
 var _stats_detail: Label
 var _boutons_reactifs: Dictionary = {}
 var _selection := ""
+var _anim := 0.0
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_construire()
 	StyleInterface.animer_entree(self, 14.0)
+	Capture.programmer(self)
 
 func _construire() -> void:
 	var marge := MarginContainer.new()
@@ -47,7 +49,6 @@ func _construire() -> void:
 	defilement.add_child(grille)
 	if ReglagesJoueur.mode_dev:
 		var ids: Array[String] = CatalogueReactifs.ids()
-		ids.append_array(CatalogueEssences.ids())
 		for id in ids:
 			_ajouter_bouton_reactif(grille, id, Jeu.copies(id))
 	elif Jeu.inventaire.is_empty():
@@ -98,7 +99,8 @@ func _construire() -> void:
 	continuer.custom_minimum_size = Vector2(0, 116)
 	continuer.add_theme_font_size_override("font_size", 34)
 	StyleInterface.styliser_bouton(continuer, Palette.ESSENCE)
-	continuer.pressed.connect(func() -> void: termine.emit())
+	continuer.pressed.connect(func() -> void:
+		StyleInterface.sortir_puis(self, func() -> void: termine.emit()))
 	colonne.add_child(continuer)
 	var quitter := Button.new()
 	quitter.text = "Refermer le grimoire"
@@ -106,8 +108,9 @@ func _construire() -> void:
 	quitter.add_theme_font_size_override("font_size", 29)
 	StyleInterface.styliser_bouton(quitter, Palette.TEXTE_ATTENUE, true)
 	quitter.pressed.connect(func() -> void:
-		get_tree().paused = false
-		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
+		StyleInterface.sortir_puis(self, func() -> void:
+			get_tree().paused = false
+			get_tree().change_scene_to_file("res://scenes/menu.tscn")))
 	colonne.add_child(quitter)
 
 func _ouvrir_reglages() -> void:
@@ -122,12 +125,12 @@ func _ajouter_bouton_reactif(grille: GridContainer, id: String, copies: int) -> 
 	if reactif == null:
 		return
 	var bouton := Button.new()
-	bouton.text = "%s%s\n%s" % ["✦ " if reactif.est_essence else "", reactif.nom, "x%d" % copies if copies > 1 else "Détails"]
+	bouton.text = "%s%s\n%s" % ["✦ " if reactif.est_transformation else "", reactif.nom, "x%d" % copies if copies > 1 else "Détails"]
 	bouton.toggle_mode = true
 	bouton.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
 	bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bouton.add_theme_font_size_override("font_size", 21)
-	StyleInterface.styliser_bouton(bouton, Palette.ESSENCE if reactif.est_essence else reactif.teinte, true)
+	StyleInterface.styliser_bouton(bouton, Palette.ESSENCE if reactif.est_transformation else reactif.teinte, true)
 	bouton.pressed.connect(func() -> void: _afficher_details(id, copies))
 	grille.add_child(bouton)
 	_boutons_reactifs[id] = bouton
@@ -144,22 +147,29 @@ func _afficher_details(id: String, copies: int) -> void:
 			heros.recalculer()
 		var bouton_ajoute: Button = _boutons_reactifs.get(id)
 		if bouton_ajoute != null:
-			bouton_ajoute.text = "%s%s\nTEST x%d (+1)" % ["✦ " if reactif.est_essence else "", reactif.nom, copies]
+			bouton_ajoute.text = "%s%s\nTEST x%d (+1)" % ["✦ " if reactif.est_transformation else "", reactif.nom, copies]
 	_selection = id
 	for bouton_id in _boutons_reactifs:
 		(_boutons_reactifs[bouton_id] as Button).button_pressed = bouton_id == id
 	_titre_detail.text = "%s%s" % [reactif.nom, "  ×%d" % copies if copies > 1 else ""]
-	_titre_detail.add_theme_color_override("font_color", Palette.ESSENCE if reactif.est_essence else reactif.teinte)
+	_titre_detail.add_theme_color_override("font_color", Palette.ESSENCE if reactif.est_transformation else reactif.teinte)
 	_description_detail.text = reactif.description
 	var lignes := DetailsReactif.lignes(reactif, copies)
 	_stats_detail.text = "BONUS TOTAL\n• " + "\n• ".join(lignes) if not lignes.is_empty() else "Aucun bonus chiffré."
+	StyleInterface.animer_rafraichissement(_titre_detail)
+	StyleInterface.animer_rafraichissement(_description_detail)
+	StyleInterface.animer_rafraichissement(_stats_detail)
 	Sons.jouer("choix", -18.0)
 
+func _process(delta: float) -> void:
+	_anim += delta
+	queue_redraw()
+
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.012, 0.014, 0.028, 0.94))
+	StyleInterface.dessiner_fond(self, size, Palette.ESSENCE, _anim, 0.96)
 	var police := ThemeDB.fallback_font
 	var centre := Vector2(size.x * 0.5, Ecran.marge_haute() + 170.0)
 	Dessin.halo(self, centre, 260.0, Color(Palette.ESSENCE, 0.22), 7)
 	draw_string(police, Vector2(0, centre.y - 34.0), "PAUSE", HORIZONTAL_ALIGNMENT_CENTER, size.x, 66, Palette.TEXTE)
-	draw_string(police, Vector2(0, centre.y + 30.0), "%s — page %d / %d" % [Jeu.nom_run(), Jeu.salle_courante, Jeu.salles_du_chapitre()],
+	draw_string(police, Vector2(0, centre.y + 30.0), "%s — salle %d / %d" % [Jeu.nom_run(), Jeu.salle_courante, Jeu.salles_du_chapitre()],
 		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)

@@ -1,6 +1,6 @@
 extends Node
 
-# Le bot passe par definir_intention(), la meme porte que le joystick. Piloter
+# Le bot passe par definir_intention(), comme le joystick. Piloter
 # des entrees simulees a deja fait rapporter des succes faux ailleurs :
 # Input.action_press() appele chaque frame re-declenche is_action_just_pressed().
 #
@@ -44,7 +44,7 @@ func _physics_process(delta: float) -> void:
 
 	var ennemis := get_tree().get_nodes_in_group("ennemis")
 	if ennemis.is_empty():
-		_aller_a_la_porte()
+		_aller_au_portail()
 		return
 
 	var fuite := Vector2.ZERO
@@ -99,7 +99,7 @@ func _physics_process(delta: float) -> void:
 
 	if menace_proche > DISTANCE_CONFORT and not sous_le_feu and not vue_bouchee:
 		# Trop loin, meme un tir bien vise rate une cible mobile : on se rapproche
-		# comme le ferait un joueur, au lieu d'arroser l'autre bout de la page.
+		# comme le ferait un joueur, au lieu d'arroser l'autre bout de la salle.
 		if menace_proche > 800.0 and plus_proche != null:
 			_heros.definir_intention(_devier(_heros.global_position.direction_to(plus_proche.global_position)), 1.0)
 			return
@@ -156,12 +156,9 @@ func _devier(direction: Vector2) -> Vector2:
 		return direction
 	return direction.rotated(_sens_contournement * PI * 0.5).lerp(direction, 0.2).normalized()
 
-func _aller_a_la_porte() -> void:
-	# Sans ennemi, la salle attend que le heros atteigne la porte : un bot qui
-	# reste immobile ferait croire a un blocage qui n'existe pas.
+func _aller_au_portail() -> void:
 	var salle := get_tree().get_first_node_in_group("salle")
-	if salle == null:
-		_heros.definir_intention(Vector2.UP, 1.0)
+	if salle == null or not salle.portail_ouvert():
+		_heros.definir_intention(Vector2.ZERO)
 		return
-	var cible: Vector2 = salle.position_de_la_porte()
-	_heros.definir_intention(_devier(_heros.global_position.direction_to(cible)), 1.0)
+	_heros.definir_intention(_heros.global_position.direction_to(salle.position_portail()), 1.0)

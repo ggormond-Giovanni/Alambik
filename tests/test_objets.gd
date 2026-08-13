@@ -1,40 +1,37 @@
 extends RefCounted
 
-func test_le_catalogue_couvre_les_trois_emplacements(v: Verif) -> void:
-	var slots := {}
-	for id in CatalogueObjets.OBJETS:
-		slots[CatalogueObjets.OBJETS[id]["slot"]] = true
-	v.egal(slots.size(), 3, "arme, robe et talisman ont des objets")
+func test_deux_anneaux_et_un_collier_par_monde(v: Verif) -> void:
+	v.egal(CatalogueObjets.OBJETS.size(), 30, "les trente chapitres ont chacun leur objet")
+	for monde in Chapitres.MONDES.size():
+		var anneaux := 0
+		var colliers := 0
+		for chapitre_monde in 3:
+			var objets := CatalogueObjets.du_chapitre(monde * 3 + chapitre_monde)
+			v.egal(objets.size(), 1, "un seul objet est associe au chapitre")
+			var slot: String = CatalogueObjets.OBJETS[objets[0]]["slot"]
+			anneaux += 1 if slot == "anneau" else 0
+			colliers += 1 if slot == "collier" else 0
+		v.egal(anneaux, 2, "le monde fournit deux anneaux")
+		v.egal(colliers, 1, "le monde fournit un collier")
 
-func test_chaque_grimoire_a_exactement_un_trio(v: Verif) -> void:
-	for chapitre in Chapitres.nombre():
-		var trio := CatalogueObjets.du_chapitre(chapitre)
-		v.egal(trio.size(), 3, "le grimoire %d a trois objets" % chapitre)
-		var slots := {}
-		for id in trio:
-			slots[CatalogueObjets.OBJETS[id]["slot"]] = true
-		v.egal(slots.size(), 3, "le trio contient arme, robe et talisman")
-
-func test_le_coffre_evite_les_doublons(v: Verif) -> void:
+func test_le_coffre_ne_demande_jamais_un_doublon(v: Verif) -> void:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = 42
-	var trio := CatalogueObjets.du_chapitre(0)
-	var possedes: Array[String] = [trio[0], trio[1]]
-	v.egal(CatalogueObjets.tirer_manquant(0, possedes, rng), trio[2], "le coffre donne la seule piece manquante")
-	possedes.append(trio[2])
-	v.egal(CatalogueObjets.tirer_manquant(0, possedes, rng), "", "un trio complet demande des gouttes")
+	var id := CatalogueObjets.objet_du_chapitre(0)
+	v.egal(CatalogueObjets.tirer_manquant(0, [], rng), id, "le chapitre donne son objet")
+	v.egal(CatalogueObjets.tirer_manquant(0, [id], rng), "", "un objet possede ne retombe pas")
 
-func test_ajouter_un_objet_le_place_dans_l_inventaire(v: Verif) -> void:
-	var r := ReglagesJoueur
-	var anciens := r.objets.duplicate()
-	var ancien_dernier := r.dernier_objet_obtenu
-	var ancienne_sauvegarde := r.sauvegarde_active
+func test_la_forge_appartient_au_slot(v: Verif) -> void:
+	var anneaux := [CatalogueObjets.objet_du_chapitre(0), CatalogueObjets.objet_du_chapitre(1)]
+	var forge := {"anneau_gauche": 3, "anneau_droit": 0, "collier": 0}
+	var premier := CatalogueObjets.bonus_effectifs({"anneau_gauche": anneaux[0]}, forge)
+	var second := CatalogueObjets.bonus_effectifs({"anneau_gauche": anneaux[1]}, forge)
+	v.egal(premier, second, "changer d'anneau conserve tout l'investissement du slot")
+
+func test_ajouter_un_objet_l_equipe_si_le_slot_est_vide(v: Verif) -> void:
+	var r: Node = load("res://autoload/reglages_joueur.gd").new()
 	r.sauvegarde_active = false
-	r.objets.clear()
-	var id := CatalogueObjets.du_chapitre(0)[0]
+	var id := CatalogueObjets.objet_du_chapitre(0)
 	v.vrai(r.ajouter_objet(id), "un objet connu peut etre ajoute")
-	v.egal(r.objets.size(), 1, "le loot est conserve dans le stuff")
-	v.egal(r.dernier_objet_obtenu, id, "le dernier loot est memorise")
-	r.objets.assign(anciens)
-	r.dernier_objet_obtenu = ancien_dernier
-	r.sauvegarde_active = ancienne_sauvegarde
+	v.egal(r.equipements["anneau_gauche"], id, "le premier anneau equipe le premier slot vide")
+	v.vrai(not r.ajouter_objet(id), "le meme objet n'est jamais requis en doublon")
+	r.free()
