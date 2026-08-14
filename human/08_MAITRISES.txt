@@ -1,0 +1,58 @@
+MAITRISES PERMANENTES
+=====================
+
+30 Maîtrises, rang maximum 5 (sauf mention). Le premier rang accompagne la
+campagne, les quatre suivants sont ce que le farm pousse au maximum.
+Coût du premier rang par position :
+PALIER=1 / 2 / 3 / 4 / 5 / 6 / 7 / 8 / 9 / 10
+COUT=60 / 100 / 170 / 280 / 460 / 760 / 1250 / 2050 / 3400 / 5600 Gouttes
+Chaque rang suivant coûte x1,85 le précédent. Maîtriser un nœud entier revient
+donc à environ 24 fois le prix de son premier rang.
+
+Les valeurs ci-dessous sont PAR RANG. Multiplier par 5 pour le total.
+
+OFFENSIF — ordre et prérequis linéaires
+1 force             : +6 % dégâts
+2 cadence           : +4 % cadence
+3 precision         : +6 % vitesse et portée des tirs
+4 puissance         : +10 % dégâts
+5 rythme            : +5 % cadence
+6 catalyse          : +16 % dégâts
+7 trajectoire       : +9 % vitesse et portée des tirs
+8 tempete           : +7 % cadence
+9 domination        : +26 % dégâts
+10 grand_oeuvre     : +45 % dégâts
+NOTE = branche entièrement poussée : environ x11 en DPS.
+
+DEFENSIF — ordre et prérequis linéaires
+1 constitution      : +8 % PV maximum
+2 armure            : -1 % dégâts reçus
+3 vitalite          : +12 % PV maximum
+4 rempart           : -1,4 % dégâts reçus
+5 robustesse        : +16 % PV maximum
+6 carapace          : -1,8 % dégâts reçus
+7 endurance         : +24 % PV maximum
+8 bastion           : -2,2 % dégâts reçus
+9 colosse           : +36 % PV maximum
+10 immortel         : -3 % dégâts reçus
+NOTE = la réduction totale est plafonnée à 60 %.
+NOTE = branche entièrement poussée : environ x11 en survie effective, soit le
+même prix et le même rendement que l'Offensif.
+
+UTILITAIRE — ordre et prérequis linéaires
+1 celerite          : +2 % déplacement
+2 collecte          : +8 % Gouttes
+3 distillation      : +1 reroll d'Améliorations — RANGS=2
+4 fortune           : +10 % Gouttes des coffres
+5 sagesse           : +8 % XP de compte
+6 abondance         : +14 % Gouttes
+7 savoir            : permet un second Passif — RANGS=1
+8 elan              : +3 % déplacement
+9 prescience        : +1 reroll d'Améliorations — RANGS=2
+10 philosophe       : +18 % coffres et +25 % Pierres de forge
+NOTE = les déblocages ne s'empilent pas : un second Passif obtenu cinq fois ne
+veut rien dire, et cinq rerolls rendraient le draft entièrement choisi.
+
+POUR MODIFIER : change directement le nom, l'effet, le coût ou l'ordre ici et
+ajoute « ETAT=A_MODIFIER » sur la ligne. Décris librement un nouvel effet.
+

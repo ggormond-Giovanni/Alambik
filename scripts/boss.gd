@@ -70,7 +70,8 @@ func _ready() -> void:
 	collision_layer = 2
 	collision_mask = 4
 	_cible = get_tree().get_first_node_in_group("cibles_ennemis")
-	($CollisionShape2D.shape as CircleShape2D).radius = donnees["rayon"]
+	($CollisionShape2D.shape as CircleShape2D).radius = float(donnees["rayon"]) \
+		* Reglages.BOSS_HITBOX_MULT
 	# Il tient le haut de la salle : le joueur garde toute la profondeur pour
 	# esquiver. Sans ancre fixe, il derivait dans un coin et devenait illisible.
 	_ancre = Vector2((limites.position.x + limites.end.x) / 2.0, limites.position.y + 240.0)
@@ -121,6 +122,8 @@ func _physics_process(delta: float) -> void:
 		_telegraphe_signature = Reglages.BOSS_TELEGRAPHE_SIGNATURE if _motif in MOTIFS_SIGNATURE else 0.0
 		_commencer_motif(_motif)
 	_executer_motif(_motif, delta)
+	global_position = Geometrie.contraindre_dans_rect(global_position, limites,
+		($CollisionShape2D.shape as CircleShape2D).radius)
 
 func _duree_du_motif(motif: String) -> float:
 	if Reglages.BOSS_DUREES_MOTIFS.has(motif):
@@ -309,10 +312,10 @@ func _executer_motif(motif: String, delta: float) -> void:
 			if _minuterie > 2.0:
 				velocity = Vector2.ZERO
 			else:
-				velocity = _direction_charge * donnees["vitesse"] * 2.2
+				velocity = _direction_charge * donnees["vitesse"] * 2.2 * Reglages.ENNEMI_VITESSE_MULT
 				move_and_slide()
-				global_position.x = clampf(global_position.x, limites.position.x, limites.end.x)
-				global_position.y = clampf(global_position.y, limites.position.y, limites.end.y)
+				global_position = Geometrie.contraindre_dans_rect(global_position, limites,
+					($CollisionShape2D.shape as CircleShape2D).radius)
 				if global_position.distance_to(_cible.global_position) < donnees["rayon"] + 40.0:
 					_cible.recevoir_degats(donnees["degats"])
 					_direction_charge = -_direction_charge
@@ -328,7 +331,8 @@ func _signature_prete(motif: String) -> bool:
 func _flotter(_delta: float) -> void:
 	# Il revient toujours vers le haut de l'arene : le joueur garde de la place.
 	var vise := Vector2(_ancre.x + sin(_anim * 0.7) * 260.0, _ancre.y)
-	velocity = global_position.direction_to(vise) * donnees["vitesse"] * 0.6
+	velocity = global_position.direction_to(vise) * donnees["vitesse"] * 0.6 \
+		* Reglages.ENNEMI_VITESSE_MULT
 	if global_position.distance_to(vise) < 20.0:
 		velocity = Vector2.ZERO
 	move_and_slide()

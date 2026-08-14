@@ -20,6 +20,7 @@ var mode_auto := false          # le bot headless pilote la run
 var ennemis_abattus := 0
 var temps_mine_restant := 0.0
 var elements_alambic_tires: Array[String] = []
+var derniere_fusion_epreuve := {}
 # Compteurs de diagnostic : sans eux, un blocage ne dit pas si le heros tirait
 # dans le vide, dans un mur, ou pas du tout.
 var tirs_emis := 0
@@ -45,7 +46,7 @@ func salles_du_chapitre() -> int:
 
 func nom_run() -> String:
 	if mode_run == "retro":
-		return "Prototype 16-bit"
+		return "Vision enchantée"
 	if mode_run == "epreuve_sorts":
 		return "Épreuves rituelles"
 	if mode_run == "mine":
@@ -79,6 +80,7 @@ func demarrer_run(graine_demandee: int = 0, salle_de_depart: int = 1, chapitre_d
 	ennemis_abattus = 0
 	temps_mine_restant = Reglages.MINE_DUREE if mode_run == "mine" else 0.0
 	elements_alambic_tires = []
+	derniere_fusion_epreuve = {}
 	tirs_emis = 0
 	tirs_touches = 0
 	tirs_dans_un_mur = 0
@@ -147,6 +149,25 @@ func ajouter_fusion_elementaire(element: String, augment: String) -> bool:
 	inventaire.append(fusion.id)
 	inventaire_change.emit()
 	return true
+
+func ajouter_fusion_aleatoire_epreuve() -> Dictionary:
+	var augments := CatalogueReactifs.ids()
+	for id in inventaire:
+		if id in augments or CatalogueElements.est_fusion(id):
+			augments.erase(id if id in augments else CatalogueElements.augment_de_fusion(id))
+	if augments.is_empty():
+		return {}
+	var augment: String = augments[rng.randi_range(0, augments.size() - 1)]
+	var element := tirer_element_alambic()
+	if element.is_empty():
+		var elements := CatalogueElements.ids()
+		element = elements[rng.randi_range(0, elements.size() - 1)]
+	ajouter_reactif(augment)
+	if not ajouter_fusion_elementaire(element, augment):
+		return {}
+	var fusion := CatalogueElements.creer_fusion(element, augment)
+	derniere_fusion_epreuve = {"augment": augment, "element": element, "fusion": fusion.id}
+	return derniere_fusion_epreuve.duplicate()
 
 func augment_deja_fusionne(augment: String) -> bool:
 	return not elements_de_augment(augment).is_empty()

@@ -1,5 +1,7 @@
 extends Control
 
+const FOND_PREMIUM := preload("res://assets/visual/fin_run_premium.png")
+
 # Le coffre se materialise, cede puis revele son contenu. La recompense est
 # deja enregistree : l'animation celebre le palier sans ajouter de decision.
 
@@ -14,6 +16,7 @@ var _objet_obtenu := ""
 var _xp_gagnee := 0
 var _coffre: Dictionary = {}
 var _salles_vaincues := 0
+var _pierres_gagnees := 0
 var _son_coffre_joue := false
 
 const COFFRE_DEBUT_OUVERTURE := 1.05
@@ -45,7 +48,7 @@ func afficher(victoire: bool, salle_atteinte: int) -> void:
 		if int(_coffre["palier"]) >= Reglages.SALLES_PAR_RUN:
 			ReglagesJoueur.enregistrer_grand_coffre(Jeu.chapitre, not _objet_obtenu.is_empty())
 	elif Jeu.mode_run == "mine" and victoire:
-		ReglagesJoueur.ajouter_pierres_forge(Reglages.MINE_PIERRES_RECOMPENSE)
+		_pierres_gagnees = ReglagesJoueur.ajouter_pierres_forge(ReglagesJoueur.pierres_mine())
 	_xp_gagnee = 0 if Jeu.est_retro() else \
 		_salle * (2 if Jeu.mode_run == "grimoire" else 1) + (20 if victoire and Jeu.mode_run == "grimoire" else 0)
 	if _xp_gagnee > 0:
@@ -55,19 +58,6 @@ func afficher(victoire: bool, salle_atteinte: int) -> void:
 	elif not Jeu.est_retro():
 		ReglagesJoueur.enregistrer_resultat_annexe(victoire)
 
-	var marge := MarginContainer.new()
-	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
-	marge.add_theme_constant_override("margin_left", 70)
-	marge.add_theme_constant_override("margin_right", 70)
-	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 90)
-	add_child(marge)
-
-	var retour := Label.new()
-	retour.text = "Retour au grimoire…"
-	retour.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	retour.add_theme_font_size_override("font_size", 25)
-	retour.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
-	marge.add_child(retour)
 	_retour_automatique()
 
 func _retour_automatique() -> void:
@@ -98,130 +88,120 @@ static func progression_ouverture(temps: float) -> float:
 static func progression_revelation(temps: float) -> float:
 	return clampf((temps - COFFRE_REVELATION) / 0.55, 0.0, 1.0)
 
+const HAUT_FIXE := 1120.0
+const BAS_FIXE := 800.0
+# Reperes lus sur la peinture, dans sa reference de 1080 de large. L'ecran se
+# positionnait en fractions de hauteur : le bilan tombait a cote de ses plaques
+# et la recompense s'ecrivait par-dessus la rangee d'icones.
+const PLAQUE_TITRE := Rect2(140.0, 150.0, 800.0, 172.0)
+const LIGNES_BILAN := [476.0, 539.0, 603.0, 666.0, 729.0]
+const CENTRE_COFFRE := Vector2(540.0, 1235.0)
+const LIGNE_ICONES := 1610.0
+const PLAQUE_RECOMPENSE := Rect2(200.0, 1726.0, 680.0, 132.0)
+
+func _repere(reference: Rect2) -> Rect2:
+	return FondAdaptatif.rect(size, FOND_PREMIUM, reference, HAUT_FIXE, BAS_FIXE)
+
+func _point(reference: Vector2) -> Vector2:
+	return FondAdaptatif.point(size, FOND_PREMIUM, reference, HAUT_FIXE, BAS_FIXE)
+
+func _centre(police: Font, zone: Rect2, texte: String, taille_police: int, couleur: Color) -> void:
+	draw_string(police, Vector2(zone.position.x, zone.get_center().y + float(taille_police) * 0.36),
+		texte, HORIZONTAL_ALIGNMENT_CENTER, zone.size.x, taille_police, couleur)
+
 func _draw() -> void:
-	var police := ThemeDB.fallback_font
-	StyleInterface.dessiner_fond(self, size, Palette.OR if _victoire else Palette.DANGER,
-		_anim, 0.98)
-	var haut := size.y * 0.22
+	var police := Polices.CORPS
+	FondAdaptatif.dessiner_premium(self, FOND_PREMIUM, size, HAUT_FIXE, BAS_FIXE)
 	var titre := ("Prototype terminé" if Jeu.mode_run == "retro" else "Épreuves relevées" if Jeu.mode_run == "epreuve_sorts" else "Mine nettoyée" if Jeu.mode_run == "mine" else "Grimoire refermé") if _victoire else "L'encre a gagné"
 	var teinte := Palette.OR if _victoire else Palette.DANGER
-	Dessin.halo(self, Vector2(size.x / 2.0, haut - 20.0), 220.0, Color(teinte, 0.5), 5)
-	draw_string(police, Vector2(0, haut - 58.0), "RÉSUMÉ DE LA DESCENTE", HORIZONTAL_ALIGNMENT_CENTER, size.x, 22, Color(teinte, 0.8))
-	draw_string(police, Vector2(0, haut), titre, HORIZONTAL_ALIGNMENT_CENTER, size.x, 62, teinte)
-	draw_string(police, Vector2(0, haut + 70.0), "%s — salle %d / %d" % [Jeu.nom_run(), _salle, Jeu.salles_du_chapitre()],
-		HORIZONTAL_ALIGNMENT_CENTER, size.x, 34, Palette.TEXTE)
-	draw_string(police, Vector2(0, haut + 118.0), "Créatures d'encre effacées : %d" % Jeu.ennemis_abattus,
-		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
-	draw_string(police, Vector2(0, haut + 158.0), "Durée : %d min %02d s" % [int(_duree / 60.0), int(_duree) % 60],
-		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
-	var bilan_progression := "AUCUNE PROGRESSION ENREGISTRÉE" if Jeu.est_retro() else "+%d XP COMPTE" % _xp_gagnee
-	draw_string(police, Vector2(0, haut + 194.0), bilan_progression,
-		HORIZONTAL_ALIGNMENT_CENTER, size.x, 25, Palette.OR if not Jeu.est_retro() else Palette.TEXTE_ATTENUE)
+	var plaque_titre := _repere(PLAQUE_TITRE)
+	_centre(police, Rect2(plaque_titre.position, Vector2(plaque_titre.size.x, plaque_titre.size.y * 0.42)),
+		"RÉSUMÉ DE LA DESCENTE", 22, Color(teinte, 0.8))
+	_centre(police, Rect2(Vector2(plaque_titre.position.x, plaque_titre.get_center().y),
+		Vector2(plaque_titre.size.x, plaque_titre.size.y * 0.5)), titre.to_upper(), 44, teinte)
+
+	var bilan: Array[String] = [
+		"%s  •  SALLE %d / %d" % [Jeu.nom_run().to_upper(), _salle, Jeu.salles_du_chapitre()],
+		"CRÉATURES EFFACÉES  •  %d" % Jeu.ennemis_abattus,
+		"DURÉE  •  %d MIN %02d S" % [int(_duree / 60.0), int(_duree) % 60],
+		"AUCUNE PROGRESSION" if Jeu.est_retro() else "+%d XP DE COMPTE" % _xp_gagnee,
+	]
 	if Jeu.mode_run == "grimoire":
-		draw_string(police, Vector2(0, haut + 230.0), "Meilleure descente ici : salle %d" % ReglagesJoueur.meilleure_du_chapitre(Jeu.chapitre),
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Color(Palette.OR, 0.8))
-	if _a_un_coffre():
-		_dessiner_coffre(police, Vector2(size.x * 0.5, haut + 410.0))
-	elif Jeu.mode_run == "mine" and _victoire:
-		draw_string(police, Vector2(0, haut + 300.0), "+%d PIERRES DE FORGE" % Reglages.MINE_PIERRES_RECOMPENSE,
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, 29, Palette.ESSENCE)
+		bilan.append("MEILLEURE DESCENTE  •  SALLE %d" % ReglagesJoueur.meilleure_du_chapitre(Jeu.chapitre))
+	for index in mini(bilan.size(), LIGNES_BILAN.size()):
+		var ligne := _repere(Rect2(150.0, float(LIGNES_BILAN[index]) - 26.0, 780.0, 52.0))
+		_centre(police, ligne, bilan[index], 25,
+			Palette.TEXTE if index == 0 else Palette.TEXTE_ATTENUE)
+
+	_dessiner_recompense(police)
 
 	# Ce que la run a construit : la seule trace qui compte.
 	var groupe := Jeu.inventaire_groupe()
-	var x := size.x / 2.0 - float(groupe.size() - 1) * 34.0
-	for entree in groupe:
-		var id: String = entree[0]
-		var r := Jeu.reactif(id)
+	var ecart := 128.0
+	var depart := 540.0 - float(mini(groupe.size(), 7) - 1) * ecart * 0.5
+	for index in mini(groupe.size(), 7):
+		var entree: Array = groupe[index]
+		var r := Jeu.reactif(str(entree[0]))
 		if r == null:
 			continue
-		var inventaire_y := 710.0 if _a_un_coffre() else (475.0 if _victoire else 280.0)
-		var centre := Vector2(x, haut + inventaire_y)
+		var centre := _point(Vector2(depart + float(index) * ecart, LIGNE_ICONES))
 		if r.est_transformation:
 			Dessin.halo(self, centre, 40.0, Palette.ESSENCE, 3)
-		draw_circle(centre, 26.0, Color(0.10, 0.09, 0.14))
-		draw_arc(centre, 26.0, 0.0, TAU, 22, Color(r.teinte, 0.8), 2.0, true)
-		Dessin.glyphe(self, r.glyphe, centre, 14.0, r.teinte)
+		draw_circle(centre, 30.0, Color(0.10, 0.09, 0.14, 0.85))
+		draw_arc(centre, 30.0, 0.0, TAU, 22, Color(r.teinte, 0.8), 2.0, true)
+		Dessin.glyphe(self, r.glyphe, centre, 15.0, r.teinte)
 		if int(entree[1]) > 1:
-			draw_string(police, centre + Vector2(14.0, 24.0), "x%d" % int(entree[1]),
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Palette.TEXTE)
-		x += 68.0
+			draw_string(police, centre + Vector2(16.0, 26.0), "x%d" % int(entree[1]),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Palette.TEXTE)
 
-func _dessiner_coffre(police: Font, centre: Vector2) -> void:
-	var arrivee := clampf(_anim / 0.62, 0.0, 1.0)
-	var rebond := 1.0 - pow(1.0 - arrivee, 3.0)
+# Le coffre anime existait deja, entierement ecrit, mais _draw ne l'appelait
+# jamais : l'ecran se contentait d'un halo et d'une ligne de texte, et le coffre
+# peint dans le decor restait donc ferme quoi qu'il arrive.
+func _dessiner_recompense(police: Font) -> void:
+	if Jeu.mode_run == "mine" and _victoire:
+		_centre(police, _repere(PLAQUE_RECOMPENSE),
+			"+%d PIERRES DE FORGE" % _pierres_gagnees, 30, Palette.ESSENCE)
+		return
+	if not _a_un_coffre():
+		return
+	var centre := _point(CENTRE_COFFRE)
 	var ouverture := progression_ouverture(_anim)
 	var revelation := progression_revelation(_anim)
-	var secousse := 0.0
-	if _anim > 0.62 and _anim < COFFRE_DEBUT_OUVERTURE:
-		secousse = sin(_anim * 62.0) * (1.0 - ouverture) * 7.0
-	var position := centre + Vector2(secousse, (1.0 - rebond) * 150.0)
-	var echelle := 0.58 + rebond * 0.42 + sin(arrivee * PI) * 0.12
-
+	# Le coffre du decor est peint bien plus finement que tout ce qu'on peut
+	# tracer ici : on ne le remplace pas, on ouvre sa lumiere par-dessus.
+	Dessin.halo(self, centre, 190.0 + ouverture * 120.0,
+		Color(Palette.ESSENCE, 0.10 + ouverture * 0.34), 6)
 	if ouverture > 0.0:
-		var flash := sin(clampf((ouverture - 0.08) / 0.92, 0.0, 1.0) * PI)
-		Dessin.halo(self, position - Vector2(0, 25), 115.0 + ouverture * 125.0,
-			Color(Palette.OR, 0.24 + flash * 0.48), 7)
-		var faisceau := PackedVector2Array([
-			position + Vector2(-82.0, -12.0), position + Vector2(-155.0, -245.0),
-			position + Vector2(155.0, -245.0), position + Vector2(82.0, -12.0)])
-		draw_colored_polygon(faisceau, Color(Palette.ESSENCE, 0.045 + ouverture * 0.075))
-		for i in 14:
-			var angle := TAU * float(i) / 14.0 + sin(float(i) * 7.13) * 0.12
-			var longueur := (70.0 + float(i % 4) * 24.0) * ouverture
-			var debut := position + Vector2.RIGHT.rotated(angle) * 72.0
-			draw_line(debut, debut + Vector2.RIGHT.rotated(angle) * longueur,
-				Color(Palette.ESSENCE, flash * (0.20 + float(i % 3) * 0.09)), 3.0, true)
-		for i in 18:
-			var vie := clampf((ouverture * 1.45 - float(i % 6) * 0.08), 0.0, 1.0)
-			var angle := -PI * 0.92 + float(i) / 17.0 * PI * 0.84
-			var distance := (55.0 + float((i * 37) % 90)) * vie
-			var p := position + Vector2(cos(angle), sin(angle)) * distance
-			p.y += vie * vie * 85.0
-			draw_circle(p, 3.0 + float(i % 3) * 1.6, Color(Palette.ESSENCE, (1.0 - vie * 0.55) * 0.8))
-		if revelation > 0.0:
-			for i in 12:
-				var a := _anim * (0.65 + float(i % 4) * 0.08) + float(i) * TAU / 12.0
-				var rayon_etincelle := 105.0 + sin(_anim * 2.1 + float(i) * 1.7) * 32.0
-				var p := position + Vector2(cos(a), sin(a) * 0.58) * rayon_etincelle
-				var taille := 2.5 + 2.5 * (0.5 + 0.5 * sin(_anim * 4.0 + float(i)))
-				draw_circle(p, taille, Color(Palette.ESSENCE, 0.42 + revelation * 0.38))
-
-	draw_set_transform(position, 0.0, Vector2.ONE * echelle)
-	# Ombre, cuve et ferrures gardent une silhouette lisible meme sur petit ecran.
-	draw_set_transform(position + Vector2(0, 44), 0.0, Vector2(echelle, echelle * 0.30))
-	draw_circle(Vector2.ZERO, 126.0, Color(0, 0, 0, 0.42))
-	draw_set_transform(position, 0.0, Vector2.ONE * echelle)
-	var corps := Rect2(-112.0, -18.0, 224.0, 82.0)
-	if ouverture > 0.0:
-		draw_rect(Rect2(-94.0, -30.0, 188.0, 36.0), Color(Palette.ESSENCE, 0.20 + ouverture * 0.42))
-	draw_rect(corps, Color(0.24, 0.075, 0.18))
-	draw_rect(Rect2(-102.0, -8.0, 204.0, 58.0), Color(0.48, 0.16, 0.27))
-	draw_rect(corps, Color(Palette.OR, 0.88), false, 6.0)
-	for x in [-72.0, 72.0]:
-		draw_rect(Rect2(x - 7.0, -15.0, 14.0, 76.0), Color(Palette.OR, 0.75))
-	# Le couvercle se souleve en conservant sa charniere visuelle.
-	var haut_couvercle := -55.0 - ouverture * 70.0
-	var bas_couvercle := -16.0 - ouverture * 16.0
-	var couvercle := PackedVector2Array([
-		Vector2(-112.0, bas_couvercle), Vector2(-98.0, haut_couvercle),
-		Vector2(98.0, haut_couvercle), Vector2(112.0, bas_couvercle)])
-	draw_colored_polygon(couvercle, Color(0.42, 0.12, 0.25))
-	Dessin.contour(self, couvercle, Color(Palette.OR, 0.92), 6.0)
-	if ouverture < 0.82:
-		draw_rect(Rect2(-19.0, -26.0 - ouverture * 20.0, 38.0, 45.0), Color(Palette.OR, 0.95))
-		draw_circle(Vector2(0, -5.0 - ouverture * 20.0), 6.0, Color(0.18, 0.06, 0.16))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-	if revelation > 0.0:
-		var alpha := revelation * revelation
-		var largeur := minf(620.0, size.x - 40.0)
-		var gauche := centre.x - largeur * 0.5
-		draw_string(police, Vector2(gauche, centre.y + 132.0),
-			"%s  •  +%d GOUTTES" % [str(_coffre["nom"]).to_upper(), _coffre_gouttes],
-			HORIZONTAL_ALIGNMENT_CENTER, largeur, 27, Color(Palette.ESSENCE, alpha))
-		if not _objet_obtenu.is_empty():
-			var objet: Dictionary = CatalogueObjets.OBJETS[_objet_obtenu]
-			draw_string(police, Vector2(gauche, centre.y + 174.0), str(objet["nom"]),
-				HORIZONTAL_ALIGNMENT_CENTER, largeur, 29, Color(objet["teinte"], alpha))
-			draw_string(police, Vector2(gauche, centre.y + 207.0), "Ajouté à l'équipement",
-				HORIZONTAL_ALIGNMENT_CENTER, largeur, 22, Color(Palette.TEXTE_ATTENUE, alpha))
+		var fente := Rect2(centre + Vector2(-176.0, -128.0 - ouverture * 30.0),
+			Vector2(352.0, 22.0 + ouverture * 46.0))
+		draw_rect(fente, Color(1.0, 0.94, 0.74, 0.28 + 0.52 * ouverture))
+		draw_rect(fente.grow(-7.0), Color(1.0, 1.0, 0.94, 0.60 * ouverture))
+		var source := centre + Vector2(0.0, -120.0)
+		for index in 9:
+			var angle := -PI * 0.5 + (float(index) - 4.0) * 0.20
+			var longueur := (190.0 + float(index % 3) * 80.0) * ouverture
+			draw_line(source, source + Vector2.RIGHT.rotated(angle) * longueur,
+				Color(Palette.OR, 0.34 * ouverture), 5.0, true)
+		for index in 16:
+			var vie := clampf(ouverture * 1.4 - float(index % 5) * 0.09, 0.0, 1.0)
+			var angle := -PI * 0.92 + float(index) / 15.0 * PI * 0.84
+			var p := source + Vector2(cos(angle), sin(angle)) * (70.0 + float((index * 37) % 110)) * vie
+			p.y += vie * vie * 110.0
+			draw_circle(p, 3.0 + float(index % 3) * 1.8,
+				Color(Palette.ESSENCE, (1.0 - vie * 0.5) * 0.75))
+	if revelation <= 0.0:
+		return
+	# La plaque du bas est peinte vide et attend justement ce texte : l'ecrire
+	# sur le coffre le rendait illisible.
+	var plaque := _repere(PLAQUE_RECOMPENSE)
+	var haute := Rect2(plaque.position, Vector2(plaque.size.x, plaque.size.y * 0.52))
+	if _objet_obtenu.is_empty():
+		_centre(police, plaque, "%s  •  +%d GOUTTES" % [str(_coffre["nom"]).to_upper(),
+			_coffre_gouttes], 29, Color(Palette.ESSENCE, revelation))
+		return
+	_centre(police, haute, "%s  •  +%d GOUTTES" % [str(_coffre["nom"]).to_upper(),
+		_coffre_gouttes], 26, Color(Palette.ESSENCE, revelation))
+	var objet: Dictionary = CatalogueObjets.OBJETS[_objet_obtenu]
+	_centre(police, Rect2(Vector2(plaque.position.x, plaque.get_center().y),
+		Vector2(plaque.size.x, plaque.size.y * 0.48)), str(objet["nom"]).to_upper(), 25,
+		Color(objet["teinte"], revelation))

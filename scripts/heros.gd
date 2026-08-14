@@ -9,8 +9,9 @@ signal touchee(position: Vector2)
 signal bouclier_brise(position: Vector2)
 signal morte
 
-var stats := Stats.depuis_reglages(ReglagesJoueur.rangs_competences_effectifs(), ReglagesJoueur.passifs_equipes_effectifs(),
-	ReglagesJoueur.bonus_objets_effectifs())
+var stats := Stats.depuis_reglages(ReglagesJoueur.rangs_competences_effectifs(),
+	ReglagesJoueur.passifs_equipes_effectifs(), ReglagesJoueur.bonus_objets_effectifs(),
+	ReglagesJoueur.niveau_compte_effectif())
 var tir_courant: Tir
 var bouclier := 0
 var limites := Rect2(Vector2(80, 300), Vector2(920, 1400))
@@ -60,6 +61,9 @@ func recalculer() -> void:
 
 func preparer_nouvelle_salle() -> void:
 	recalculer()
+	# Seconde chance se rearme a chaque salle : une seule fois par grimoire, elle
+	# ne servait qu'une fois sur vingt rencontres.
+	_seconde_chance_disponible = true
 	if "regeneration" in tir_courant.drapeaux:
 		stats.soigner(stats.pv_max * Reglages.REGENERATION_PART \
 			* ArbreCompetences.multiplicateur_soin(ReglagesJoueur.rangs_competences_effectifs()))
@@ -72,8 +76,7 @@ func _physics_process(delta: float) -> void:
 	var reponse := Reglages.HEROS_ACCELERATION if vise != Vector2.ZERO else Reglages.HEROS_FREINAGE
 	velocity = velocity.move_toward(vise, reponse * delta)
 	move_and_slide()
-	global_position.x = clampf(global_position.x, limites.position.x, limites.end.x)
-	global_position.y = clampf(global_position.y, limites.position.y, limites.end.y)
+	global_position = Geometrie.contraindre_dans_rect(global_position, limites, Reglages.HEROS_RAYON)
 
 func _process(delta: float) -> void:
 	_flottement += delta
@@ -155,13 +158,9 @@ func _point_vise(index: int) -> Vector2:
 	if index < 0 or index >= valides.size():
 		return global_position
 	var cible: Node2D = valides[index]
-	var vitesse := Vector2.ZERO
-	if "velocity" in cible:
-		vitesse = cible.velocity
-	# Anticipation bornee : au-dela, une cible qui change d'avis fait rater tous
-	# les tirs au lieu de quelques-uns.
-	var vol := minf(0.8, global_position.distance_to(cible.global_position) / maxf(80.0, tir_courant.vitesse))
-	return cible.global_position + vitesse * vol * 0.9
+	var vitesse: Vector2 = cible.velocity if "velocity" in cible else Vector2.ZERO
+	return Geometrie.point_anticipe(cible.global_position, vitesse,
+		global_position, tir_courant.vitesse)
 
 func recevoir_degats(montant: float, _effets: Array = []) -> void:
 	if _invulnerable > 0.0 or stats.est_mort():
@@ -176,6 +175,9 @@ func recevoir_degats(montant: float, _effets: Array = []) -> void:
 	_secousse = 1.0
 	var ratio_pv := stats.pv / maxf(1.0, stats.pv_max)
 	stats.blesser(montant * (Reglages.TERRE_PROTECTION_MULT if _protection_terre > 0.0 else 1.0) \
+		* ((1.0 - Reglages.PEAU_DE_PIERRE_REDUCTION) if "peau_de_pierre" in tir_courant.drapeaux else 1.0) \
+		* ((1.0 - Reglages.SCEAU_GARDE_REDUCTION) if "sceau_garde" in tir_courant.drapeaux else 1.0) \
+		* (Reglages.SCEAU_RUINE_VULNERABILITE if "sceau_ruine" in tir_courant.drapeaux else 1.0) \
 		* (1.0 - ArbreCompetences.reduction_degats(ReglagesJoueur.rangs_competences_effectifs())) \
 		* Sorts.multiplicateur_degats_recus(ReglagesJoueur.passifs_equipes_effectifs()) \
 		* Sorts.multiplicateur_degats_recus_conditionnel(ReglagesJoueur.passifs_equipes_effectifs(), ratio_pv))
@@ -186,7 +188,8 @@ func recevoir_degats(montant: float, _effets: Array = []) -> void:
 			return
 		if _seconde_chance_disponible and ReglagesJoueur.passifs_equipes_effectifs().has("seconde_chance"):
 			_seconde_chance_disponible = false
-			stats.pv = stats.pv_max * 0.35 * float(ReglagesJoueur.passifs_equipes_effectifs()["seconde_chance"])
+			stats.pv = stats.pv_max * Reglages.SECONDE_CHANCE_PART \
+				* float(ReglagesJoueur.passifs_equipes_effectifs()["seconde_chance"])
 			bouclier = 1
 			Sons.jouer("fusion", -7.0)
 			return
@@ -199,6 +202,10 @@ func multiplicateur_degats_passif() -> float:
 		resultat *= 1.0 + (1.0 - ratio) * Reglages.COURAGEUX_BONUS_MAX
 	if "mannequin" in tir_courant.drapeaux and _temps_immobile >= Reglages.MANNEQUIN_DELAI:
 		resultat *= Reglages.MANNEQUIN_DEGATS_MULT
+	# Elan vital recompense le deplacement : le bonus persiste un court instant
+	# apres l'arret, sinon il ne servirait jamais — on tire a l'arret.
+	if "elan_vital" in tir_courant.drapeaux and _temps_immobile <= Reglages.ELAN_VITAL_DUREE:
+		resultat *= Reglages.ELAN_VITAL_DEGATS_MULT
 	if "transformation_heros_tenebres" in tir_courant.drapeaux:
 		resultat *= Reglages.TENEBRES_HEROS_DEGATS_MULT
 	if _aureole_lumiere > 0.0:
@@ -285,13 +292,22 @@ func _draw() -> void:
 
 	# La vie suit le mage : l'oeil ne quitte plus le combat pour lire le haut.
 	var part_pv := clampf(stats.pv / maxf(1.0, stats.pv_max), 0.0, 1.0)
-	var barre := Rect2(Vector2(-58.0, -116.0), Vector2(116.0, 13.0))
-	draw_rect(barre.grow(4.0), Color(0.012, 0.018, 0.025, 0.88))
-	draw_rect(barre, Color(0.20, 0.08, 0.11))
-	var barre_pv := barre
+	var barre := Rect2(Vector2(-76.0, -128.0), Vector2(152.0, 20.0))
+	draw_rect(barre.grow(7.0), Color(0.008, 0.014, 0.026, 0.94))
+	draw_rect(barre.grow(3.0), Color(Palette.OR, 0.72), false, 3.0)
+	draw_rect(barre, Color(0.18, 0.035, 0.055, 0.96))
+	var barre_pv := barre.grow(-3.0)
 	barre_pv.size.x *= part_pv
-	draw_rect(barre_pv, Palette.DANGER.lerp(Color(0.42, 0.90, 0.55), part_pv))
-	draw_rect(barre, Color(1.0, 1.0, 1.0, 0.45), false, 2.0)
+	var couleur_pv := Palette.DANGER.lerp(Color(0.34, 0.92, 0.54), part_pv)
+	draw_rect(barre_pv, couleur_pv.darkened(0.16))
+	if barre_pv.size.x > 4.0:
+		draw_rect(Rect2(barre_pv.position, Vector2(barre_pv.size.x, 5.0)), couleur_pv.lightened(0.22))
+	for cran in 3:
+		var x := barre.position.x + barre.size.x * float(cran + 1) / 4.0
+		draw_line(Vector2(x, barre.position.y + 2), Vector2(x, barre.end.y - 2), Color(0.02, 0.02, 0.03, 0.52), 2.0)
+	var police := ThemeDB.fallback_font
+	draw_string(police, Vector2(-76.0, -137.0), "%d / %d" % [ceili(stats.pv), ceili(stats.pv_max)],
+		HORIZONTAL_ALIGNMENT_CENTER, 152.0, 16, Color.WHITE)
 
 func _dessiner_repli(r: float, teinte: Color) -> void:
 	var capuche := Dessin.goutte(Vector2(0, -r * 0.15), r * 1.35, PI, 1.15)

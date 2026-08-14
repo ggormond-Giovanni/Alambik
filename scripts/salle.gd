@@ -10,6 +10,13 @@ signal ennemi_abattu(experience: int)
 const PROJECTILE := preload("res://scenes/projectile.tscn")
 const ENNEMI := preload("res://scenes/ennemi.tscn")
 const BOSS := preload("res://scenes/boss.tscn")
+const PLANCHE_OBSTACLES := preload("res://assets/visual/obstacles.png")
+const PORTAIL_PREMIUM := preload("res://assets/visual/portail_sortie_premium.png")
+const RECTS_OBSTACLES := [
+	Rect2(79, 317, 546, 248),
+	Rect2(707, 266, 498, 300),
+	Rect2(1297, 302, 494, 259),
+]
 
 var effets: Node2D
 var limites := Rect2()
@@ -38,7 +45,7 @@ func portail_ouvert() -> bool:
 	return _portail_ouvert
 
 func position_portail() -> Vector2:
-	return Vector2(limites.get_center().x, limites.position.y + 105.0)
+	return Vector2(limites.get_center().x, limites.position.y + 180.0)
 
 func demarrer(numero_: int, limites_: Rect2) -> void:
 	numero = numero_
@@ -69,6 +76,7 @@ func _construire_obstacles() -> void:
 		if enfant is StaticBody2D:
 			enfant.queue_free()
 	_obstacles.clear()
+	_construire_murs_perimetre()
 	# Quelques blocs d'encre sechee, disposes selon le numero de salle : ils
 	# arretent les projectiles et forcent a se replacer.
 	var alea := RandomNumberGenerator.new()
@@ -80,12 +88,15 @@ func _construire_obstacles() -> void:
 	# neutraliserait le combat ; la regle vaut pour chacun des trois boss.
 	var combat_de_boss := Jeu.mode_run == "grimoire" and Chapitres.est_boss(Jeu.chapitre, numero) \
 		or Jeu.mode_run in ["epreuve_sorts", "retro"]
-	var nombre := 0 if combat_de_boss else alea.randi_range(0, 2)
+	# Une seule pièce de décor jouable au maximum. Le décor de bord suffit à
+	# donner de la richesse ; le centre doit rester une vraie zone d'esquive.
+	var nombre := 0 if combat_de_boss else alea.randi_range(0, 1)
 	for i in nombre:
-		var taille := Vector2(alea.randf_range(90.0, 200.0), alea.randf_range(50.0, 110.0))
+		var taille_visuelle := Vector2(alea.randf_range(78.0, 138.0), alea.randf_range(44.0, 76.0))
+		var taille := Vector2(taille_visuelle.x * 0.76, taille_visuelle.y * 0.42)
 		var centre := Vector2(
-			alea.randf_range(limites.position.x + taille.x, limites.end.x - taille.x),
-			alea.randf_range(limites.position.y + 300.0, limites.end.y - 520.0))
+			alea.randf_range(limites.position.x + taille_visuelle.x, limites.end.x - taille_visuelle.x),
+			alea.randf_range(limites.position.y + 260.0, limites.end.y - 430.0))
 		var rect := Rect2(centre - taille / 2.0, taille)
 		_obstacles.append(rect)
 		var corps := StaticBody2D.new()
@@ -95,6 +106,27 @@ func _construire_obstacles() -> void:
 		var forme := CollisionShape2D.new()
 		var rectangle := RectangleShape2D.new()
 		rectangle.size = taille
+		forme.shape = rectangle
+		corps.add_child(forme)
+		add_child(corps)
+
+func _construire_murs_perimetre() -> void:
+	var e := Reglages.ARENE_MUR_EPAISSEUR
+	var bandes := [
+		Rect2(limites.position.x - e, limites.position.y - e, e, limites.size.y + e * 2.0),
+		Rect2(limites.end.x, limites.position.y - e, e, limites.size.y + e * 2.0),
+		Rect2(limites.position.x, limites.position.y - e, limites.size.x, e),
+		Rect2(limites.position.x, limites.end.y, limites.size.x, e),
+	]
+	for rect in bandes:
+		var corps := StaticBody2D.new()
+		corps.name = "MurPerimetre"
+		corps.collision_layer = 4
+		corps.collision_mask = 0
+		corps.global_position = (rect as Rect2).get_center()
+		var forme := CollisionShape2D.new()
+		var rectangle := RectangleShape2D.new()
+		rectangle.size = (rect as Rect2).size
 		forme.shape = rectangle
 		corps.add_child(forme)
 		add_child(corps)
@@ -318,13 +350,15 @@ func _place_libre(position: Vector2) -> bool:
 			return false
 	return true
 
-func tirer(tir_source: Tir, origine: Vector2, direction: Vector2, hostile := false) -> void:
+func tirer(tir_source: Tir, origine: Vector2, direction: Vector2, hostile := false,
+		cible_exclue := 0) -> void:
 	var angles := tir_source.angles()
 	var decalages := tir_source.decalages()
 	for i in angles.size():
 		var p := PROJECTILE.instantiate()
 		p.tir = tir_source
 		p.hostile = hostile
+		p.cible_exclue = cible_exclue
 		p.direction = direction.rotated(angles[i])
 		p.global_position = origine + direction.orthogonal() * decalages[i]
 		p.fragments_demandes.connect(_sur_fragments)
@@ -344,7 +378,8 @@ func _sur_soin_demande(montant: float) -> void:
 	if heros != null:
 		heros.stats.soigner(montant)
 
-func _sur_fragments(origine: Vector2, direction: Vector2, tir_source: Tir, hostile: bool) -> void:
+func _sur_fragments(origine: Vector2, direction: Vector2, tir_source: Tir, hostile: bool,
+		cible_exclue: int) -> void:
 	# Un fragment ne se refragmente pas : sinon un seul tir peut saturer la scene.
 	var eclat := tir_source.copie()
 	eclat.fragments = 0
@@ -356,81 +391,46 @@ func _sur_fragments(origine: Vector2, direction: Vector2, tir_source: Tir, hosti
 	eclat.portee = Reglages.FRAGMENT_PORTEE
 	# Le signal part d'un contact physique : ajouter des Area2D pendant que le
 	# moteur vide ses collisions produit une erreur et une saccade visible.
-	call_deferred("_tirer_fragments", eclat, tir_source.fragments, origine, direction, hostile)
+	call_deferred("_tirer_fragments", eclat, tir_source.fragments, origine, direction, hostile,
+		cible_exclue)
 
-func _tirer_fragments(eclat: Tir, nombre: int, origine: Vector2, direction: Vector2, hostile: bool) -> void:
+func _tirer_fragments(eclat: Tir, nombre: int, origine: Vector2, direction: Vector2, hostile: bool,
+		cible_exclue: int) -> void:
 	if not is_inside_tree():
 		return
 	for i in nombre:
 		var angle := TAU * float(i) / float(nombre) + randf() * 0.3
-		tirer(eclat, origine, direction.rotated(angle), hostile)
+		tirer(eclat, origine, direction.rotated(angle), hostile, cible_exclue)
 
 func _draw() -> void:
 	# Le fond de l'arene est dessine par le noeud Fond ; ici on ne dessine que ce
 	# qui doit passer par-dessus.
 	for index in _obstacles.size():
 		var rect: Rect2 = _obstacles[index]
-		match (numero + index) % 3:
-			0: _dessiner_muret(rect)
-			1: _dessiner_bosquet(rect, index)
-			_: _dessiner_rochers(rect, index)
+		_dessiner_obstacle_peint(rect, (numero + index) % 3)
 	if _portail_ouvert:
 		_dessiner_portail()
 
 func _dessiner_portail() -> void:
 	var centre := position_portail()
-	var pulsation := 1.0 + sin(_anim * 4.0) * 0.08
-	Dessin.halo(self, centre, 145.0 * pulsation, Color(Palette.OR, 0.72), 6)
-	draw_circle(centre, Reglages.PORTAIL_RAYON * pulsation, Color(0.12, 0.04, 0.24, 0.88))
-	draw_arc(centre, Reglages.PORTAIL_RAYON * pulsation, 0.0, TAU, 48, Palette.OR, 8.0, true)
-	draw_arc(centre, Reglages.PORTAIL_RAYON * 0.62, -_anim, TAU - _anim, 40,
-		Color(Palette.ESSENCE, 0.92), 5.0, true)
-	Dessin.glyphe(self, "cristal", centre, 31.0, Palette.TEXTE)
+	var pulsation := 1.0 + sin(_anim * 3.6) * 0.025
+	Dessin.halo(self, centre + Vector2(0, -18), 165.0 * pulsation, Color(Palette.ESSENCE, 0.58), 7)
+	var taille := Vector2(350, 350) * pulsation
+	var destination := Rect2(centre + Vector2(-taille.x * 0.5, -taille.y * 0.55), taille)
+	draw_texture_rect(PORTAIL_PREMIUM, destination, false)
+	for i in 8:
+		var a := _anim * (0.55 + i * 0.025) + float(i) * TAU / 8.0
+		var p := centre + Vector2(cos(a) * 112.0, sin(a) * 92.0 - 22.0)
+		draw_circle(Retro16.pixel(p), 3.0 + float(i % 2) * 2.0, Color(Palette.TEXTE, 0.72))
+	var police := ThemeDB.fallback_font
+	draw_string(police, centre + Vector2(-105, 158), "SORTIE", HORIZONTAL_ALIGNMENT_CENTER, 210, 23, Palette.TEXTE)
 
-func _dessiner_muret(rect: Rect2) -> void:
-	draw_rect(rect.grow(7.0), Color(0.05, 0.07, 0.08, 0.24))
-	var hauteur_pierre := maxf(22.0, rect.size.y / 3.0)
-	var lignes := ceili(rect.size.y / hauteur_pierre)
-	for ligne in lignes:
-		var decalage := 22.0 if ligne % 2 == 1 else 0.0
-		var largeur_pierre := 52.0
-		var colonnes := ceili((rect.size.x + decalage) / largeur_pierre)
-		for colonne in colonnes:
-			var pierre := Rect2(rect.position + Vector2(float(colonne) * largeur_pierre - decalage,
-				float(ligne) * hauteur_pierre), Vector2(largeur_pierre - 3.0, hauteur_pierre - 3.0)).intersection(rect)
-			var variation := float((colonne + ligne * 3 + numero) % 4) * 0.025
-			draw_rect(pierre, Color(0.38 + variation, 0.43 + variation, 0.40 + variation))
-			draw_rect(pierre, Color(0.68, 0.76, 0.68, 0.72), false, 2.0)
-	draw_line(rect.position + Vector2(0.0, 3.0), Vector2(rect.end.x, rect.position.y + 3.0),
-		Color(Palette.MOUSSE_MAGIQUE, 0.85), 5.0)
-
-func _dessiner_bosquet(rect: Rect2, graine: int) -> void:
-	var centre := rect.get_center()
-	draw_colored_polygon(Dessin.blob(centre, maxf(rect.size.x, rect.size.y) * 0.53,
-		numero * 41 + graine, 0.18), Color(Palette.MOUSSE_MAGIQUE, 0.30))
-	var arbres := maxi(3, ceili(rect.size.x / 54.0))
-	for i in arbres:
-		var part := (float(i) + 0.5) / float(arbres)
-		var x := lerpf(rect.position.x + 18.0, rect.end.x - 18.0, part)
-		var y := rect.get_center().y + sin(float(i * 5 + graine)) * rect.size.y * 0.16
-		var tronc := Rect2(Vector2(x - 7.0, y - 2.0), Vector2(14.0, rect.end.y - y + 4.0))
-		draw_rect(tronc, Color(0.38, 0.24, 0.16))
-		draw_circle(Vector2(x + 3.0, y + 2.0), 30.0, Color(0.16, 0.42, 0.25))
-		draw_circle(Vector2(x - 9.0, y - 10.0), 24.0, Color(0.25, 0.58, 0.32))
-		draw_circle(Vector2(x + 10.0, y - 12.0), 19.0, Color(0.42, 0.72, 0.38))
-		draw_circle(Vector2(x + 13.0, y - 17.0), 4.0, Color(Palette.OR, 0.82))
-
-func _dessiner_rochers(rect: Rect2, graine: int) -> void:
-	draw_colored_polygon(Dessin.blob(rect.get_center() + Vector2(0.0, 8.0), rect.size.x * 0.52,
-		numero * 59 + graine, 0.16), Color(0.08, 0.10, 0.12, 0.24))
-	var rochers := maxi(3, ceili(rect.size.x / 58.0))
-	for i in rochers:
-		var part := (float(i) + 0.5) / float(rochers)
-		var position := Vector2(lerpf(rect.position.x + 16.0, rect.end.x - 16.0, part),
-			rect.get_center().y + sin(float(i * 7 + graine)) * rect.size.y * 0.12)
-		var rayon := minf(rect.size.y * 0.48, 31.0 + float((i + graine) % 3) * 7.0)
-		var roche := Dessin.blob(position, rayon, numero * 73 + i + graine, 0.14)
-		draw_colored_polygon(roche, Color(0.34, 0.40, 0.46))
-		Dessin.contour(self, roche, Color(0.62, 0.70, 0.76), 2.5)
-		var cristal := Dessin.polygone_regulier(position + Vector2(rayon * 0.28, -rayon * 0.35), rayon * 0.22, 5, -PI / 2.0)
-		draw_colored_polygon(cristal, Color(Palette.ESSENCE, 0.82))
+func _dessiner_obstacle_peint(rect: Rect2, type: int) -> void:
+	var source: Rect2 = RECTS_OBSTACLES[type]
+	# L'image depasse legerement la collision vers le haut, comme un vrai objet
+	# vu en trois-quarts, mais sa base correspond exactement a l'obstacle.
+	var largeur := rect.size.x / 0.76 * 1.08
+	var hauteur := largeur * source.size.y / source.size.x
+	var destination := Rect2(rect.get_center().x - largeur * 0.5,
+		rect.end.y - hauteur, largeur, hauteur)
+	draw_texture_rect_region(PLANCHE_OBSTACLES, destination, source)

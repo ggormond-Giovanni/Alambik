@@ -1,0 +1,31 @@
+ÉCRAN RÉGLAGES
+==============
+
+ÉTAT = VALIDÉ ET INTÉGRÉ LE 14 AOÛT 2026
+
+COMPOSITION
+-----------
+Grand cadre plein écran, titre enchâssé et fermeture dans le coin supérieur.
+Onglets verticaux : Audio / Visuel / Accessibilité / Développement.
+Zone droite structurée en lignes métalliques avec curseurs et interrupteurs.
+Les cinq lignes sont toujours occupées par un contrôle ou une information utile.
+Titres, valeurs et descriptions restent lisibles dans une fenêtre PC réduite.
+Réinitialisation isolée en rouge tout en bas ; RETOUR est l'action principale.
+
+CONTENU RÉEL
+------------
+Audio = volume musique, piste de combat et volume des effets.
+Visuel = secousses et effets visuels complets.
+Accessibilité = animations et flashes réduits, rappel des grandes cibles tactiles.
+Développement = mode développeur et explications.
+La réinitialisation exige un second toucher dans un délai de quatre secondes.
+Tous les changements sont appliqués et sauvegardés immédiatement.
+
+TYPOGRAPHIE ET CADRAGE
+---------------------
+Les titres ornementaux restent intégrés aux cadres.
+Tous les textes fonctionnels utilisent DM Sans, embarquée dans le projet :
+elle doit rester lisible, sobre et identique sur PC et mobile.
+Les libellés gardent une marge intérieure nette et ne touchent jamais les cadres.
+
+CAPTURE = tmp/refonte_interface/reglages_typographie_finale_v2.png

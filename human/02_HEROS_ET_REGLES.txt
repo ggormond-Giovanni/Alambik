@@ -1,0 +1,55 @@
+HEROS ET REGLES DE COMBAT
+=========================
+
+[HERO]
+ETAT = ACTUEL
+NOM = L'Alchimiste
+PV_MAX = 100
+VITESSE = 560 pixels/seconde
+ACCELERATION = 3100
+FREINAGE = 4200
+RAYON_COLLISION = 24
+INVULNERABILITE_APRES_COUP = 0,60 seconde
+CONTROLE = joystick flottant ; souris sur PC, doigt sur mobile
+ATTAQUE = automatique lorsque le héros s'arrête
+DELAI_AVANT_TIR_APRES_ARRET = 0,12 seconde
+VISÉE = ennemi valide le plus proche, avec anticipation de déplacement
+DESIGN = cape violette, capuche sombre, yeux or, fiole tenue vers la visée
+ANIMATION = marche en 4 poses sur grille de 4 pixels
+
+[TIR_DE_BASE]
+DEGATS = 10
+CADENCE = 2,4 tirs/seconde
+VITESSE_PROJECTILE = 900
+RAYON_COLLISION_PROJECTILE = 10
+PORTEE = 1400
+PERTE_PAR_REBOND = 25 % des dégâts restants
+PERTE_PAR_PERFORATION = 35 % des dégâts restants
+DEGATS_D_UN_FRAGMENT = 28 % du tir d'origine
+PORTEE_D_UN_FRAGMENT = 260
+
+[REGLES_DES_COPIES_D_AMELIORATION]
+COPIES_MAX_PAR_DEFAUT = 3
+RENDEMENT_COPIE_1 = 100 %
+RENDEMENT_COPIE_2 = 60 % de la première
+RENDEMENT_COPIE_3 = 40 % de la première
+AU_DELA = rendement précédent × 70 %
+NOTE = les bonus multiplicatifs s'additionnent ; ils ne se multiplient pas.
+
+[EFFETS_ELEMENTAIRES_DE_BASE]
+BRULURE_CLASSIQUE = 6 dégâts/seconde pendant 4 secondes
+GIVRE = vitesse ennemie × 0,45 pendant 2 secondes
+ACIDE = dégâts reçus × 1,35 pendant 4 secondes
+VOL_DE_VIE_LUMIERE = 3,5 % des dégâts infligés
+SURCHARGE_TENEBRES = 22 % de chance de faire × 3,2 dégâts
+
+[ARENE]
+VIEWPORT = 1080 × 1920
+MARGE_LATERALE = 24
+ZONE_HAUTE_RESERVEE = 104
+ZONE_BASSE_RESERVEE = 38
+PLAFOND_ENNEMIS_SIMULTANES = 10
+VITESSE_GLOBALE_DES_MONSTRES = × 1,10
+HITBOX_MONSTRES = 72 % du rayon visuel
+HITBOX_BOSS = 74 % du rayon visuel
+OBSTACLES_CENTRAUX = 0 ou 1 ; collision uniquement sur la base visible

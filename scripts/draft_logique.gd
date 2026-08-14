@@ -1,7 +1,7 @@
 class_name DraftLogique
 extends RefCounted
 
-# Un niveau propose trois Augments distincts parmi ceux que la run ne possede
+# Un niveau propose trois Améliorations distincts parmi ceux que la run ne possede
 # pas encore. Les six decisions restent ainsi comportementales et lisibles.
 
 static func candidats(inventaire: Array) -> Array[String]:

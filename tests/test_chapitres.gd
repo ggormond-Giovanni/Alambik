@@ -62,6 +62,52 @@ func test_difficulte_croissante(v: Verif) -> void:
 	for index in range(1, Chapitres.nombre()):
 		v.vrai(float(Chapitres.par_index(index)["pv_mult"]) > float(Chapitres.par_index(index - 1)["pv_mult"]),
 			"le chapitre %d est plus dur que le precedent" % index)
+	var dernier := Chapitres.nombre() - 1
+	v.vrai(Chapitres.facteur_pv(dernier, Reglages.SALLES_PAR_RUN) < 200.0,
+		"la fin reste sous x200 PV au lieu d'exploser a x512 des l'entree")
+	v.vrai(Chapitres.facteur_degats(dernier, Reglages.SALLES_PAR_RUN) < 10.0,
+		"les degats finaux restent esquivables avec une defense developpee")
+
+# La marche d'entree de Monde etait le vrai mur : un chapitre 1 valait +50 % de
+# PV d'un coup, contre +12 % entre deux chapitres du meme Monde.
+func test_la_montee_est_lissee_sur_chaque_chapitre(v: Verif) -> void:
+	# Passe la phase d'adoucissement du debut, ou la montee est volontairement
+	# plus vive puisqu'elle part de bien plus bas.
+	for index in range(Reglages.COURBE_PALIERS_DOUCEUR + 1, Chapitres.nombre()):
+		var ratio := float(Chapitres.par_index(index)["pv_mult"]) \
+			/ float(Chapitres.par_index(index - 1)["pv_mult"])
+		v.presque(ratio, Reglages.COURBE_PV_PAR_PALIER,
+			"aucun passage de chapitre n'est une marche plus haute que les autres")
+	var par_monde := pow(Reglages.COURBE_PV_PAR_PALIER, Chapitres.CHAPITRES_PAR_MONDE)
+	v.vrai(par_monde >= 1.40 and par_monde <= 1.50,
+		"un Monde entier reste une montee franche, repartie sur ses trois chapitres")
+
+# Un compte neuf n'a ni Maitrise ni objet. Mesure faite, sans cet adoucissement
+# il mourait salle 3 du premier chapitre, donc avant le coffre de la salle 5 :
+# la campagne ne financait jamais sa propre progression.
+func test_les_premiers_paliers_sont_adoucis(v: Verif) -> void:
+	v.presque(Chapitres.douceur_du_palier(0), Reglages.COURBE_DOUCEUR_DEBUT,
+		"le tout premier chapitre est nettement en dessous de la courbe")
+	v.presque(Chapitres.douceur_du_palier(Reglages.COURBE_PALIERS_DOUCEUR), 1.0,
+		"l'adoucissement a disparu apres les premiers Mondes")
+	v.presque(Chapitres.douceur_du_palier(Chapitres.nombre() - 1), 1.0,
+		"la fin de campagne n'est pas touchee")
+	for palier in range(1, Chapitres.nombre()):
+		v.vrai(Chapitres.pv_du_palier(palier) > Chapitres.pv_du_palier(palier - 1),
+			"la difficulte monte a chaque palier, adoucissement compris")
+		v.vrai(Chapitres.degats_du_palier(palier) > Chapitres.degats_du_palier(palier - 1),
+			"les degats montent aussi a chaque palier")
+
+func test_la_courbe_reste_definie_au_dela_du_dernier_monde(v: Verif) -> void:
+	var dernier := Chapitres.nombre() - 1
+	v.presque(Chapitres.pv_du_palier(dernier), float(Chapitres.par_index(dernier)["pv_mult"]),
+		"la table et la formule donnent le meme resultat")
+	v.vrai(Chapitres.pv_du_palier(dernier + 3) > Chapitres.pv_du_palier(dernier),
+		"un onzieme Monde aurait deja sa difficulte, sans nouvelle table")
+	v.vrai(Chapitres.degats_du_palier(dernier + 3) > Chapitres.degats_du_palier(dernier),
+		"les degats suivent la meme extension")
+	v.presque(Chapitres.pv_du_palier(-4), Chapitres.pv_du_palier(0),
+		"un palier negatif retombe sur le premier")
 
 func test_index_hors_bornes_ne_plante_pas(v: Verif) -> void:
 	v.egal(Chapitres.par_index(-5)["id"], Chapitres.TOUS[0]["id"], "un index negatif retombe sur le premier")

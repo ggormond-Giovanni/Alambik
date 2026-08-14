@@ -13,7 +13,6 @@ const HUD := preload("res://ui/hud.tscn")
 const JOYSTICK := preload("res://ui/joystick.tscn")
 const PAUSE := preload("res://ui/pause.tscn")
 const RECOMPENSE_SORTS := preload("res://ui/recompense_sorts.tscn")
-const BOT := preload("res://sondes/bot.gd")
 const VOILE_TRANSITION := preload("res://scripts/voile_transition.gd")
 
 var _fond: Node2D
@@ -37,6 +36,9 @@ var _familier_minuterie := 0.0
 var _meteore_minuterie := 0.0
 var _zone_minuterie := 0.0
 var _orbe_minuterie := 0.0
+var _chaine_minuterie := 0.0
+var _onde_choc_minuterie := 0.0
+var _sceau_minuterie := 0.0
 var _orbes_chargees := 0
 var _gardien: Gardien
 var _fin_salle_en_attente := false
@@ -45,12 +47,36 @@ var _voile_salle: Control
 var _titre_voile: Label
 var _sous_titre_voile: Label
 var _transition_salle := false
+var _dernier_rituel_prepare := 0
 
 func _ready() -> void:
 	if OS.get_name() == "Android":
 		get_tree().set_auto_accept_quit(false)
 	var arguments := OS.get_cmdline_user_args()
+	if "--hud-complet" in arguments:
+		var actif_capture := str(Sorts.ACTIFS.keys()[0])
+		var ultime_capture := str(Sorts.ULTIMES.keys()[0])
+		ReglagesJoueur.sort_actif_equipe = actif_capture
+		ReglagesJoueur.ultime_equipe = ultime_capture
+		ReglagesJoueur.rangs_sorts[actif_capture] = Reglages.CAPACITE_RANG_MAX
+		ReglagesJoueur.rangs_sorts[ultime_capture] = Reglages.CAPACITE_RANG_MAX
+		_recharge_sort_actif = 3.4
+		_charge_ultime = 12
 	Jeu.mode_auto = "--auto" in arguments
+	# Une sonde ne doit jamais ecrire dans la sauvegarde du joueur. Vingt runs
+	# automatiques gonflaient ses compteurs, sa monnaie et ses deblocages, et
+	# rendaient au passage toute mesure suivante ininterpretable.
+	if Jeu.mode_auto:
+		ReglagesJoueur.sauvegarde_active = false
+	# --vierge mesure ce que vit un nouveau compte. Sans lui, une sauvegarde en
+	# Mode dev fait croire a une descente sans Maitrises alors qu'elles sont
+	# toutes au rang maximal.
+	if "--vierge" in arguments:
+		_remettre_progression_a_zero()
+	# --maxe simule au contraire un compte entierement farme : c'est la seule
+	# facon de verifier ce que la progression permanente rend franchissable.
+	if "--maxe" in arguments:
+		_doter_progression_maximale()
 	var mode_argument := _texte_argument(arguments, "--mode=")
 	Jeu.demarrer_run(_valeur_argument(arguments, "--graine="), maxi(1, _valeur_argument(arguments, "--salle=")),
 		maxi(0, _valeur_argument(arguments, "--chapitre=") - 1) if _valeur_argument(arguments, "--chapitre=") > 0 else ReglagesJoueur.chapitre_choisi,
@@ -68,8 +94,12 @@ func _ready() -> void:
 			candidats.remove_at(index)
 	if ReglagesJoueur.passifs_equipes_effectifs().has("heritage_reactif"):
 		var heritage := CatalogueReactifs.ids()
-		if not heritage.is_empty():
-			Jeu.ajouter_reactif(heritage[Jeu.rng.randi_range(0, heritage.size() - 1)])
+		for tirage in Reglages.HERITAGE_AMELIORATIONS:
+			if heritage.is_empty():
+				break
+			var index := Jeu.rng.randi_range(0, heritage.size() - 1)
+			Jeu.ajouter_reactif(heritage[index])
+			heritage.remove_at(index)
 	Jeu.run_terminee.connect(_sur_run_terminee)
 
 	_camera = Camera2D.new()
@@ -112,20 +142,94 @@ func _ready() -> void:
 	_joystick = JOYSTICK.instantiate()
 	_couche.add_child(_joystick)
 	_joystick.intention_changee.connect(_sur_intention)
+	_joystick.tape_rapide.connect(_sur_tape_rapide)
 	var cadre_retro := Control.new()
 	cadre_retro.set_script(load("res://scripts/cadre_retro.gd"))
 	_couche.add_child(cadre_retro)
 	_construire_voile_salle()
 
 	if Jeu.mode_auto:
-		var bot := Node.new()
-		bot.set_script(BOT)
-		bot.bavard = "--bavard" in arguments
-		add_child(bot)
+		# Le bot appartient aux sondes et n'est volontairement pas exporte dans
+		# l'APK. Le charger uniquement quand une sonde PC le demande permet a la
+		# scene de combat mobile de rester autonome.
+		var script_bot := load("res://sondes/bot.gd")
+		if script_bot != null:
+			var bot := Node.new()
+			bot.set_script(script_bot)
+			bot.bavard = "--bavard" in arguments
+			add_child(bot)
 
 	_entrer_dans_la_salle()
 	_animer_entree_salle()
+	# Arguments de capture reserves au controle visuel automatise des panneaux.
+	if "--ouvrir-pause" in arguments:
+		call_deferred("_ouvrir_pause")
+	elif "--ouvrir-pause-ameliorations" in arguments:
+		call_deferred("_ouvrir_pause_ameliorations_capture")
+	elif "--ouvrir-amelioration" in arguments:
+		call_deferred("_ouvrir_recompense_etage")
+	elif "--ouvrir-alambic" in arguments:
+		call_deferred("_ouvrir_alambic_apres_salle")
+	elif "--ouvrir-recompense-sort" in arguments:
+		call_deferred("_ouvrir_recompense_sorts", false)
+	elif "--ouvrir-portail" in arguments:
+		call_deferred("_preparer_capture_portail")
 	Capture.programmer(self)
+
+func _remettre_progression_a_zero() -> void:
+	ReglagesJoueur.sauvegarde_active = false
+	# Le Mode dev ouvre toutes les Maitrises au rang maximal : le laisser actif
+	# ferait passer un compte complet pour un compte neuf.
+	ReglagesJoueur.mode_dev = false
+	ReglagesJoueur.rangs_competences.clear()
+	ReglagesJoueur.rangs_sorts.clear()
+	ReglagesJoueur.passifs_equipes.clear()
+	ReglagesJoueur.sort_actif_equipe = ""
+	ReglagesJoueur.ultime_equipe = ""
+	ReglagesJoueur.objets.clear()
+	ReglagesJoueur.forge_niveaux.clear()
+	ReglagesJoueur.equipements = {"anneau_gauche": "", "anneau_droit": "", "collier": ""}
+
+func _doter_progression_maximale() -> void:
+	# Outil de sonde : la vraie sauvegarde du joueur ne doit jamais recevoir ca.
+	ReglagesJoueur.sauvegarde_active = false
+	ReglagesJoueur.mode_dev = false
+	# Le niveau de compte porte le socle de statistiques : un compte entierement
+	# farme a forcement monte en niveau, l'oublier fausse toute la mesure.
+	ReglagesJoueur.niveau_compte = Reglages.NIVEAU_REFERENCE_FIN
+	for id in ArbreCompetences.NOEUDS:
+		ReglagesJoueur.rangs_competences[id] = ArbreCompetences.rangs(str(id))
+	for catalogue in [Sorts.ACTIFS, Sorts.PASSIFS, Sorts.ULTIMES]:
+		for id in catalogue:
+			ReglagesJoueur.rangs_sorts[id] = Reglages.CAPACITE_RANG_MAX
+	ReglagesJoueur.sort_actif_equipe = str(Sorts.ACTIFS.keys()[0])
+	ReglagesJoueur.ultime_equipe = str(Sorts.ULTIMES.keys()[0])
+	ReglagesJoueur.passifs_equipes.clear()
+	for id in Sorts.PASSIFS:
+		if ReglagesJoueur.passifs_equipes.size() < ReglagesJoueur.nombre_slots_passifs():
+			ReglagesJoueur.passifs_equipes.append(str(id))
+	var derniers: Array = CatalogueObjets.IDS_PAR_MONDE[CatalogueObjets.IDS_PAR_MONDE.size() - 1]
+	ReglagesJoueur.equipements = {"anneau_gauche": str(derniers[0]),
+		"anneau_droit": str(derniers[1]), "collier": str(derniers[2])}
+	for id in derniers:
+		if not str(id) in ReglagesJoueur.objets:
+			ReglagesJoueur.objets.append(str(id))
+		ReglagesJoueur.forge_niveaux[str(id)] = Reglages.FORGE_NIVEAU_MAX
+
+func _ouvrir_pause_ameliorations_capture() -> void:
+	_ouvrir_pause()
+	await get_tree().process_frame
+	if _panneau != null:
+		_panneau._ouvrir_ameliorations()
+
+func _preparer_capture_portail() -> void:
+	# Outil de controle visuel uniquement : aucune partie normale ne passe ici.
+	for ennemi in get_tree().get_nodes_in_group("ennemis"):
+		if is_instance_valid(ennemi):
+			ennemi.queue_free()
+	await get_tree().process_frame
+	if _salle != null:
+		_salle._ouvrir_portail()
 
 # En mode auto, une salle qui ne se termine pas est un blocage, pas une
 # difficulte. On veut le savoir avec l'etat de la salle, pas par un silence.
@@ -194,9 +298,12 @@ func _calculer_limites() -> void:
 		return
 	var haut := Reglages.ARENE_HAUT + Ecran.marge_haute()
 	var bas := Reglages.ARENE_BAS + Ecran.marge_basse()
+	var hauteur_disponible := maxf(600.0, taille.y - haut - bas)
+	var hauteur_arene := minf(hauteur_disponible, Reglages.ARENE_HAUTEUR_MAX)
+	var respiration_verticale := (hauteur_disponible - hauteur_arene) * 0.5
 	_limites = Rect2(
-		Vector2(Reglages.ARENE_MARGE_LATERALE, haut),
-		Vector2(taille.x - 2.0 * Reglages.ARENE_MARGE_LATERALE, maxf(600.0, taille.y - haut - bas)))
+		Vector2(Reglages.ARENE_MARGE_LATERALE, haut + respiration_verticale),
+		Vector2(taille.x - 2.0 * Reglages.ARENE_MARGE_LATERALE, hauteur_arene))
 	if _heros != null:
 		_heros.limites = _limites
 
@@ -209,9 +316,15 @@ func _entrer_dans_la_salle() -> void:
 	if not _salle.terminee.is_connected(_sur_salle_terminee):
 		_salle.terminee.connect(_sur_salle_terminee)
 	_heros.global_position = Vector2((_limites.position.x + _limites.end.x) / 2.0, _limites.end.y - 120.0)
+	if Jeu.mode_run == "epreuve_sorts" and _dernier_rituel_prepare < Jeu.salle_courante:
+		Jeu.ajouter_fusion_aleatoire_epreuve()
+		_dernier_rituel_prepare = Jeu.salle_courante
+		_heros.recalculer()
+		_sous_titre_voile.text = _texte_fusion_epreuve()
 	_heros.preparer_nouvelle_salle()
 	if ReglagesJoueur.passifs_equipes_effectifs().has("reserve_ultime"):
-		_charge_ultime += maxi(1, roundi(5.0 * float(ReglagesJoueur.passifs_equipes_effectifs()["reserve_ultime"])))
+		_charge_ultime += maxi(1, roundi(float(Reglages.RESERVE_ULTIME_CHARGES) \
+			* float(ReglagesJoueur.passifs_equipes_effectifs()["reserve_ultime"])))
 	_hud.rafraichir()
 	_temps_dans_la_salle = 0.0
 	if Jeu.mode_auto:
@@ -299,6 +412,8 @@ func _animer_entree_salle() -> void:
 	_titre_voile.text = "SALLE %02d" % Jeu.salle_courante if Jeu.mode_run == "grimoire" else Jeu.nom_run().to_upper()
 	_sous_titre_voile.text = Jeu.nom_run().to_upper() if Jeu.mode_run == "grimoire" else (
 			"SURVIVEZ 5 MINUTES" if Jeu.mode_run == "mine" else "UNE SALLE D'ESSAI" if Jeu.mode_run == "retro" else "CINQ RITUELS")
+	if Jeu.mode_run == "epreuve_sorts":
+		_sous_titre_voile.text = _texte_fusion_epreuve()
 	_voile_salle.visible = true
 	_voile_salle.modulate.a = 1.0
 	await get_tree().create_timer(0.10 if ReglagesJoueur.effets_reduits else 0.38).timeout
@@ -310,6 +425,14 @@ func _animer_entree_salle() -> void:
 	await ouverture.finished
 	_voile_salle.visible = false
 	_voile_salle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+func _texte_fusion_epreuve() -> String:
+	var rituel: Dictionary = Jeu.derniere_fusion_epreuve
+	if rituel.is_empty():
+		return "RITUEL ALÉATOIRE"
+	var augment := CatalogueReactifs.par_id(str(rituel["augment"]))
+	var element: Dictionary = CatalogueElements.par_id(str(rituel["element"]))
+	return "%s + %s" % [augment.nom.to_upper(), str(element.get("nom", "ÉLÉMENT")).to_upper()]
 
 func _ouvrir_recompense_etage() -> void:
 	if _terminee or _panneau != null:
@@ -425,9 +548,14 @@ func _avancer_phenomenes(delta: float) -> void:
 			_familier_minuterie = _intervalle_phenomene(Reglages.FAMILIER_TIR_INTERVALLE, "familier_tireur")
 			var cible := _ennemi_plus_proche(_heros.global_position)
 			if cible != null:
+				var origine := _heros.global_position + Reglages.FAMILIER_DECALAGE
+				var vise := Geometrie.point_anticipe(cible.global_position,
+					_vitesse_de(cible), origine, _heros.stats.vitesse_projectile)
+				# Le familier n'a pas de sprite : sans cette lueur, les traits
+				# semblent naitre d'un point vide a cote du heros.
+				_effets.onde(origine, 44.0, Palette.ESSENCE, 0.22)
 				_tirer_phenomene("familier_tireur", Reglages.FAMILIER_TIR_PART_DEGATS,
-					_heros.global_position + Vector2(72.0, -36.0),
-					_heros.global_position.direction_to(cible.global_position))
+					origine, origine.direction_to(vise))
 	if "meteores" in drapeaux:
 		_meteore_minuterie -= delta
 		if _meteore_minuterie <= 0.0:
@@ -443,6 +571,21 @@ func _avancer_phenomenes(delta: float) -> void:
 		if _orbe_minuterie <= 0.0:
 			_orbe_minuterie = _intervalle_phenomene(Reglages.ORBE_INTERVALLE, "orbes_chargees")
 			_orbes_chargees = mini(Reglages.ORBE_MAX, _orbes_chargees + 1)
+	if "chaine_alchimique" in drapeaux:
+		_chaine_minuterie -= delta
+		if _chaine_minuterie <= 0.0:
+			_chaine_minuterie = _intervalle_phenomene(Reglages.CHAINE_INTERVALLE, "chaine_alchimique")
+			_declencher_chaine()
+	if "onde_de_choc" in drapeaux:
+		_onde_choc_minuterie -= delta
+		if _onde_choc_minuterie <= 0.0:
+			_onde_choc_minuterie = _intervalle_phenomene(Reglages.ONDE_CHOC_INTERVALLE, "onde_de_choc")
+			_declencher_onde_de_choc()
+	if _elements_scelles(drapeaux).size() > 0:
+		_sceau_minuterie -= delta
+		if _sceau_minuterie <= 0.0:
+			_sceau_minuterie = Reglages.SCEAU_AURA_INTERVALLE
+			_pulser_sceaux(drapeaux)
 	if "familier_gardien" in drapeaux and (_gardien == null or not is_instance_valid(_gardien)):
 		_gardien = Gardien.new()
 		_gardien.heros = _heros
@@ -452,6 +595,8 @@ func _avancer_phenomenes(delta: float) -> void:
 func _tirer_phenomene(id: String, part_degats: float, origine: Vector2, direction: Vector2) -> void:
 	var tir := Tir.de_base(_heros.stats)
 	tir.degats *= part_degats
+	if id == "familier_tireur":
+		tir.drapeaux.append("trait_familier")
 	_appliquer_element_phenomene(tir, id)
 	_salle.tirer(tir, origine, direction, false)
 
@@ -484,6 +629,82 @@ func _declencher_meteore() -> void:
 		if is_instance_valid(ennemi) and ennemi.global_position.distance_to(cible.global_position) <= Reglages.METEORE_RAYON:
 			_infliger_phenomene(ennemi, tir)
 
+# La chaine part du heros et saute de proche en proche sans jamais revenir sur
+# un maillon deja frappe. Elle passe par _infliger_phenomene, donc elle herite
+# automatiquement de l'Element fusionne comme les autres Phenomenes.
+func _declencher_chaine() -> void:
+	var tir := Tir.de_base(_heros.stats)
+	tir.degats *= Reglages.CHAINE_PART_DEGATS
+	_appliquer_element_phenomene(tir, "chaine_alchimique")
+	var depart := _heros.global_position
+	var deja: Array[int] = []
+	for maillon in Reglages.CHAINE_CIBLES:
+		var cible := _maillon_suivant(depart, deja)
+		if cible == null:
+			return
+		deja.append(cible.get_instance_id())
+		_effets.arc(depart, cible.global_position, Palette.ESSENCE)
+		_infliger_phenomene(cible, tir)
+		depart = cible.global_position
+
+func _maillon_suivant(origine: Vector2, deja: Array[int]) -> Node2D:
+	var resultat: Node2D = null
+	var distance := Reglages.CHAINE_PORTEE * Reglages.CHAINE_PORTEE
+	for ennemi in get_tree().get_nodes_in_group("ennemis"):
+		if not is_instance_valid(ennemi) or ennemi.get_instance_id() in deja:
+			continue
+		var d := origine.distance_squared_to(ennemi.global_position)
+		if d < distance:
+			distance = d
+			resultat = ennemi
+	return resultat
+
+func _declencher_onde_de_choc() -> void:
+	var tir := Tir.de_base(_heros.stats)
+	tir.degats *= Reglages.ONDE_CHOC_PART_DEGATS
+	_appliquer_element_phenomene(tir, "onde_de_choc")
+	_effets.onde(_heros.global_position, Reglages.ONDE_CHOC_RAYON, Palette.OR, 0.55)
+	for ennemi in get_tree().get_nodes_in_group("ennemis"):
+		if not is_instance_valid(ennemi) \
+				or ennemi.global_position.distance_to(_heros.global_position) > Reglages.ONDE_CHOC_RAYON:
+			continue
+		_infliger_phenomene(ennemi, tir)
+		_repousser(ennemi, _heros.global_position, Reglages.ONDE_CHOC_REPOUSSEE)
+
+# Les Elements scelles dans la salle, lus sur les drapeaux du tir courant.
+func _elements_scelles(drapeaux: Array[String]) -> Array[String]:
+	var resultat: Array[String] = []
+	for element in CatalogueElements.ids():
+		if "sceau_element_%s" % element in drapeaux:
+			resultat.append(element)
+	return resultat
+
+# L'aura d'un Sceau marque sans tuer : elle applique l'alteration de son Element
+# aux creatures proches. C'est ce qui la distingue des Phenomenes, qui frappent.
+func _pulser_sceaux(drapeaux: Array[String]) -> void:
+	var elements := _elements_scelles(drapeaux)
+	if elements.is_empty():
+		return
+	var rayon := Reglages.SCEAU_AURA_RAYON
+	if "air" in elements:
+		rayon *= Reglages.SCEAU_AURA_RAYON_AIR_MULT
+	var effets: Array[String] = []
+	for element in elements:
+		match element:
+			"feu": effets.append("feu")
+			"eau": effets.append("eau")
+			"terre": effets.append("terre")
+			"tenebres": effets.append("acide")
+	_effets.onde(_heros.global_position, rayon, Palette.ESSENCE, 0.30)
+	var degats: float = _heros.tir_courant.degats * Reglages.SCEAU_AURA_DEGATS
+	for ennemi in get_tree().get_nodes_in_group("ennemis"):
+		if not is_instance_valid(ennemi) \
+				or ennemi.global_position.distance_to(_heros.global_position) > rayon:
+			continue
+		ennemi.recevoir_degats(degats, effets)
+		if "lumiere" in elements:
+			_heros.stats.soigner(_heros.stats.pv_max * Reglages.SCEAU_AURA_SOIN)
+
 func _frapper_zone_heros() -> void:
 	var tir := Tir.de_base(_heros.stats)
 	tir.degats *= Reglages.ZONE_HEROS_PART_DEGATS
@@ -501,6 +722,10 @@ func _infliger_phenomene(ennemi: Node, tir: Tir) -> void:
 	if "lumiere" in tir.effets:
 		_heros.stats.soigner(degats * Reglages.LUMIERE_VOL_DE_VIE)
 
+func _vitesse_de(cible: Node2D) -> Vector2:
+	var vitesse: Vector2 = cible.velocity if "velocity" in cible else Vector2.ZERO
+	return vitesse
+
 func _ennemi_plus_proche(origine: Vector2) -> Node2D:
 	var resultat: Node2D = null
 	var distance := INF
@@ -517,11 +742,16 @@ func _sur_heros_touche(position: Vector2) -> void:
 	_effets.impact(position, Palette.DANGER, 1.6)
 	_hud.impact_degats()
 	if ReglagesJoueur.passifs_equipes_effectifs().has("riposte_alchimique"):
-		_effets.onde(position, 270.0, Palette.OR, 0.45)
+		_effets.onde(position, Reglages.RIPOSTE_RAYON, Palette.OR, 0.45)
 		for ennemi in get_tree().get_nodes_in_group("ennemis"):
-			if is_instance_valid(ennemi) and ennemi.global_position.distance_to(position) <= 270.0:
-				ennemi.recevoir_degats(_heros.tir_courant.degats * 1.5 \
-					* float(ReglagesJoueur.passifs_equipes_effectifs()["riposte_alchimique"]), [])
+			if not is_instance_valid(ennemi) \
+					or ennemi.global_position.distance_to(position) > Reglages.RIPOSTE_RAYON:
+				continue
+			ennemi.recevoir_degats(_heros.tir_courant.degats * Reglages.RIPOSTE_PART_DEGATS \
+				* float(ReglagesJoueur.passifs_equipes_effectifs()["riposte_alchimique"]), [])
+			# La riposte doit rendre l'espace repris : encaisser un coup sans
+			# desengager ne changeait rien a la situation.
+			_repousser(ennemi, position, Reglages.RIPOSTE_REPOUSSEE)
 
 func _sur_bouclier_brise(position: Vector2) -> void:
 	_effets.onde(position, 200.0, Color(0.85, 0.92, 1.0), 0.5)
@@ -532,18 +762,31 @@ func _sur_ennemi_abattu(experience: int) -> void:
 		_niveaux_en_attente += Jeu.gagner_experience_run(experience)
 		if _niveaux_en_attente > 0 and _panneau == null and not _terminee:
 			_ouvrir_recompense_etage()
+	if "soif_de_sang" in _heros.tir_courant.drapeaux:
+		_heros.stats.soigner(_heros.stats.pv_max * Reglages.SOIF_DE_SANG_PART)
 	var passifs := ReglagesJoueur.passifs_equipes_effectifs()
 	if passifs.has("moisson_vitale"):
 		_compteur_moisson += 1
-		if _compteur_moisson >= 10:
+		if _compteur_moisson >= Reglages.MOISSON_SEUIL:
 			_compteur_moisson = 0
-			_heros.stats.soigner(_heros.stats.pv_max * 0.08 * float(passifs["moisson_vitale"]))
+			_heros.stats.soigner(_heros.stats.pv_max * Reglages.MOISSON_PART \
+				* float(passifs["moisson_vitale"]))
 			_effets.onde(_heros.global_position, 150.0, Color(0.35, 1.0, 0.58), 0.5)
 	if passifs.has("sang_froid"):
 		_compteur_sang_froid += 1
-		if _compteur_sang_froid >= ceili(12.0 / maxf(0.25, float(passifs["sang_froid"]))):
+		if _compteur_sang_froid >= ceili(float(Reglages.SANG_FROID_SEUIL) \
+				/ maxf(0.25, float(passifs["sang_froid"]))):
 			_compteur_sang_froid = 0
 			_recharge_sort_actif = 0.0
+
+func _sur_tape_rapide(nombre: int) -> void:
+	var requises := RaccourciTactile.tapes_requises(ReglagesJoueur.raccourci_sort)
+	if requises <= 0 or nombre < requises or _terminee or _panneau != null:
+		return
+	# La serie repart de zero apres un tir, sinon la tape suivante completerait
+	# un double appui deja consomme.
+	_joystick.consommer_raccourci()
+	_lancer_sort_actif()
 
 func _lancer_sort_actif() -> void:
 	var id := ReglagesJoueur.sort_actif_effectif()
@@ -554,8 +797,10 @@ func _lancer_sort_actif() -> void:
 	_recharge_sort_actif = float(sort["recharge"]) * Sorts.multiplicateur_recharge_active(ReglagesJoueur.passifs_equipes_effectifs())
 	_appliquer_sort(float(sort["rayon"]), float(sort["degats"]) * efficacite, str(sort["effet"]), false)
 	var passifs := ReglagesJoueur.passifs_equipes_effectifs()
-	if passifs.has("echo_alchimique") and Jeu.rng.randf() < 0.30 * float(passifs["echo_alchimique"]):
-		_appliquer_sort(float(sort["rayon"]), float(sort["degats"]) * efficacite * 0.50, str(sort["effet"]), false)
+	if passifs.has("echo_alchimique") \
+			and Jeu.rng.randf() < Reglages.ECHO_CHANCE * float(passifs["echo_alchimique"]):
+		_appliquer_sort(float(sort["rayon"]),
+			float(sort["degats"]) * efficacite * Reglages.ECHO_PART_DEGATS, str(sort["effet"]), false)
 
 func _lancer_ultime() -> void:
 	var id := ReglagesJoueur.ultime_effectif()
@@ -581,9 +826,17 @@ func _appliquer_sort(rayon: float, multiplicateur: float, effet: String, ultime:
 		if effet == "givre" and ennemi.has_method("geler"):
 			ennemi.geler(2.2 if ultime else 1.2)
 		elif effet == "repousse":
-			var direction := _heros.global_position.direction_to(ennemi.global_position)
-			ennemi.global_position += direction * 120.0
+			_repousser(ennemi, _heros.global_position, 120.0)
 	Sons.jouer("fusion" if ultime else "choix", -9.0)
+
+# Une poussee qui traverse le decor sortirait la creature de l'arene : elle est
+# bornee par les memes limites que le heros.
+func _repousser(ennemi: Node2D, origine: Vector2, distance: float) -> void:
+	var direction := origine.direction_to(ennemi.global_position)
+	if direction == Vector2.ZERO:
+		return
+	ennemi.global_position = Geometrie.contraindre_dans_rect(
+		ennemi.global_position + direction * distance, _limites, 24.0)
 
 func _sur_run_terminee(victoire: bool) -> void:
 	if _terminee:

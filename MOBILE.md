@@ -1,9 +1,10 @@
 # Mettre Alambic sur le téléphone
 
-Tout est déjà installé et configuré sur cette machine : templates d'export
-Godot 4.7.1, SDK Android, JDK 17, keystore de debug et keystore de release.
-L'APK à distribuer est prêt : `dist/alambic.apk` (version 0.2, 28 Mo). Il ne
-reste que le téléphone.
+Ce guide décrit la configuration Linux de la machine de développement
+d'origine : Godot 4.7.1, SDK Android, JDK 17 et keystores. Sur un nouveau PC,
+ces dépendances doivent être configurées avant d'utiliser les scripts `.sh`.
+Les APK de test portent un nom et un numéro de version uniques afin qu'Android
+et les services cloud ne les confondent jamais avec un ancien paquet.
 
 ## 1. Préparer le téléphone (une fois)
 
@@ -64,12 +65,12 @@ Pour ne pas rester dans les logs :
 
 ## 4. Installer sans le PC (télécharger l'APK)
 
-`dist/alambic.apk` est suivi par git : une fois le dépôt poussé, il se télécharge
+`alambic.apk` est suivi par git : une fois le dépôt poussé, il se télécharge
 depuis le téléphone. Sur GitHub, le bouton **Download** de la page du fichier
 (ou l'adresse `raw`) donne directement l'APK.
 
 Sans PC du tout : ouvrir le dépôt dans le navigateur du téléphone, télécharger
-`dist/alambic.apk`, puis l'ouvrir depuis *Fichiers ▸ Téléchargements*. Android
+`alambic.apk`, puis l'ouvrir depuis *Fichiers ▸ Téléchargements*. Android
 demande d'autoriser l'installation d'applications de cette source : c'est normal
 pour un APK qui ne vient pas du Play Store.
 

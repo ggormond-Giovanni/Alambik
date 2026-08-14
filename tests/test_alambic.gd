@@ -3,19 +3,19 @@ extends RefCounted
 func test_six_elements_hors_du_pool(v: Verif) -> void:
 	v.egal(CatalogueElements.ids().size(), 6, "l'Alambic genere les six Elements decides")
 	for id in CatalogueElements.ids():
-		v.vrai(id not in CatalogueReactifs.ids(), "%s n'est pas un Augment de draft" % id)
+		v.vrai(id not in CatalogueReactifs.ids(), "%s n'est pas un Amélioration de draft" % id)
 
 func test_fusion_conserve_l_augment(v: Verif) -> void:
 	Jeu.demarrer_run(7)
 	Jeu.ajouter_reactif("tir_multiple")
 	v.vrai(Jeu.ajouter_fusion_elementaire("feu", "tir_multiple"), "la fusion est creee")
-	v.vrai("tir_multiple" in Jeu.inventaire, "l'Augment original n'est pas consomme")
+	v.vrai("tir_multiple" in Jeu.inventaire, "l'Amélioration original n'est pas consomme")
 	v.vrai(CatalogueElements.id_fusion("feu", "tir_multiple") in Jeu.inventaire,
 		"la transformation est ajoutee separement")
 	v.vrai(Jeu.augment_deja_fusionne("tir_multiple"),
-		"l'Augment est marque comme deja combine")
+		"l'Amélioration est marque comme deja combine")
 	v.vrai(not Jeu.ajouter_fusion_elementaire("eau", "tir_multiple"),
-		"un Augment combine ne peut pas recevoir un second Element")
+		"un Amélioration combine ne peut pas recevoir un second Element")
 	v.vrai(CatalogueElements.id_fusion("eau", "tir_multiple") not in Jeu.inventaire,
 		"la seconde Fusion refusee n'entre pas dans l'inventaire")
 
@@ -48,7 +48,7 @@ func test_un_element_depend_de_la_famille(v: Verif) -> void:
 	var phenomene := CatalogueElements.creer_fusion("feu", "meteores")
 	v.vrai("feu" in projectile.mods.get("effets", []), "le projectile applique une brulure")
 	v.vrai("transformation_heros_feu" in heros.mods.get("drapeaux", []),
-		"l'Augment du Heros devient une transformation")
+		"l'Amélioration du Heros devient une transformation")
 	v.vrai(phenomene.famille == CatalogueReactifs.PHENOMENE \
 		and phenomene.mods.get("effets", []).is_empty(),
 		"le Phenomene porte l'Element sans devenir un projectile")

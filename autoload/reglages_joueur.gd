@@ -22,6 +22,9 @@ var volume_effets := 1.0
 var piste_musique := "first_arcade"
 var secousses_ecran := true
 var effets_reduits := false
+# Comment le Sort actif part : par son icone seule, par une tape rapide dans la
+# zone de deplacement, ou par une double tape rapide.
+var raccourci_sort := RaccourciTactile.MODE_DEFAUT
 var sort_actif_equipe := ""
 var ultime_equipe := ""
 var passifs_equipes: Array[String] = []
@@ -30,7 +33,9 @@ var objets: Array[String] = []
 var dernier_objet_obtenu := ""
 var grands_coffres_sans_objet := {}
 var equipements := {"anneau_gauche": "", "anneau_droit": "", "collier": ""}
-var forge_niveaux := {"anneau_gauche": 0, "anneau_droit": 0, "collier": 0}
+# La Forge appartient desormais a l'objet, pas a l'emplacement. Changer
+# d'anneau ne transfere donc plus artificiellement tous les niveaux investis.
+var forge_niveaux := {}
 var pierres_forge := 0
 var mode_run_choisi := "grimoire"
 var sauvegarde_active := true
@@ -69,6 +74,8 @@ func charger() -> void:
 		piste_musique = "first_arcade"
 	secousses_ecran = bool(config.get_value("accessibilite", "secousses", true))
 	effets_reduits = bool(config.get_value("accessibilite", "effets_reduits", false))
+	raccourci_sort = RaccourciTactile.mode_valide(str(config.get_value("commandes", "raccourci_sort",
+		RaccourciTactile.MODE_DEFAUT)))
 	sort_actif_equipe = str(config.get_value("sorts", "actif", ""))
 	ultime_equipe = str(config.get_value("sorts", "ultime", ""))
 	passifs_equipes.clear()
@@ -96,6 +103,7 @@ func charger() -> void:
 	forge_niveaux = config.get_value("stuff", "forge", forge_niveaux)
 	pierres_forge = maxi(0, int(config.get_value("stuff", "pierres_forge", 0)))
 	_migrer_equipements()
+	_migrer_forge_par_objet()
 	mode_run_choisi = str(config.get_value("options", "mode_run", "grimoire"))
 	# Le prototype graphique n'est plus un mode : toutes les descentes utilisent
 	# maintenant le rendu 16-bit, donc les anciennes sauvegardes reviennent en campagne.
@@ -120,6 +128,7 @@ func sauvegarder() -> void:
 	config.set_value("audio", "piste", piste_musique)
 	config.set_value("accessibilite", "secousses", secousses_ecran)
 	config.set_value("accessibilite", "effets_reduits", effets_reduits)
+	config.set_value("commandes", "raccourci_sort", raccourci_sort)
 	config.set_value("sorts", "actif", sort_actif_equipe)
 	config.set_value("sorts", "ultime", ultime_equipe)
 	config.set_value("sorts", "passifs", passifs_equipes)
@@ -162,8 +171,17 @@ func _migrer_equipements() -> void:
 		var id := str(equipements.get(slot, ""))
 		if not CatalogueObjets.compatible(slot, id) or id not in objets:
 			equipements[slot] = ""
-	for id in objets:
-		_equipement_automatique(id)
+
+func _migrer_forge_par_objet() -> void:
+	# Anciennes sauvegardes : le niveau etait stocke sur le slot. On le donne a
+	# l'objet actuellement equipe, puis on retire les trois anciennes cles.
+	for slot in ["anneau_gauche", "anneau_droit", "collier"]:
+		if not forge_niveaux.has(slot):
+			continue
+		var id := str(equipements.get(slot, ""))
+		if not id.is_empty():
+			forge_niveaux[id] = maxi(int(forge_niveaux.get(id, 0)), int(forge_niveaux[slot]))
+		forge_niveaux.erase(slot)
 
 func _equipement_automatique(id: String) -> void:
 	for slot in ["anneau_gauche", "anneau_droit", "collier"]:
@@ -183,25 +201,40 @@ func equiper_objet(slot: String, id: String) -> bool:
 	maitrise_changee.emit()
 	return true
 
-func cout_forge(slot: String) -> int:
-	return Reglages.FORGE_COUT_BASE + maxi(0, int(forge_niveaux.get(slot, 0))) * Reglages.FORGE_COUT_PAR_NIVEAU
-
-func ameliorer_forge(slot: String) -> bool:
-	if slot not in forge_niveaux or pierres_forge < cout_forge(slot):
+func retirer_objet(slot: String) -> bool:
+	if slot not in equipements or str(equipements[slot]).is_empty():
 		return false
-	pierres_forge -= cout_forge(slot)
-	forge_niveaux[slot] = int(forge_niveaux[slot]) + 1
+	equipements[slot] = ""
 	sauvegarder()
 	maitrise_changee.emit()
 	return true
 
-func ajouter_pierres_forge(nombre: int) -> void:
-	if nombre <= 0:
-		return
-	pierres_forge += maxi(1, roundi(float(nombre) \
-		* ArbreCompetences.multiplicateur_pierres(rangs_competences_effectifs())))
+func niveau_objet(id: String) -> int:
+	return clampi(int(forge_niveaux.get(id, 0)), 0, Reglages.FORGE_NIVEAU_MAX) \
+		if CatalogueObjets.OBJETS.has(id) else 0
+
+func cout_forge(id: String) -> int:
+	return Reglages.cout_forge(niveau_objet(id))
+
+func ameliorer_objet(id: String) -> bool:
+	if id not in objets_disponibles() or niveau_objet(id) >= Reglages.FORGE_NIVEAU_MAX \
+			or pierres_forge < cout_forge(id):
+		return false
+	pierres_forge -= cout_forge(id)
+	forge_niveaux[id] = niveau_objet(id) + 1
 	sauvegarder()
 	maitrise_changee.emit()
+	return true
+
+func ajouter_pierres_forge(nombre: int) -> int:
+	if nombre <= 0:
+		return 0
+	var gain := maxi(1, roundi(float(nombre) \
+		* ArbreCompetences.multiplicateur_pierres(rangs_competences_effectifs())))
+	pierres_forge += gain
+	sauvegarder()
+	maitrise_changee.emit()
+	return gain
 
 func grands_coffres_rates(chapitre: int) -> int:
 	return int(grands_coffres_sans_objet.get(str(chapitre), 0))
@@ -223,6 +256,14 @@ func definir_piste_musique(id: String) -> void:
 		return
 	piste_musique = id
 	Sons.appliquer_reglages()
+	sauvegarder()
+	reglages_changes.emit()
+
+func definir_raccourci_sort(mode: String) -> void:
+	var demande := RaccourciTactile.mode_valide(mode)
+	if demande == raccourci_sort:
+		return
+	raccourci_sort = demande
 	sauvegarder()
 	reglages_changes.emit()
 
@@ -265,7 +306,10 @@ func titre_compte() -> String:
 	return "COMPTE"
 
 func rang_competence(id: String) -> int:
-	return 1 if mode_dev and ArbreCompetences.NOEUDS.has(id) else int(rangs_competences.get(id, 0))
+	if not ArbreCompetences.NOEUDS.has(id):
+		return 0
+	return ArbreCompetences.rangs(id) if mode_dev \
+		else clampi(int(rangs_competences.get(id, 0)), 0, ArbreCompetences.rangs(id))
 
 func gouttes_affichees() -> String:
 	return "∞" if mode_dev else str(gouttes)
@@ -274,7 +318,7 @@ func rangs_competences_effectifs() -> Dictionary:
 	if mode_dev:
 		var tous_les_rangs := {}
 		for id in ArbreCompetences.NOEUDS:
-			tous_les_rangs[id] = 1
+			tous_les_rangs[id] = ArbreCompetences.rangs(id)
 		return tous_les_rangs
 	return rangs_competences
 
@@ -302,8 +346,7 @@ func cout_competence(id: String) -> int:
 func peut_acheter_competence(id: String) -> bool:
 	if not ArbreCompetences.NOEUDS.has(id):
 		return false
-	var noeud: Dictionary = ArbreCompetences.NOEUDS[id]
-	return rang_competence(id) < ArbreCompetences.MAX_RANG \
+	return rang_competence(id) < ArbreCompetences.rangs(id) \
 		and (mode_dev or ArbreCompetences.prerequis_atteint(id, rangs_competences)) \
 		and (mode_dev or gouttes >= cout_competence(id))
 
@@ -326,6 +369,17 @@ func equiper_sort(id: String, type: String) -> void:
 		ultime_equipe = id
 	sauvegarder()
 	maitrise_changee.emit()
+
+func retirer_sort(type: String) -> bool:
+	if type == "actif" and not sort_actif_equipe.is_empty():
+		sort_actif_equipe = ""
+	elif type == "ultime" and not ultime_equipe.is_empty():
+		ultime_equipe = ""
+	else:
+		return false
+	sauvegarder()
+	maitrise_changee.emit()
+	return true
 
 func basculer_passif(id: String) -> String:
 	if not Sorts.PASSIFS.has(id) or not sort_debloque(id):
@@ -412,7 +466,7 @@ func reinitialiser_progression() -> void:
 	dernier_objet_obtenu = ""
 	grands_coffres_sans_objet.clear()
 	equipements = {"anneau_gauche": "", "anneau_droit": "", "collier": ""}
-	forge_niveaux = {"anneau_gauche": 0, "anneau_droit": 0, "collier": 0}
+	forge_niveaux = {}
 	pierres_forge = 0
 	mode_run_choisi = "grimoire"
 	sauvegarder()
@@ -436,6 +490,21 @@ func enregistrer_resultat_annexe(victoire: bool) -> void:
 
 func meilleure_du_chapitre(chapitre: int) -> int:
 	return int(meilleures_par_chapitre.get(str(chapitre), 0))
+
+# Palier de reference des annexes. Sans lui, la Mine rapporterait autant au
+# premier Monde qu'apres le dernier et cesserait d'etre une source de Pierres.
+func palier_atteint() -> int:
+	if mode_dev:
+		return Chapitres.nombre() - 1
+	var meilleur := 0
+	for cle in meilleures_par_chapitre:
+		var index := int(cle)
+		if index >= 0 and index < Chapitres.nombre() and int(meilleures_par_chapitre[cle]) > 0:
+			meilleur = maxi(meilleur, Chapitres.palier(index))
+	return meilleur
+
+func pierres_mine() -> int:
+	return Reglages.pierres_mine(palier_atteint())
 
 # Un chapitre s'ouvre quand le precedent a ete termine. Le premier est toujours
 # ouvert : personne ne doit rester devant une porte close au premier lancement.

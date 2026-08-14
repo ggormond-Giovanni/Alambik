@@ -44,7 +44,7 @@ func _ready() -> void:
 	_graine = randi() % 1000
 	_cible = get_tree().get_first_node_in_group("heros")
 	var forme := $CollisionShape2D.shape as CircleShape2D
-	forme.radius = donnees["rayon"]
+	forme.radius = float(donnees["rayon"]) * Reglages.ENNEMI_HITBOX_MULT
 	_recharge = float(donnees.get("recharge", 1.0)) * 0.5
 
 func _physics_process(delta: float) -> void:
@@ -77,6 +77,7 @@ func _physics_process(delta: float) -> void:
 		"phaseur": _agir_phaseur(delta)
 		"tisseur": _agir_tisseur(delta)
 		"volatile": _agir_volatile(delta)
+	_contraindre_aux_murs()
 
 func _cible_la_plus_proche() -> Node2D:
 	var meilleure: Node2D = null
@@ -91,7 +92,7 @@ func _cible_la_plus_proche() -> Node2D:
 	return meilleure
 
 func _facteur_vitesse() -> float:
-	return Reglages.GIVRE_RALENTISSEMENT if _givre > 0.0 else 1.0
+	return Reglages.ENNEMI_VITESSE_MULT * (Reglages.GIVRE_RALENTISSEMENT if _givre > 0.0 else 1.0)
 
 func _avancer_vers(cible: Vector2, vitesse: float) -> void:
 	var direction := global_position.direction_to(cible)
@@ -102,8 +103,7 @@ func _avancer_vers(cible: Vector2, vitesse: float) -> void:
 	var avant := global_position
 	velocity = direction * vitesse * _facteur_vitesse()
 	move_and_slide()
-	global_position.x = clampf(global_position.x, limites.position.x, limites.end.x)
-	global_position.y = clampf(global_position.y, limites.position.y, limites.end.y)
+	_contraindre_aux_murs()
 	var attendu := vitesse * _facteur_vitesse() * get_physics_process_delta_time()
 	if _contournement <= 0.0 and avant.distance_to(global_position) < attendu * 0.35:
 		_contournement = 0.8
@@ -177,8 +177,7 @@ func _agir_veloce(_delta: float) -> void:
 				_minuterie = donnees.get("duree_charge", 0.5)
 			velocity = _direction_charge * donnees["vitesse"] * _facteur_vitesse()
 			move_and_slide()
-			global_position.x = clampf(global_position.x, limites.position.x, limites.end.x)
-			global_position.y = clampf(global_position.y, limites.position.y, limites.end.y)
+			_contraindre_aux_murs()
 			if distance <= donnees["portee"] and _recharge <= 0.0:
 				_recharge = 1.0
 				_cible.recevoir_degats(donnees["degats"])
@@ -276,11 +275,16 @@ func _agir_phaseur(_delta: float) -> void:
 			# changement de cote surprend, mais la distance reste previsible.
 			var radial := _cible.global_position.direction_to(global_position)
 			var destination := _cible.global_position - radial * float(donnees["portee"])
-			global_position.x = clampf(destination.x, limites.position.x, limites.end.x)
-			global_position.y = clampf(destination.y, limites.position.y, limites.end.y)
+			global_position = Geometrie.contraindre_dans_rect(destination, limites, _rayon_collision())
 			_etat = "repos"
 			_tirer_cercle(int(donnees.get("projectiles_cercle", 6)))
 			_tirer_vers(_cible.global_position)
+
+func _rayon_collision() -> float:
+	return ($CollisionShape2D.shape as CircleShape2D).radius
+
+func _contraindre_aux_murs() -> void:
+	global_position = Geometrie.contraindre_dans_rect(global_position, limites, _rayon_collision())
 
 func _agir_tisseur(_delta: float) -> void:
 	if _etat == "tisser":
@@ -448,10 +452,15 @@ func _dessiner_telegraphe(r: float) -> void:
 func _dessiner_barre_de_vie(r: float) -> void:
 	if pv >= pv_max:
 		return
-	var largeur := r * 2.0
-	var haut := -r - 16.0
-	draw_rect(Rect2(-largeur / 2.0, haut, largeur, 6.0), Color(0, 0, 0, 0.55))
-	draw_rect(Rect2(-largeur / 2.0, haut, largeur * clampf(pv / pv_max, 0.0, 1.0), 6.0), Palette.DANGER)
+	var largeur := maxf(56.0, r * 2.2)
+	var haut := -r - 22.0
+	var barre := Rect2(-largeur / 2.0, haut, largeur, 9.0)
+	draw_rect(barre.grow(4.0), Color(0.008, 0.012, 0.022, 0.88))
+	draw_rect(barre, Color(0.20, 0.035, 0.055, 0.94))
+	var pleine := barre.grow(-2.0)
+	pleine.size.x *= clampf(pv / pv_max, 0.0, 1.0)
+	draw_rect(pleine, Palette.DANGER)
+	draw_rect(barre, Color(Palette.OR, 0.62), false, 2.0)
 
 func _dessiner_rampant(r: float, couleur: Color) -> void:
 	var vers := Vector2.DOWN if _cible == null else global_position.direction_to(_cible.global_position)

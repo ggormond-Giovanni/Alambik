@@ -1,0 +1,21 @@
+RECOMPENSES ET FIN DE RUN
+========================
+
+CONTENU REEL DU JEU
+-------------------
+Coffres de paliers ; Essence ; objet éventuel ; Pierres de forge en Mine ; XP ;
+victoire/défaite ; progression atteinte.
+
+COMPOSITION ACTUELLE VALIDEE
+----------------------------
+Récompense de miniboss = trophée arcanique illustré, nom, effet, rang et action.
+Fin de run = coffre illustré sur estrade, statistiques dans une plaque gravée,
+récompenses et Améliorations dans des emplacements dédiés.
+Victoire et défaite gardent le même châssis avec une couleur contextuelle.
+Le retour reste automatique après la révélation.
+
+TOI > Célébration : sobre / importante / spectaculaire :
+TOI > Récompenses révélées une à une ou toutes ensemble ?
+TOI > Statistiques de run à montrer :
+TOI > Retour automatique ou bouton Continuer ?
+TOI > Référence précise ou commentaire libre :

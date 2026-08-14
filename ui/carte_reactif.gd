@@ -1,7 +1,7 @@
 class_name CarteReactif
 extends Button
 
-# Une carte d'Augment entierement dessinee. Une transformation elementaire
+# Une carte d'Amélioration entierement dessinee. Une transformation elementaire
 # conserve une double bordure pour rester identifiable dans l'inventaire.
 
 signal choisie(id: String)
@@ -57,7 +57,7 @@ func _sur_appui() -> void:
 func _draw() -> void:
 	if reactif == null:
 		return
-	var police := ThemeDB.fallback_font
+	var police := Polices.CORPS
 	var r := Rect2(Vector2(8.0, 7.0), size - Vector2(16.0, 14.0))
 	var teinte: Color = reactif.teinte
 	var alpha := 0.35 if desactivee else 1.0

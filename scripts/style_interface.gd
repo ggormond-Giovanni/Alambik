@@ -1,17 +1,19 @@
 class_name StyleInterface
 extends RefCounted
 
-# Un langage commun pour tous les ecrans : panneaux en blocs, bordures de quatre
-# pixels et contrastes francs, comme une interface 16-bit agrandie sans flou.
+# Pixel art moderne : construction nette sur la grille, mais profondeur,
+# transparences colorees et lumiere de fantasy plutot qu'un aplat austere.
 
 static func panneau(fond: Color, bord: Color, rayon := 24, ombre := 10) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fond
 	style.border_color = bord
 	style.set_border_width_all(4)
-	style.set_corner_radius_all(0)
-	style.shadow_color = Color(0.0, 0.0, 0.0, 0.0)
-	style.shadow_size = 0
+	style.set_corner_radius_all(maxi(0, mini(rayon, 10)))
+	style.corner_detail = 5
+	style.shadow_color = Color(0.005, 0.012, 0.035, 0.72)
+	style.shadow_size = maxi(0, mini(ombre, 12))
+	style.shadow_offset = Vector2(0.0, 7.0)
 	style.content_margin_left = 24.0
 	style.content_margin_right = 24.0
 	style.content_margin_top = 16.0
@@ -19,7 +21,7 @@ static func panneau(fond: Color, bord: Color, rayon := 24, ombre := 10) -> Style
 	return style
 
 static func panneau_leger(accent := Palette.ESSENCE, rayon := 22) -> StyleBoxFlat:
-	var style := panneau(Color(0.040, 0.034, 0.066, 0.86), Color(accent, 0.28), rayon, 5)
+	var style := panneau(Color(0.075, 0.105, 0.205, 0.90), Color(accent, 0.46), rayon, 6)
 	style.border_width_top = 1
 	style.border_width_right = 1
 	style.border_width_bottom = 1
@@ -36,7 +38,17 @@ static func dessiner_fond(canvas: CanvasItem, taille: Vector2, accent := Palette
 static func dessiner_entete(canvas: CanvasItem, taille: Vector2, surtitre: String,
 		titre: String, sous_titre: String, accent := Palette.OR,
 		y := 104.0, aligne_gauche := false) -> void:
-	var police := ThemeDB.fallback_font
+	var police := Polices.CORPS
+	var cadre := Rect2(28.0, y - 72.0, taille.x - 56.0, 154.0 if not sous_titre.is_empty() else 126.0)
+	canvas.draw_rect(cadre, Color(0.025, 0.045, 0.115, 0.92))
+	canvas.draw_rect(cadre, Color(accent, 0.62), false, 4.0)
+	canvas.draw_rect(Rect2(cadre.position + Vector2(8.0, 8.0), cadre.size - Vector2(16.0, 16.0)),
+		Color(Palette.BORD_PAGE, 0.38), false, 2.0)
+	for coin in [cadre.position + Vector2(12.0, 12.0),
+		cadre.position + Vector2(cadre.size.x - 12.0, 12.0),
+		cadre.position + Vector2(12.0, cadre.size.y - 12.0),
+		cadre.end - Vector2(12.0, 12.0)]:
+		canvas.draw_circle(coin, 5.0, Color(accent, 0.86))
 	var x := 54.0 if aligne_gauche else 0.0
 	var largeur := taille.x - 108.0 if aligne_gauche else taille.x
 	var alignement := HORIZONTAL_ALIGNMENT_LEFT if aligne_gauche else HORIZONTAL_ALIGNMENT_CENTER
@@ -53,16 +65,36 @@ static func dessiner_entete(canvas: CanvasItem, taille: Vector2, surtitre: Strin
 	Retro16.rectangle(canvas, Rect2(ligne_x, ligne_y, ligne_largeur, 4.0),
 		Color(accent, 0.42))
 
+# Les ecrans premium sont peints : leurs boutons ne sont que des zones tactiles
+# posees sur la peinture. Un Button garde pourtant ses styleboxes de survol, de
+# clic et de focus, que Godot dessine par-dessus le decor — d'ou les rectangles
+# gris qui apparaissaient sous la souris. `flat` n'enleve que l'etat normal.
+static func rendre_invisible(bouton: Button) -> Button:
+	bouton.flat = true
+	bouton.focus_mode = Control.FOCUS_NONE
+	bouton.mouse_filter = Control.MOUSE_FILTER_STOP
+	var vide := StyleBoxEmpty.new()
+	for etat in ["normal", "hover", "pressed", "focus", "disabled"]:
+		bouton.add_theme_stylebox_override(etat, vide)
+	return bouton
+
+static func zone_tactile(action := Callable()) -> Button:
+	var bouton := Button.new()
+	rendre_invisible(bouton)
+	if action.is_valid():
+		bouton.pressed.connect(action)
+	return bouton
+
 static func styliser_bouton(bouton: Button, accent := Palette.OR, secondaire := false) -> void:
 	# Pas de focus clavier ni de déclenchement au premier contact : sur mobile,
 	# le joueur doit pouvoir glisser hors du bouton pour annuler son geste.
 	bouton.focus_mode = Control.FOCUS_NONE
 	bouton.action_mode = BaseButton.ACTION_MODE_BUTTON_RELEASE
-	var fond := Color(0.075, 0.060, 0.115, 0.96) if secondaire else Color(accent, 0.18)
+	var fond := Color(0.095, 0.125, 0.235, 0.96) if secondaire else Color(accent.darkened(0.46), 0.94)
 	bouton.add_theme_stylebox_override("normal", panneau(fond, Color(accent, 0.42), 0, 0))
 	# L'état hover ne porte aucune information : un écran tactile n'en a pas.
 	bouton.add_theme_stylebox_override("hover", panneau(fond, Color(accent, 0.42), 0, 0))
-	bouton.add_theme_stylebox_override("pressed", panneau(Color(accent, 0.38), accent, 0, 0))
+	bouton.add_theme_stylebox_override("pressed", panneau(Color(accent, 0.48), accent.lightened(0.24), 0, 3))
 	bouton.add_theme_stylebox_override("focus", panneau(Color(accent, 0.24), accent, 0, 0))
 	bouton.add_theme_stylebox_override("disabled", panneau(Color(0.06, 0.05, 0.08, 0.72), Color(accent, 0.14), 0, 0))
 	bouton.add_theme_color_override("font_color", Palette.TEXTE)
@@ -71,7 +103,9 @@ static func styliser_bouton(bouton: Button, accent := Palette.OR, secondaire := 
 	bouton.add_theme_color_override("font_focus_color", Color.WHITE)
 	bouton.add_theme_color_override("font_disabled_color", Color(Palette.TEXTE_ATTENUE, 0.62))
 	bouton.add_theme_constant_override("outline_size", 4)
-	bouton.add_theme_color_override("font_outline_color", Color(0.02, 0.015, 0.04, 0.75))
+	bouton.add_theme_constant_override("icon_max_width", 64)
+	bouton.add_theme_constant_override("h_separation", 16)
+	bouton.add_theme_color_override("font_outline_color", Color(0.03, 0.05, 0.13, 0.88))
 	if not bouton.has_meta("micro_animation_installee"):
 		bouton.set_meta("micro_animation_installee", true)
 		bouton.resized.connect(func() -> void: bouton.pivot_offset = bouton.size * 0.5)
@@ -147,7 +181,7 @@ static func animer_entree(controle: Control, distance := 22.0) -> void:
 	controle.modulate.a = 0.0
 	controle.position.y += mouvement
 	controle.pivot_offset = controle.size * 0.5
-	controle.scale = Vector2.ONE * (0.995 if ReglagesJoueur.effets_reduits else 0.975)
+	controle.scale = Vector2.ONE * (0.985 if ReglagesJoueur.effets_reduits else 0.925)
 	var animation := controle.create_tween()
 	animation.set_parallel(true)
 	animation.set_trans(Tween.TRANS_QUINT)
@@ -195,12 +229,13 @@ static func basculer_contenu(sortant: Control, entrant: Control, direction := 1.
 	if sortant.has_meta("transition_contenu"):
 		return
 	sortant.set_meta("transition_contenu", true)
-	var distance := 12.0 if ReglagesJoueur.effets_reduits else 38.0
-	var duree := 0.09 if ReglagesJoueur.effets_reduits else 0.20
+	var distance := 18.0 if ReglagesJoueur.effets_reduits else 112.0
+	var duree := 0.10 if ReglagesJoueur.effets_reduits else 0.28
 	var sortie := sortant.create_tween().set_parallel(true)
 	sortie.set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_IN)
 	sortie.tween_property(sortant, "modulate:a", 0.0, duree)
 	sortie.tween_property(sortant, "position:x", sortant.position.x - distance * direction, duree)
+	sortie.tween_property(sortant, "scale", Vector2.ONE * 0.94, duree)
 	await sortie.finished
 	sortant.visible = false
 	sortant.modulate.a = 1.0
@@ -208,10 +243,12 @@ static func basculer_contenu(sortant: Control, entrant: Control, direction := 1.
 	entrant.visible = true
 	entrant.modulate.a = 0.0
 	entrant.position.x += distance * direction
+	entrant.scale = Vector2.ONE * 0.94
 	var entree := entrant.create_tween().set_parallel(true)
 	entree.set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
 	entree.tween_property(entrant, "modulate:a", 1.0, duree * 1.45)
 	entree.tween_property(entrant, "position:x", entrant.position.x - distance * direction, duree * 1.45)
+	entree.tween_property(entrant, "scale", Vector2.ONE, duree * 1.45)
 	await entree.finished
 	sortant.remove_meta("transition_contenu")
 
@@ -222,7 +259,7 @@ static func sortir_puis(controle: Control, action: Callable, distance := -18.0) 
 		return
 	controle.set_meta("sortie_interface_en_cours", true)
 	controle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var duree := 0.10 if ReglagesJoueur.effets_reduits else 0.24
+	var duree := 0.11 if ReglagesJoueur.effets_reduits else 0.34
 	var mouvement := distance * (0.25 if ReglagesJoueur.effets_reduits else 1.0)
 	var animation := controle.create_tween()
 	animation.set_parallel(true)
@@ -231,5 +268,10 @@ static func sortir_puis(controle: Control, action: Callable, distance := -18.0) 
 	animation.tween_property(controle, "modulate:a", 0.0, duree)
 	animation.tween_property(controle, "position:y", controle.position.y + mouvement, duree)
 	animation.tween_property(controle, "scale", Vector2.ONE *
-		(0.995 if ReglagesJoueur.effets_reduits else 0.985), duree)
+		(0.98 if ReglagesJoueur.effets_reduits else 1.065), duree)
 	animation.chain().tween_callback(action)
+
+static func ajouter_icone(bouton: Button, index: int, largeur := 60) -> void:
+	bouton.icon = Retro16.icone_interface(index)
+	bouton.expand_icon = true
+	bouton.add_theme_constant_override("icon_max_width", largeur)

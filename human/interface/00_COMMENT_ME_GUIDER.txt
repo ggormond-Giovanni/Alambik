@@ -1,0 +1,58 @@
+COMMENT ME GUIDER POUR L'INTERFACE
+=================================
+
+Tu n'as besoin d'aucun vocabulaire technique.
+
+LA BONNE METHODE
+----------------
+1. Choisis UN écran dans ce dossier.
+2. Remplis seulement les lignes qui commencent par TOI >.
+3. Tu peux aussi coller une image de référence et écrire directement dessus :
+   « j'aime ce cadre », « pas cette couleur », « ce bouton plus gros ».
+4. Dis-moi : « Lis la fiche 03 et fais-moi une maquette, sans coder ».
+5. Je crée une image de l'écran. Tu corriges librement.
+6. Seulement après ton « validé », j'intègre cet écran dans Godot.
+
+Tu peux laisser des réponses vides. Une phrase comme « même esprit que mon image,
+mais plus alchimique et moins sombre » est une vraie réponse exploitable.
+
+LES 8 QUESTIONS QUI SUFFISENT
+-----------------------------
+TOI > 1. Quel écran veux-tu traiter ?
+TOI > 2. Quelles informations doivent attirer l'œil en premier ?
+TOI > 3. Qu'est-ce qui doit être grand et illustré ?
+TOI > 4. Qu'est-ce qui peut rester petit ou discret ?
+TOI > 5. Parmi tes références, qu'aimes-tu précisément ?
+TOI > 6. Qu'est-ce que tu ne veux surtout pas reprendre ?
+TOI > 7. Couleurs ou ambiance particulières ?
+TOI > 8. Animation souhaitée à l'ouverture ou au clic ?
+
+VOCABULAIRE FACULTATIF
+----------------------
+- Cadre : contour principal de l'écran.
+- Panneau : grande zone contenant plusieurs informations.
+- Carte : choix illustré, par exemple un sort ou un Am?lioration.
+- Slot : petite case d'équipement.
+- Onglet : bouton qui change une catégorie sans quitter l'écran.
+- Hiérarchie : ce que l'œil voit en premier, deuxième, troisième.
+
+REGLE DE VALIDATION
+-------------------
+Chaque écran passe par : FICHE > MAQUETTE IMAGE > TES CORRECTIONS > INTEGRATION.
+Une maquette refusée ne touche pas au jeu.
+
+ORDRE CONSEILLE
+---------------
+01 Langage visuel global
+02 Accueil
+03 Equipement
+04 Maitrises
+05 Arsenal et sorts
+06 Carte de campagne et modes
+07 HUD de combat
+08 Pause
+09 Choix d'Am?lioration
+10 Alambic
+11 Reglages
+12 Recompenses et fin de run
+

@@ -1,0 +1,19 @@
+ECRAN PAUSE
+===========
+
+CONTENU REEL DU JEU
+-------------------
+Continuer ; consulter les Améliorations ; Reglages ; quitter vers le menu.
+
+COMPOSITION PROPOSEE D'APRES TA REFERENCE
+-----------------------------------------
+Un véritable panneau central métallique, étroit, posé sur le combat assombri.
+Titre dans la traverse supérieure ; bouton fermer rouge dans un coin.
+Contexte de la run sous le titre ; grands boutons avec icône et texte alignés.
+Bas = accès secondaires plus petits. Aucun immense décor de sous-menu derrière.
+
+TOI > Voir le combat derrière : oui très visible / assombri / presque caché :
+TOI > Boutons principaux dans l'ordre :
+TOI > Améliorations : directement dans pause / bouton vers une page :
+TOI > Informations de run à afficher :
+TOI > Référence précise ou commentaire libre :

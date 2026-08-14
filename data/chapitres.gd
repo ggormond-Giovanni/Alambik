@@ -4,18 +4,25 @@ extends RefCounted
 # Les dix identites de monde existantes sont declinees en trois chapitres. Les
 # contenus sont reutilises entre les trois, tandis que densite et statistiques
 # montent. Le troisieme porte le boss signature du monde.
+#
+# Les Mondes ne portent plus leurs multiplicateurs : la difficulte est une
+# fonction du palier, c'est-a-dire du rang du chapitre dans la campagne. Une
+# table figee obligeait a recalculer dix lignes a chaque retouche et rendait
+# l'entree d'un Monde deux fois plus dure que ses propres chapitres.
+
+const CHAPITRES_PAR_MONDE := 3
 
 const MONDES := [
-	{"id": "encres", "numero": "I", "nom": "Encres", "sous_titre": "Les créatures quittent leurs lignes.", "boss_signature": "archiscribe_encres", "pv_mult": 1.00, "degats_mult": 1.00, "teinte": Color(0.60, 0.50, 0.92)},
-	{"id": "braises", "numero": "II", "nom": "Braises", "sous_titre": "Chaque salle conserve une étincelle.", "boss_signature": "roi_braises", "pv_mult": 1.35, "degats_mult": 1.15, "teinte": Color(1.00, 0.55, 0.28)},
-	{"id": "givre", "numero": "III", "nom": "Givre", "sous_titre": "Le papier craque sous le froid.", "boss_signature": "reine_givre", "pv_mult": 1.82, "degats_mult": 1.32, "teinte": Color(0.52, 0.86, 1.00)},
-	{"id": "orages", "numero": "IV", "nom": "Orages", "sous_titre": "Les phrases grondent avant de frapper.", "boss_signature": "maitre_orages", "pv_mult": 2.46, "degats_mult": 1.52, "teinte": Color(0.98, 0.90, 0.35)},
-	{"id": "venins", "numero": "V", "nom": "Venins", "sous_titre": "L’encre ronge ceux qui la lisent.", "boss_signature": "hydre_venins", "pv_mult": 3.32, "degats_mult": 1.75, "teinte": Color(0.52, 0.94, 0.38)},
-	{"id": "echos", "numero": "VI", "nom": "Échos", "sous_titre": "Chaque attaque revient une seconde fois.", "boss_signature": "choeur_infini", "pv_mult": 4.48, "degats_mult": 2.01, "teinte": Color(0.70, 0.56, 0.98)},
-	{"id": "ombres", "numero": "VII", "nom": "Ombres", "sous_titre": "Les mots se déplacent quand on détourne les yeux.", "boss_signature": "souverain_ombres", "pv_mult": 6.05, "degats_mult": 2.31, "teinte": Color(0.46, 0.42, 0.68)},
-	{"id": "runes", "numero": "VIII", "nom": "Runes", "sous_titre": "Des signes anciens défendent leurs secrets.", "boss_signature": "gardien_runes", "pv_mult": 8.17, "degats_mult": 2.66, "teinte": Color(0.35, 0.92, 0.76)},
-	{"id": "neant", "numero": "IX", "nom": "Néant", "sous_titre": "Certaines salles auraient dû rester scellées.", "boss_signature": "devoreur_neant", "pv_mult": 11.03, "degats_mult": 3.06, "teinte": Color(0.82, 0.38, 0.82)},
-	{"id": "alambic", "numero": "X", "nom": "Alambic", "sous_titre": "Toutes les formules convergent ici.", "boss_signature": "grand_alambic", "pv_mult": 14.89, "degats_mult": 3.52, "teinte": Color(1.00, 0.74, 0.24)},
+	{"id": "encres", "numero": "I", "nom": "Encres", "sous_titre": "Les créatures quittent leurs lignes.", "boss_signature": "archiscribe_encres", "teinte": Color(0.60, 0.50, 0.92)},
+	{"id": "braises", "numero": "II", "nom": "Braises", "sous_titre": "Chaque salle conserve une étincelle.", "boss_signature": "roi_braises", "teinte": Color(1.00, 0.55, 0.28)},
+	{"id": "givre", "numero": "III", "nom": "Givre", "sous_titre": "Le papier craque sous le froid.", "boss_signature": "reine_givre", "teinte": Color(0.52, 0.86, 1.00)},
+	{"id": "orages", "numero": "IV", "nom": "Orages", "sous_titre": "Les phrases grondent avant de frapper.", "boss_signature": "maitre_orages", "teinte": Color(0.98, 0.90, 0.35)},
+	{"id": "venins", "numero": "V", "nom": "Venins", "sous_titre": "L’encre ronge ceux qui la lisent.", "boss_signature": "hydre_venins", "teinte": Color(0.52, 0.94, 0.38)},
+	{"id": "echos", "numero": "VI", "nom": "Échos", "sous_titre": "Chaque attaque revient une seconde fois.", "boss_signature": "choeur_infini", "teinte": Color(0.70, 0.56, 0.98)},
+	{"id": "ombres", "numero": "VII", "nom": "Ombres", "sous_titre": "Les mots se déplacent quand on détourne les yeux.", "boss_signature": "souverain_ombres", "teinte": Color(0.46, 0.42, 0.68)},
+	{"id": "runes", "numero": "VIII", "nom": "Runes", "sous_titre": "Des signes anciens défendent leurs secrets.", "boss_signature": "gardien_runes", "teinte": Color(0.35, 0.92, 0.76)},
+	{"id": "neant", "numero": "IX", "nom": "Néant", "sous_titre": "Certaines salles auraient dû rester scellées.", "boss_signature": "devoreur_neant", "teinte": Color(0.82, 0.38, 0.82)},
+	{"id": "alambic", "numero": "X", "nom": "Alambic", "sous_titre": "Toutes les formules convergent ici.", "boss_signature": "grand_alambic", "teinte": Color(1.00, 0.74, 0.24)},
 ]
 
 const MINIBOSS_FINAUX := ["la_rature", "l_errata", "le_correcteur", "reliure_affamee",
@@ -28,9 +35,10 @@ static func _construire_chapitres() -> Array[Dictionary]:
 	var resultat: Array[Dictionary] = []
 	for index_monde in MONDES.size():
 		var monde: Dictionary = MONDES[index_monde]
-		for index_chapitre in 3:
+		for index_chapitre in CHAPITRES_PAR_MONDE:
 			var chapitre_monde := index_chapitre + 1
-			var est_signature := chapitre_monde == 3
+			var est_signature := chapitre_monde == CHAPITRES_PAR_MONDE
+			var palier := index_monde * CHAPITRES_PAR_MONDE + index_chapitre
 			var boss_final: String = str(monde["boss_signature"]) if est_signature \
 				else MINIBOSS_FINAUX[(index_monde * 2 + index_chapitre) % MINIBOSS_FINAUX.size()]
 			resultat.append({
@@ -44,11 +52,29 @@ static func _construire_chapitres() -> Array[Dictionary]:
 				"bosses": [5, 10, 15, 20],
 				"boss": boss_final,
 				"boss_signature": est_signature,
-				"pv_mult": float(monde["pv_mult"]) * pow(1.10, index_chapitre),
-				"degats_mult": float(monde["degats_mult"]) * pow(1.05, index_chapitre),
+				"palier": palier,
+				"pv_mult": pv_du_palier(palier),
+				"degats_mult": degats_du_palier(palier),
 				"teinte": monde["teinte"],
 			})
 	return resultat
+
+# Definies pour tout palier positif, y compris au-dela du trentieme : ajouter
+# un onzieme Monde ne demande qu'une entree dans MONDES.
+static func douceur_du_palier(palier: int) -> float:
+	return lerpf(Reglages.COURBE_DOUCEUR_DEBUT, 1.0,
+		clampf(float(maxi(0, palier)) / float(Reglages.COURBE_PALIERS_DOUCEUR), 0.0, 1.0))
+
+static func pv_du_palier(palier: int) -> float:
+	var p := maxi(0, palier)
+	return pow(Reglages.COURBE_PV_PAR_PALIER, float(p)) * douceur_du_palier(p)
+
+static func degats_du_palier(palier: int) -> float:
+	var p := maxi(0, palier)
+	return pow(Reglages.COURBE_DEGATS_PAR_PALIER, float(p)) * douceur_du_palier(p)
+
+static func palier(index: int) -> int:
+	return int(par_index(index)["palier"])
 
 static func nombre() -> int:
 	return TOUS.size()

@@ -1,0 +1,105 @@
+GROS BOSS / BOSS SIGNATURES
+===========================
+
+ACTUEL = 10 identités différentes, une par monde.
+OBJECTIF = 5 architectures de boss × 2 versions = 10 combats.
+Règles communes : phase 2 sous 50 % PV ; XP 25 ; 4 invocations par motif ;
+corps massif avec œil/creuset central. Chaque boss possède une couronne et un
+glyphe distincts, mais utilise aujourd'hui le moteur commun de patterns.
+
+[archiscribe_encres] ETAT=ACTUEL
+NOM=L'Archiscribe des Encres | MONDE=Encres | PV=360 | VITESSE=235 | DEGATS=18 | PROJECTILE=400
+DESIGN=couronne de cinq plumes verticales ; violet ; glyphe éclats.
+PHASE_1=barrage_horizontal > pluie > poursuite > pause
+PHASE_2=spirale > invocation > barrage_croise > pause
+
+[roi_braises] ETAT=ACTUEL
+NOM=Le Roi des Braises | MONDE=Braises | PV=380 | VITESSE=295 | DEGATS=22 | PROJECTILE=425
+DESIGN=deux grandes cornes de braise ; orange/rouge ; glyphe œil.
+PHASE_1=charge > spirale > poursuite > pause
+PHASE_2=anneau_breche > charge > pluie > pause
+
+[reine_givre] ETAT=ACTUEL
+NOM=La Reine du Givre | MONDE=Givre | PV=400 | VITESSE=215 | DEGATS=19 | PROJECTILE=450
+DESIGN=couronne de cinq cristaux ; bleu glace ; glyphe hexagone.
+PHASE_1=pluie > eventail_lent > anneau_breche > pause
+PHASE_2=barrage_croise > pluie > poursuite > pause
+
+[maitre_orages] ETAT=ACTUEL
+NOM=Le Maître des Orages | MONDE=Orages | PV=390 | VITESSE=270 | DEGATS=23 | PROJECTILE=475
+DESIGN=grand éclair vertical ; jaune ; glyphe éclair.
+PHASE_1=spirale > barrage_croise > pause
+PHASE_2=poursuite > anneau_breche > spirale > pause
+
+[hydre_venins] ETAT=ACTUEL
+NOM=L'Hydre des Venins | MONDE=Venins | PV=420 | VITESSE=225 | DEGATS=21 | PROJECTILE=400
+DESIGN=trois têtes rectangulaires ; vert venin ; glyphe goutte.
+PHASE_1=invocation > eventail_lent > pluie > pause
+PHASE_2=anneau_breche > invocation > poursuite > pause
+
+[choeur_infini] ETAT=ACTUEL
+NOM=Le Chœur infini | MONDE=Échos | PV=410 | VITESSE=250 | DEGATS=22 | PROJECTILE=425
+DESIGN=cinq visages orbitaux ; violet ; glyphe vague.
+PHASE_1=poursuite > barrage_horizontal > spirale > pause
+PHASE_2=barrage_croise > poursuite > anneau_breche > pause
+
+[souverain_ombres] ETAT=ACTUEL
+NOM=Le Souverain des Ombres | MONDE=Ombres | PV=440 | VITESSE=285 | DEGATS=24 | PROJECTILE=450
+DESIGN=deux ailes d'ombre anguleuses ; violet noir ; glyphe nuage.
+PHASE_1=charge > pluie > invocation > pause
+PHASE_2=spirale > charge > anneau_breche > pause
+
+[gardien_runes] ETAT=ACTUEL
+NOM=Le Gardien des Runes | MONDE=Runes | PV=460 | VITESSE=205 | DEGATS=23 | PROJECTILE=475
+DESIGN=six runes carrées autour du corps ; cyan ; glyphe cristal.
+PHASE_1=anneau_breche > barrage_horizontal > eventail_lent > pause
+PHASE_2=pluie > barrage_croise > invocation > pause
+
+[devoreur_neant] ETAT=ACTUEL
+NOM=Le Dévoreur du Néant | MONDE=Néant | PV=490 | VITESSE=275 | DEGATS=25 | PROJECTILE=400
+DESIGN=bouche horizontale à six dents ; violet ; glyphe zigzag.
+PHASE_1=spirale > poursuite > charge > pause
+PHASE_2=invocation > anneau_breche > barrage_croise > pause
+
+[grand_alambic] ETAT=ACTUEL
+NOM=Le Grand Alambic | MONDE=Alambic | PV=520 | VITESSE=240 | DEGATS=25 | PROJECTILE=425
+DESIGN=cornue verticale dorée avec trois bulles ; glyphe fiole.
+PHASE_1=pluie > spirale > anneau_breche > pause
+PHASE_2=charge > poursuite > invocation > barrage_croise > pause
+
+DECISION APPLIQUEE : CINQ FAMILLES, DEUX VERSIONS
+-------------------------------------------------
+1. SCRIBE_CHOEUR
+   V1=L'Archiscribe des Encres
+   V2=Le Choeur infini
+   SQUELETTE=masque-manuscrit flottant, couronne et satellites variables.
+
+2. CREUSET_COURONNE
+   V1=Le Roi des Braises
+   V2=Le Souverain des Ombres
+   SQUELETTE=creuset blindé trapu, deux grandes cornes élémentaires.
+
+3. MONARQUE_CRISTAL_RUNIQUE
+   V1=La Reine du Givre
+   V2=Le Gardien des Runes
+   SQUELETTE=automate royal large, couronne de cristaux ou plaques runiques.
+
+4. MOTEUR_TEMPETE_AILE
+   V1=Le Maître des Orages
+   V2=Le Dévoreur du Néant
+   SQUELETTE=moteur flottant, deux ailes anguleuses et noyau central.
+
+5. HYDRE_ALAMBIC
+   V1=L'Hydre des Venins
+   V2=Le Grand Alambic
+   SQUELETTE=châssis de cornue massif, trois cols ou chambres de verre.
+
+La ligne visuelle suit déjà ces paires. Le moteur conserve les statistiques et
+patterns propres à chaque identité : une V2 n'est donc jamais une simple couleur.
+
+MODELE DE PAIRE
+[famille_id] ETAT=A_MODIFIER
+IDENTITE MECANIQUE=
+VERSION_1=nom, monde, couleur, stats, phase 1, phase 2
+VERSION_2=nom, monde, couleur, stats, patterns remplacés ou réordonnés
+SQUELETTE COMMUN=silhouette, hitbox, mouvement, attaque signature

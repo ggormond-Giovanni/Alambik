@@ -1,0 +1,25 @@
+ÉCRAN CAMPAGNE ET MODES
+=======================
+
+ÉTAT = VALIDÉ ET INTÉGRÉ LE 14 AOÛT 2026
+
+CONTENU RÉEL DU JEU
+-------------------
+Campagne de 10 Mondes × 3 Chapitres ; Mine ; Épreuves rituelles.
+
+COMPOSITION VALIDÉE
+-------------------
+Le hub Aventure conserve quatre accès illustrés : Campagne, Mine, Épreuve, Livre.
+Campagne ouvre une grande carte illustrée dans un châssis plein écran.
+Les flèches parcourent les dix Mondes ; chaque Monde expose ses trois Chapitres.
+La fiche basse montre le texte du Monde, le gardien, la progression, les trois
+Alambics et les quatre gardiens. Les chapitres verrouillés restent visibles mais
+ne peuvent pas être sélectionnés.
+
+COMPORTEMENT
+------------
+SÉLECTIONNER mémorise le Monde et le Chapitre puis revient au hub.
+JOUER sur le hub lance toujours immédiatement le chapitre mémorisé.
+RETOUR et la croix ferment la sélection sans modifier le choix actuel.
+
+CAPTURE = tmp/refonte_interface/campagne_premium_reelle.png

@@ -1,6 +1,8 @@
 extends Control
 
-# L'Alambic genere un Element et l'attache a un Augment existant. La fusion
+const FOND_PREMIUM := preload("res://assets/visual/alambic_premium.png")
+
+# L'Alambic genere un Element et l'attache a un Amélioration existant. La fusion
 # ajoute une transformation : elle ne retire ni ne remplace jamais l'original.
 
 signal termine
@@ -30,14 +32,14 @@ func _process(delta: float) -> void:
 func _construire() -> void:
 	var marge := MarginContainer.new()
 	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
-	marge.add_theme_constant_override("margin_left", 44)
-	marge.add_theme_constant_override("margin_right", 44)
-	marge.add_theme_constant_override("margin_top", int(Ecran.marge_haute()) + 430)
-	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 30)
+	marge.add_theme_constant_override("margin_left", 86)
+	marge.add_theme_constant_override("margin_right", 86)
+	marge.add_theme_constant_override("margin_top", int(Ecran.marge_haute()) + 850)
+	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 82)
 	add_child(marge)
 
 	var colonne := VBoxContainer.new()
-	colonne.add_theme_constant_override("separation", 16)
+	colonne.add_theme_constant_override("separation", 12)
 	marge.add_child(colonne)
 
 	var defilement := ScrollContainer.new()
@@ -55,16 +57,17 @@ func _construire() -> void:
 	_apercu.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_apercu.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_apercu.add_theme_font_size_override("font_size", 24)
-	_apercu.custom_minimum_size = Vector2(0, 150)
+	_apercu.custom_minimum_size = Vector2(0, 132)
 	colonne.add_child(_apercu)
 
 	_bouton_fusionner = Button.new()
-	_bouton_fusionner.text = "INFUSER L'AUGMENT"
-	_bouton_fusionner.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
+	_bouton_fusionner.text = "INFUSER L'AMÉLIORATION"
+	_bouton_fusionner.custom_minimum_size = Vector2(0, 142)
 	_bouton_fusionner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_bouton_fusionner.add_theme_font_size_override("font_size", 30)
 	_bouton_fusionner.pressed.connect(_sur_fusionner)
 	StyleInterface.styliser_bouton(_bouton_fusionner, _teinte_element())
+	StyleInterface.ajouter_icone(_bouton_fusionner, 12, 66)
 	colonne.add_child(_bouton_fusionner)
 	_construire_cartes()
 
@@ -105,9 +108,9 @@ func _rafraichir() -> void:
 	if donnees.is_empty():
 		_apercu.text = "L'Alambic reste silencieux."
 	elif _cartes.is_empty():
-		_apercu.text = "%s\n\nAucun Augment non fusionné n'est disponible." % donnees["nom"]
+		_apercu.text = "%s\n\nAucune Amélioration non fusionnée n'est disponible." % donnees["nom"]
 	elif _selection.is_empty():
-		_apercu.text = "%s\n\nChoisissez l'Augment à transformer." % donnees["nom"]
+		_apercu.text = "%s\n\nChoisissez l'Amélioration à transformer." % donnees["nom"]
 	else:
 		var augment := CatalogueReactifs.par_id(_selection)
 		var fusion := CatalogueElements.creer_fusion(_element, _selection)
@@ -141,19 +144,17 @@ func _teinte_element() -> Color:
 	return donnees.get("teinte", Palette.ESSENCE)
 
 func _draw() -> void:
-	var police := ThemeDB.fallback_font
+	var police := Polices.CORPS
 	var teinte := _teinte_element()
-	StyleInterface.dessiner_fond(self, size, teinte, _anim, 0.98)
-	Dessin.halo(self, Vector2(size.x / 2.0, 220.0), 420.0, Color(teinte, 0.24), 7)
-	var haut := Ecran.marge_haute() + 80.0
-	draw_string(police, Vector2(52.0, haut - 36.0), "ALAMBIC ÉLÉMENTAIRE", HORIZONTAL_ALIGNMENT_LEFT,
-		size.x - 104.0, 22, teinte)
+	FondAdaptatif.dessiner_premium(self, FOND_PREMIUM, size, 1180.0, 740.0)
+	var haut := Ecran.marge_haute() + 118.0
+	draw_string(police, Vector2(72.0, haut), "ALAMBIC ÉLÉMENTAIRE", HORIZONTAL_ALIGNMENT_CENTER,
+		size.x - 144.0, 38, Palette.TEXTE)
 	var nom_element := str(CatalogueElements.par_id(_element).get("nom", "Élément inconnu"))
-	draw_string(police, Vector2(52.0, haut + 18.0), nom_element, HORIZONTAL_ALIGNMENT_LEFT,
-		size.x - 104.0, 52, Palette.TEXTE)
-	draw_string(police, Vector2(52.0, haut + 58.0), "Un Augment entre. Il ressort transformé — et reste actif.  •  PV +%d %%" % roundi(Reglages.SOIN_ALAMBIC * 100.0),
-		HORIZONTAL_ALIGNMENT_LEFT, size.x - 104.0, 24, Palette.TEXTE_ATTENUE)
-	_dessiner_alambic(Vector2(size.x / 2.0, haut + 210.0), teinte)
+	draw_string(police, Vector2(80.0, haut + 67.0), nom_element.to_upper(), HORIZONTAL_ALIGNMENT_CENTER,
+		size.x - 160.0, 31, teinte)
+	draw_string(police, Vector2(90.0, haut + 690.0), "Choisissez l'Amélioration à transformer • Soin : +%d %%" % roundi(Reglages.SOIN_ALAMBIC * 100.0),
+		HORIZONTAL_ALIGNMENT_CENTER, size.x - 180.0, 22, Palette.TEXTE_ATTENUE)
 
 func _dessiner_alambic(centre: Vector2, teinte: Color) -> void:
 	var ballon := centre + Vector2(0, 40.0)

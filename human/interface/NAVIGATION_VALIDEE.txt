@@ -1,0 +1,88 @@
+NAVIGATION PRINCIPALE — VALIDEE
+===============================
+
+ETAT = VALIDEE LE 14 AOUT 2026
+
+BARRE INFERIEURE PERMANENTE
+---------------------------
+Ordre exact de gauche à droite :
+1. EQUIPEMENT
+2. AVENTURE
+3. MAITRISES
+4. SORTS
+
+La barre reste affichée dans ces quatre menus.
+Le menu actif est clairement éclairé et légèrement surélevé.
+On peut changer de menu en touchant son onglet ou en glissant horizontalement.
+Le swipe déplace le contenu derrière le châssis ; le châssis et la barre restent
+fixes. Un seul écran d'écart maximum par geste.
+
+ECRAN AVENTURE / HUB
+--------------------
+Les quatre accès illustrés autour du héros sont :
+- CAMPAGNE
+- MINE
+- EPREUVE
+- LIVRE
+
+CAMPAGNE = ouvre la carte et la sélection du Monde puis du Chapitre.
+MINE = ouvre le mode Mine.
+EPREUVE = ouvre les Epreuves rituelles.
+LIVRE = ouvre les informations/collections liées au grimoire vivant.
+
+CARTE DE MONDE
+--------------
+Le cartouche situé directement au-dessus de JOUER affiche toujours le Monde et
+le Chapitre actuellement sélectionnés.
+Toucher ce cartouche ouvre la sélection du Monde puis du Chapitre.
+Toucher CAMPAGNE ouvre exactement cette même sélection.
+Le joueur choisit d'abord le Monde, puis le Chapitre disponible.
+La sélection courante est mémorisée et affichée sur le hub.
+Le bouton JOUER lance directement le Monde et le Chapitre déjà sélectionnés.
+JOUER ne doit afficher aucune confirmation et ne doit jamais rouvrir un écran
+de sélection intermédiaire : la transition vers la partie commence aussitôt.
+
+VOCABULAIRE DEFINITIF
+---------------------
+L'ancien terme anglais est supprimé partout dans les textes visibles.
+Terme unique à employer dans l'interface et les documents : AMELIORATION.
+Pluriel : AMELIORATIONS.
+
+
+IMPLEMENTATION REELLE — 14 AOUT 2026
+------------------------------------
+- L'accueil valide est integre avec ses vraies zones tactiles.
+- Le heros de l'accueil est un calque separe et respire doucement.
+- JOUER lance immediatement le chapitre selectionne.
+- La barre inferieure reste disponible sur les quatre pages et le swipe fonctionne.
+- Le panneau PAUSE premium est integre au-dessus du vrai combat.
+- Les valeurs du panneau PAUSE (mode, salle, niveau, nombre d'Ameliorations,
+  Essence) sont dynamiques.
+- CHOISISSEZ UNE AMELIORATION utilise le chassis premium et affiche les trois
+  propositions reelles, leurs noms, familles, descriptions et icones.
+- NOUVEAU TIRAGE utilise le vrai compteur de relances.
+- Le fond de la Mine couvre maintenant exactement la surface de monde montree
+  par la camera PC : aucun monstre, projectile ou heros ne peut sembler jouer
+  dans le vide hors de l'arene.
+
+Captures de controle :
+- tmp/refonte_interface/menu_respiration.png
+- tmp/refonte_interface/pause_premium_reel.png
+- tmp/refonte_interface/amelioration_premium_reelle_v2.png
+- tmp/refonte_interface/mine_corrigee.png
+- tmp/refonte_interface/equipement_premium_reel.png
+- tmp/refonte_interface/maitrises_premium_reel.png
+- tmp/refonte_interface/sorts_premium_reel.png
+- tmp/refonte_interface/reglages_premium_reels.png
+- tmp/refonte_interface/campagne_premium_reelle.png
+- tmp/refonte_interface/hud_combat_premium.png
+- tmp/refonte_interface/portail_fin_premium.png
+
+MENUS PRINCIPAUX PREMIUM — 14 AOUT 2026
+---------------------------------------
+- ÉQUIPEMENT : changement, retrait et amélioration réels ; niveau lié à l'objet.
+- MAÎTRISES : trois branches, dix nœuds visibles par branche, achat et reset réels.
+- SORTS : Actifs, Passifs et Ultimes ; build équipé toujours visible.
+- Les trois écrans partagent le même métal bleu nuit, les gravures dorées, les
+  accents violets/cyan, les grandes illustrations et la barre fixe validée.
+

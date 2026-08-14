@@ -1,0 +1,26 @@
+HUD DE COMBAT
+=============
+
+ÉTAT = VALIDÉ ET INTÉGRÉ LE 14 AOÛT 2026
+
+INFORMATIONS PERMANENTES
+------------------------
+Haut gauche = bouton Pause métallique isolé.
+Haut centre = Salle, Niveau de run et barre XP.
+Haut droite = Essence et nombre d'Améliorations dans deux lignes distinctes.
+Sous le bandeau = petites cases des Améliorations obtenues pendant la run.
+Droite = Sort actif et Ultime, avec icône et progression de recharge/charge.
+
+BARRES DE PV
+------------
+Héros = barre chiffrée directement au-dessus du héros, toujours visible.
+Monstres = barre fine encadrée uniquement lorsqu'ils sont blessés.
+Boss = grande barre nominative sous le bandeau principal.
+
+STYLE
+-----
+Coins coupés, doubles liserés, fond bleu-noir, or chaud et accents cyan/violet.
+Aucune bulle ronde ni rectangle générique. Les boutons de capacité restent
+grands, illustrés et lisibles sous le pouce.
+
+CAPTURE = tmp/refonte_interface/hud_combat_premium.png

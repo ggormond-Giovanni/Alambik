@@ -3,115 +3,47 @@ extends Control
 signal termine
 
 const REGLAGES := preload("res://ui/reglages.tscn")
+const PANNEAU := preload("res://assets/visual/pause_premium.png")
 
-var _titre_detail: Label
-var _description_detail: Label
-var _stats_detail: Label
-var _boutons_reactifs: Dictionary = {}
-var _selection := ""
+var _zones: Dictionary = {}
+var _inventaire: Control
 var _anim := 0.0
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_construire()
-	StyleInterface.animer_entree(self, 14.0)
+	_construire_zones()
+	StyleInterface.animer_entree(self, 20.0)
 	Capture.programmer(self)
 
-func _construire() -> void:
-	var marge := MarginContainer.new()
-	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
-	marge.add_theme_constant_override("margin_left", 72)
-	marge.add_theme_constant_override("margin_right", 72)
-	marge.add_theme_constant_override("margin_top", int(Ecran.marge_haute()) + 300)
-	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 64)
-	add_child(marge)
-	var colonne := VBoxContainer.new()
-	colonne.add_theme_constant_override("separation", 16)
-	marge.add_child(colonne)
+func _construire_zones() -> void:
+	_ajouter_zone("fermer", Rect2(770, 194, 112, 130), _reprendre)
+	_ajouter_zone("reprendre", Rect2(250, 610, 585, 185), _reprendre)
+	_ajouter_zone("ameliorations", Rect2(250, 817, 585, 177), _ouvrir_ameliorations)
+	_ajouter_zone("reglages", Rect2(250, 1018, 585, 177), _ouvrir_reglages)
+	_ajouter_zone("quitter", Rect2(250, 1218, 585, 182), _quitter_run)
+	resized.connect(_replacer_zones)
+	_replacer_zones()
 
-	var inventaire_titre := Label.new()
-	inventaire_titre.text = "DEV — touchez pour ajouter un augment à tester" if ReglagesJoueur.mode_dev else "VOS AUGMENTS — touchez pour voir les bonus"
-	inventaire_titre.add_theme_font_size_override("font_size", 24)
-	inventaire_titre.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
-	colonne.add_child(inventaire_titre)
+func _ajouter_zone(id: String, reference: Rect2, action: Callable) -> void:
+	var bouton := StyleInterface.zone_tactile(action)
+	bouton.set_meta("reference", reference)
+	add_child(bouton)
+	_zones[id] = bouton
 
-	var defilement := ScrollContainer.new()
-	defilement.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	defilement.custom_minimum_size = Vector2(0, 260)
-	defilement.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	colonne.add_child(defilement)
-	var grille := GridContainer.new()
-	grille.columns = 3
-	grille.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grille.add_theme_constant_override("h_separation", 12)
-	grille.add_theme_constant_override("v_separation", 12)
-	defilement.add_child(grille)
-	if ReglagesJoueur.mode_dev:
-		var ids: Array[String] = CatalogueReactifs.ids()
-		for id in ids:
-			_ajouter_bouton_reactif(grille, id, Jeu.copies(id))
-	elif Jeu.inventaire.is_empty():
-		var vide := Label.new()
-		vide.text = "Aucun augment pour le moment."
-		vide.add_theme_font_size_override("font_size", 28)
-		vide.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
-		grille.add_child(vide)
-	else:
-		for entree in Jeu.inventaire_groupe():
-			_ajouter_bouton_reactif(grille, entree[0], int(entree[1]))
+func _replacer_zones() -> void:
+	var sx := size.x / 1080.0
+	var hauteur := 1920.0 * sx
+	var decalage_y := (size.y - hauteur) * 0.5
+	for id in _zones:
+		var bouton: Button = _zones[id]
+		var r: Rect2 = bouton.get_meta("reference")
+		bouton.position = Vector2(r.position.x * sx, decalage_y + r.position.y * sx)
+		bouton.size = r.size * sx
 
-	var details := PanelContainer.new()
-	details.custom_minimum_size = Vector2(0, 280)
-	details.add_theme_stylebox_override("panel", StyleInterface.panneau(Color(0.055, 0.045, 0.085, 0.98), Color(Palette.ESSENCE, 0.38), 24, 8))
-	colonne.add_child(details)
-	var textes := VBoxContainer.new()
-	textes.add_theme_constant_override("separation", 8)
-	details.add_child(textes)
-	_titre_detail = Label.new()
-	_titre_detail.text = "Choisissez un augment"
-	_titre_detail.add_theme_font_size_override("font_size", 32)
-	_titre_detail.add_theme_color_override("font_color", Palette.TEXTE)
-	textes.add_child(_titre_detail)
-	_description_detail = Label.new()
-	_description_detail.text = "Ses effets chiffrés apparaîtront ici."
-	_description_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_description_detail.add_theme_font_size_override("font_size", 23)
-	_description_detail.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
-	textes.add_child(_description_detail)
-	_stats_detail = Label.new()
-	_stats_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_stats_detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_stats_detail.add_theme_font_size_override("font_size", 23)
-	_stats_detail.add_theme_color_override("font_color", Palette.ESSENCE)
-	textes.add_child(_stats_detail)
-
-	var bouton_reglages := Button.new()
-	bouton_reglages.text = "RÉGLAGES"
-	bouton_reglages.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
-	bouton_reglages.add_theme_font_size_override("font_size", 29)
-	StyleInterface.styliser_bouton(bouton_reglages, Palette.OR, true)
-	bouton_reglages.pressed.connect(_ouvrir_reglages)
-	colonne.add_child(bouton_reglages)
-
-	var continuer := Button.new()
-	continuer.text = "Continuer"
-	continuer.custom_minimum_size = Vector2(0, 116)
-	continuer.add_theme_font_size_override("font_size", 34)
-	StyleInterface.styliser_bouton(continuer, Palette.ESSENCE)
-	continuer.pressed.connect(func() -> void:
-		StyleInterface.sortir_puis(self, func() -> void: termine.emit()))
-	colonne.add_child(continuer)
-	var quitter := Button.new()
-	quitter.text = "Refermer le grimoire"
-	quitter.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
-	quitter.add_theme_font_size_override("font_size", 29)
-	StyleInterface.styliser_bouton(quitter, Palette.TEXTE_ATTENUE, true)
-	quitter.pressed.connect(func() -> void:
-		StyleInterface.sortir_puis(self, func() -> void:
-			get_tree().paused = false
-			get_tree().change_scene_to_file("res://scenes/menu.tscn")))
-	colonne.add_child(quitter)
+func _reprendre() -> void:
+	Sons.jouer("choix", -12.0)
+	StyleInterface.sortir_puis(self, func() -> void: termine.emit())
 
 func _ouvrir_reglages() -> void:
 	Sons.jouer("choix", -12.0)
@@ -120,56 +52,105 @@ func _ouvrir_reglages() -> void:
 	add_child(panneau)
 	panneau.ferme.connect(func() -> void: panneau.queue_free())
 
-func _ajouter_bouton_reactif(grille: GridContainer, id: String, copies: int) -> void:
-	var reactif := Jeu.reactif(id)
-	if reactif == null:
+func _ouvrir_ameliorations() -> void:
+	if _inventaire != null:
 		return
-	var bouton := Button.new()
-	bouton.text = "%s%s\n%s" % ["✦ " if reactif.est_transformation else "", reactif.nom, "x%d" % copies if copies > 1 else "Détails"]
-	bouton.toggle_mode = true
-	bouton.custom_minimum_size = Vector2(0, Ecran.CIBLE_TACTILE)
-	bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bouton.add_theme_font_size_override("font_size", 21)
-	StyleInterface.styliser_bouton(bouton, Palette.ESSENCE if reactif.est_transformation else reactif.teinte, true)
-	bouton.pressed.connect(func() -> void: _afficher_details(id, copies))
-	grille.add_child(bouton)
-	_boutons_reactifs[id] = bouton
+	Sons.jouer("choix", -12.0)
+	_inventaire = _VueAmeliorations.new()
+	_inventaire.ferme.connect(func() -> void:
+		_inventaire.queue_free()
+		_inventaire = null)
+	add_child(_inventaire)
+	StyleInterface.animer_entree(_inventaire, 18.0)
 
-func _afficher_details(id: String, copies: int) -> void:
-	var reactif := Jeu.reactif(id)
-	if reactif == null:
-		return
-	if ReglagesJoueur.mode_dev:
-		Jeu.ajouter_reactif(id)
-		copies = Jeu.copies(id)
-		var heros := get_tree().get_first_node_in_group("heros")
-		if heros != null:
-			heros.recalculer()
-		var bouton_ajoute: Button = _boutons_reactifs.get(id)
-		if bouton_ajoute != null:
-			bouton_ajoute.text = "%s%s\nTEST x%d (+1)" % ["✦ " if reactif.est_transformation else "", reactif.nom, copies]
-	_selection = id
-	for bouton_id in _boutons_reactifs:
-		(_boutons_reactifs[bouton_id] as Button).button_pressed = bouton_id == id
-	_titre_detail.text = "%s%s" % [reactif.nom, "  ×%d" % copies if copies > 1 else ""]
-	_titre_detail.add_theme_color_override("font_color", Palette.ESSENCE if reactif.est_transformation else reactif.teinte)
-	_description_detail.text = reactif.description
-	var lignes := DetailsReactif.lignes(reactif, copies)
-	_stats_detail.text = "BONUS TOTAL\n• " + "\n• ".join(lignes) if not lignes.is_empty() else "Aucun bonus chiffré."
-	StyleInterface.animer_rafraichissement(_titre_detail)
-	StyleInterface.animer_rafraichissement(_description_detail)
-	StyleInterface.animer_rafraichissement(_stats_detail)
-	Sons.jouer("choix", -18.0)
+func _quitter_run() -> void:
+	Sons.jouer("choix", -10.0)
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/menu.tscn")
 
 func _process(delta: float) -> void:
 	_anim += delta
 	queue_redraw()
 
 func _draw() -> void:
-	StyleInterface.dessiner_fond(self, size, Palette.ESSENCE, _anim, 0.96)
-	var police := ThemeDB.fallback_font
-	var centre := Vector2(size.x * 0.5, Ecran.marge_haute() + 170.0)
-	Dessin.halo(self, centre, 260.0, Color(Palette.ESSENCE, 0.22), 7)
-	draw_string(police, Vector2(0, centre.y - 34.0), "PAUSE", HORIZONTAL_ALIGNMENT_CENTER, size.x, 66, Palette.TEXTE)
-	draw_string(police, Vector2(0, centre.y + 30.0), "%s — salle %d / %d" % [Jeu.nom_run(), Jeu.salle_courante, Jeu.salles_du_chapitre()],
-		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
+	# Voile seulement : le vrai combat reste visible derriere le calque extrait.
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.004, 0.008, 0.018, 0.66))
+	var sx := size.x / 1080.0
+	var decalage_y := (size.y - 1920.0 * sx) * 0.5
+	draw_texture_rect(PANNEAU, Rect2(0.0, decalage_y, size.x, 1920.0 * sx), false)
+	var police := Polices.CORPS
+	draw_string(police, Vector2(286.0 * sx, decalage_y + 516.0 * sx), Jeu.nom_run(),
+		HORIZONTAL_ALIGNMENT_CENTER, 508.0 * sx, 29, Palette.TEXTE)
+	draw_string(police, Vector2(286.0 * sx, decalage_y + 558.0 * sx), "Salle %d / %d" % [Jeu.salle_courante, Jeu.salles_du_chapitre()],
+		HORIZONTAL_ALIGNMENT_CENTER, 508.0 * sx, 25, Palette.TEXTE_ATTENUE)
+	draw_string(police, Vector2(230.0 * sx, decalage_y + 1625.0 * sx), "Niveau %d" % Jeu.niveau_run,
+		HORIZONTAL_ALIGNMENT_CENTER, 220.0 * sx, 22, Palette.TEXTE)
+	draw_string(police, Vector2(430.0 * sx, decalage_y + 1625.0 * sx), "%d Améliorations" % Jeu.inventaire.size(),
+		HORIZONTAL_ALIGNMENT_CENTER, 250.0 * sx, 21, Palette.TEXTE)
+	draw_string(police, Vector2(660.0 * sx, decalage_y + 1625.0 * sx), "%s Essence" % ReglagesJoueur.gouttes_affichees(),
+		HORIZONTAL_ALIGNMENT_CENTER, 240.0 * sx, 21, Palette.TEXTE)
+
+class _VueAmeliorations:
+	extends Control
+	signal ferme
+	const FOND := preload("res://assets/visual/fond_interface_scriptorium.png")
+
+	func _ready() -> void:
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		var marge := MarginContainer.new()
+		marge.set_anchors_preset(Control.PRESET_FULL_RECT)
+		marge.add_theme_constant_override("margin_left", 70)
+		marge.add_theme_constant_override("margin_right", 70)
+		marge.add_theme_constant_override("margin_top", 180)
+		marge.add_theme_constant_override("margin_bottom", 160)
+		add_child(marge)
+		var panneau := PanelContainer.new()
+		panneau.add_theme_stylebox_override("panel", StyleInterface.panneau(Color(0.008, 0.016, 0.038, 0.94), Color(Palette.OR, 0.84), 5, 12))
+		marge.add_child(panneau)
+		var colonne := VBoxContainer.new()
+		colonne.add_theme_constant_override("separation", 18)
+		panneau.add_child(colonne)
+		var titre := Label.new()
+		titre.text = "AMÉLIORATIONS DE LA RUN"
+		titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		titre.add_theme_font_size_override("font_size", 38)
+		titre.add_theme_color_override("font_color", Palette.TEXTE)
+		colonne.add_child(titre)
+		var defilement := ScrollContainer.new()
+		defilement.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		colonne.add_child(defilement)
+		var liste := VBoxContainer.new()
+		liste.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		liste.add_theme_constant_override("separation", 12)
+		defilement.add_child(liste)
+		if Jeu.inventaire.is_empty():
+			var vide := Label.new()
+			vide.text = "Aucune amélioration pour le moment."
+			vide.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			vide.add_theme_font_size_override("font_size", 27)
+			liste.add_child(vide)
+		else:
+			for entree in Jeu.inventaire_groupe():
+				var r := Jeu.reactif(str(entree[0]))
+				if r == null: continue
+				var carte := CarteReactif.new()
+				carte.configurer(r)
+				carte.custom_minimum_size.y = 172
+				carte.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				liste.add_child(carte)
+		var fermer := Button.new()
+		fermer.text = "RETOUR"
+		fermer.custom_minimum_size.y = 112
+		fermer.add_theme_font_size_override("font_size", 30)
+		StyleInterface.styliser_bouton(fermer, Palette.OR, true)
+		fermer.pressed.connect(func() -> void: ferme.emit())
+		colonne.add_child(fermer)
+
+	func _draw() -> void:
+		FondAdaptatif.dessiner(self, FOND, size, 500.0, 420.0)
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.002, 0.006, 0.015, 0.44))
+		var cadre := Rect2(52.0, 156.0, size.x - 104.0, size.y - 284.0)
+		draw_rect(cadre, Color(0.006, 0.012, 0.030, 0.42))
+		draw_rect(cadre, Color(Palette.OR, 0.74), false, 3.0)
+		draw_rect(cadre.grow(-10.0), Color(Palette.ESSENCE, 0.26), false, 2.0)

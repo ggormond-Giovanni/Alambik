@@ -1,0 +1,29 @@
+ECRAN D'ACCUEIL
+===============
+
+ROLE = donner envie de jouer et accéder aux systèmes permanents
+
+CONTENU REEL DU JEU
+-------------------
+Profil et niveau ; XP ; Essence ; héros ; Monde et Chapitre choisis ; Jouer ;
+Campagne ; Mine ; Epreuve ; Livre ; Equipement ; Aventure ; Maitrises ; Sorts.
+Pas d'endurance, de boutique ou de monnaie premium fictive.
+
+COMPOSITION PROPOSEE
+--------------------
+Haut = profil compact à gauche, Essence et Reglages à droite
+Centre = héros grand, décor visible, très peu de boutons par-dessus
+Côtés = quatre accès illustrés : Campagne, Mine, Epreuve, Livre
+Bas = Monde/Chapitre choisi comme une vraie carte + gros bouton Jouer immédiat
+Tout en bas = navigation permanente Equipement/Aventure/Maitrises/Sorts
+Navigation = toucher ou swipe horizontal ; barre fixe, contenu animé
+Interaction = toucher la carte ou Campagne permet de changer Monde/Chapitre ;
+Jouer lance immédiatement ce qui est affiché, sans confirmation ni sélection
+
+TOI > Ce qui doit être vu en premier :
+TOI > Taille du héros : petit / moyen / très grand :
+TOI > Accès à garder directement visibles :
+TOI > Accès à cacher dans la navigation du bas :
+TOI > Le chapitre doit être : petite fiche / grande carte illustrée / mini-carte :
+TOI > Le décor doit prendre : peu / moitié / beaucoup de place :
+TOI > Référence précise ou commentaire libre :

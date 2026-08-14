@@ -1,0 +1,47 @@
+LANGAGE VISUEL GLOBAL
+=====================
+
+ETAT = A_VALIDER_AVANT_TOUTE_NOUVELLE_INTEGRATION
+
+CE QUE TES REFERENCES DISENT DEJA
+---------------------------------
+- Interface dense et réellement composée, pas une pile de rectangles génériques.
+- Grands cadres presque noirs, anguleux, intégrés aux bords de l'écran.
+- Liserés cuivre/or fins, doubles contours et coins métalliques travaillés.
+- Titres enchâssés dans le cadre supérieur, en crème chaud.
+- Panneaux emboîtés avec séparateurs, onglets et zones fonctionnelles distinctes.
+- Cartes verticales illustrées, avec rareté, niveau, progression et état visibles.
+- Boutons rectangulaires construits, biseautés, avec une vraie icône à gauche.
+- Couleur utilisée pour la fonction : orange attaque, bleu défense, vert utilitaire,
+  violet magie ; le fond reste sombre et laisse les illustrations briller.
+- Peu ou pas d'arrondis. Aucun effet « bulle de dialogue ».
+- Les ornements ne sont pas gratuits : ils structurent les zones et la lecture.
+
+PROPOSITION ALAMBIC
+-------------------
+Fond principal = bleu-noir d'encre
+Métal = cuivre vieilli + lumière or chaud
+Magie = violet avec accents turquoise
+Formes = coins coupés, cartouches, cadres emboîtés, petites attaches métalliques
+Texture = pierre sombre, cuir, papier noirci, métal ; très subtile sous le texte
+Police = titres fantasy ornementaux ; DM Sans pour tout texte fonctionnel
+Règle = aucun texte fonctionnel en police monospace ou pseudo-console
+Règle = marge intérieure nette autour des libellés, valeurs et descriptions
+Règle = taille contrôlée à la résolution PC de test 450 x 800 avant validation
+
+TOI > Ce que tu valides dans cette proposition :
+TOI > Ce que tu refuses :
+TOI > Plus sombre / pareil / plus lumineux :
+TOI > Plus sobre / pareil / plus ornementé :
+TOI > Une couleur à rendre plus présente :
+TOI > Une matière dominante : métal / pierre / cuir / bois / parchemin / autre :
+
+INTERDITS PROPOSES
+------------------
+- Gros rectangles translucides posés arbitrairement sur un décor.
+- Coins très arrondis.
+- Même panneau réutilisé partout sans adaptation à sa fonction.
+- Icône minuscule perdue dans un grand bouton vide.
+- Texte centré partout sans colonnes, grille ou hiérarchie.
+
+TOI > Ajoute ici tout ce que tu considères « amateur » ou hors style :

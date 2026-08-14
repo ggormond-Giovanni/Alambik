@@ -1,0 +1,52 @@
+DOSSIER HUMAN — MODE D'EMPLOI
+==============================
+
+Ce dossier est ton panneau de contrôle lisible. Tu n'as pas besoin d'ouvrir le
+code. Les valeurs ACTUELLES viennent du jeu au 14 août 2026.
+
+COMMENT DEMANDER UN CHANGEMENT
+------------------------------
+1. Modifie librement les textes et les nombres de ces fichiers.
+2. Tu peux écrire en phrases normales : « il fuit davantage », « je veux une
+   attaque en spirale bleue », « à supprimer », etc.
+3. Ajoute tes idées nouvelles avec ETAT = A_CREER.
+4. Écris un résumé dans 99_MES_MODIFICATIONS.txt.
+5. Dis-moi : « Lis human et applique mes changements ».
+
+Je comparerai alors ce dossier au jeu, modifierai le code, lancerai les tests et
+indiquerai ce qui a été appliqué. Rien dans human ne change le jeu tout seul.
+
+REGLES D'ECRITURE
+-----------------
+- ID : nom technique stable. Évite de le changer ; demande-moi un renommage.
+- NOM : texte visible par le joueur.
+- DESCRIPTION : texte court visible ou intention générale.
+- STATS : valeurs exactes actuelles.
+- COMPORTEMENT : décisions, distances, fuite, poursuite, cadence.
+- DESIGN : silhouette, couleurs, animation et effets visuels.
+- PATTERNS : ordre des attaques d'un boss.
+- ETAT = ACTUEL : existe dans le jeu.
+- ETAT = A_MODIFIER : tu as changé la fiche et veux l'appliquer.
+- ETAT = A_CREER : nouvelle idée qui n'existe pas encore.
+- ETAT = A_SUPPRIMER : tu veux réellement retirer cet élément.
+
+Tu peux remplacer une valeur par « À CHOISIR » ou écrire plusieurs variantes.
+Je te proposerai alors une implémentation sans inventer silencieusement.
+
+INDEX
+-----
+01_OBJECTIFS.txt                 vision et quantités visées
+02_HEROS_ET_REGLES.txt           héros, tir et règles générales
+03_AMELIORATIONS_ET_ELEMENTS.txt      Am?liorations et toutes les Fusions
+04_MONSTRES.txt                  ennemis communs et comportements
+05_MINIBOSS.txt                  dix miniboss
+06_GROS_BOSS.txt                 boss de fin de monde
+07_PATTERNS_BOSS.txt             définition précise de chaque attaque majeure
+08_MAITRISES.txt                 arbre permanent de trente Maîtrises
+09_MONDES_ET_VAGUES.txt          campagne, salles et rencontres
+10_ARSENAL_EQUIPEMENT.txt        sorts, passifs, ultimes, objets et récompenses
+11_DIRECTION_ARTISTIQUE.txt      règles visuelles de toute nouvelle production
+12_PROMPTS_ASSETS_VISUELS.txt    fiches précises pour régénérer un visuel
+13_INTERFACE_ET_ARENE.txt        accueil, HUD, transitions, vitesse et hitbox
+interface/                       une fiche simple par écran avant toute maquette
+99_MES_MODIFICATIONS.txt         bloc-notes libre à me faire lire

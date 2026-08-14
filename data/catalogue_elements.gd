@@ -1,7 +1,7 @@
 class_name CatalogueElements
 extends RefCounted
 
-# Un Element ne porte aucun effet universel. La famille de l'Augment decide si
+# Un Element ne porte aucun effet universel. La famille de l'Amélioration decide si
 # la fusion modifie un projectile, un Phenomene ou directement le heros.
 
 const PREFIXE_FUSION := "element__"
@@ -49,8 +49,13 @@ static func creer_fusion(element: String, augment: String) -> Reactif:
 static func _mods(element: String, famille: String) -> Dictionary:
 	if famille == CatalogueReactifs.HEROS:
 		return {"drapeaux": ["transformation_heros_%s" % element]}
+	# Un Sceau scelle son Element dans la salle : une aura permanente marque
+	# toute creature qui s'approche, sans lui infliger de degats. C'est la seule
+	# famille dont l'Element controle au lieu de frapper.
+	if famille == CatalogueReactifs.SCEAU:
+		return {"drapeaux": ["sceau_element_%s" % element]}
 	if famille == CatalogueReactifs.PHENOMENE:
-		# L'identite de l'Augment est necessaire pour savoir quel Phenomene porte
+		# L'identite de l'Amélioration est necessaire pour savoir quel Phenomene porte
 		# l'Element ; elle reste encodee dans l'id de fusion, pas dans le Tir.
 		return {}
 	match element:
@@ -66,19 +71,27 @@ static func _mods(element: String, famille: String) -> Dictionary:
 static func _description(element: String, famille: String) -> String:
 	if famille == CatalogueReactifs.HEROS:
 		match element:
-			"feu": return "Transformation du héros : Phénix à résurrections multiples. L'Augment original reste actif."
-			"eau": return "Transformation du héros : une résurrection complète. L'Augment original reste actif."
-			"air": return "Transformation du héros : résurrection aérienne. L'Augment original reste actif."
-			"terre": return "Transformation du héros : résurrection renforcée et protection temporaire. L'Augment original reste actif."
-			"lumiere": return "Transformation du héros : résurrection et auréole de puissance. L'Augment original reste actif."
-			"tenebres": return "Transformation du héros : la sécurité est sacrifiée contre une forte puissance offensive. L'Augment original reste actif."
+			"feu": return "Transformation du héros : Phénix à résurrections multiples. L'Amélioration original reste actif."
+			"eau": return "Transformation du héros : une résurrection complète. L'Amélioration original reste actif."
+			"air": return "Transformation du héros : résurrection aérienne. L'Amélioration original reste actif."
+			"terre": return "Transformation du héros : résurrection renforcée et protection temporaire. L'Amélioration original reste actif."
+			"lumiere": return "Transformation du héros : résurrection et auréole de puissance. L'Amélioration original reste actif."
+			"tenebres": return "Transformation du héros : la sécurité est sacrifiée contre une forte puissance offensive. L'Amélioration original reste actif."
+	if famille == CatalogueReactifs.SCEAU:
+		match element:
+			"feu": return "Le Sceau embrase l'air : les créatures proches prennent feu d'elles-mêmes. L'Amélioration original reste actif."
+			"eau": return "Le Sceau noie l'air : les créatures proches deviennent Mouillées, ralenties et vulnérables. L'Amélioration original reste actif."
+			"air": return "Le Sceau soulève l'air : son aura porte bien plus loin autour de vous. L'Amélioration original reste actif."
+			"terre": return "Le Sceau alourdit l'air : les créatures proches attaquent plus tard. L'Amélioration original reste actif."
+			"lumiere": return "Le Sceau irradie : marquer une créature proche vous rend de la vie. L'Amélioration original reste actif."
+			"tenebres": return "Le Sceau ronge : les créatures proches encaissent bien plus mal vos attaques. L'Amélioration original reste actif."
 	if famille == CatalogueReactifs.PHENOMENE:
-		return "Le Phénomène devient vecteur de %s ; l'intensité est adaptée à sa fréquence. L'Augment original reste actif." % par_id(element)["nom"]
+		return "Le Phénomène devient vecteur de %s ; l'intensité est adaptée à sa fréquence. L'Amélioration original reste actif." % par_id(element)["nom"]
 	match element:
-		"feu": return "Les projectiles appliquent des brûlures cumulatives relatives à l'attaque. L'Augment original reste actif."
-		"eau": return "Les projectiles rendent les cibles Mouillées : ralenties et vulnérables. L'Augment original reste actif."
-		"air": return "Les projectiles gagnent fortement en vitesse. L'Augment original reste actif."
-		"terre": return "Les projectiles deviennent lents et lourds ; le premier proc retarde la prochaine attaque. L'Augment original reste actif."
-		"lumiere": return "Les impacts rendent une part des dégâts sous forme de vie. L'Augment original reste actif."
-		"tenebres": return "Certains projectiles deviennent des surcharges dévastatrices. L'Augment original reste actif."
+		"feu": return "Les projectiles appliquent des brûlures cumulatives relatives à l'attaque. L'Amélioration original reste actif."
+		"eau": return "Les projectiles rendent les cibles Mouillées : ralenties et vulnérables. L'Amélioration original reste actif."
+		"air": return "Les projectiles gagnent fortement en vitesse. L'Amélioration original reste actif."
+		"terre": return "Les projectiles deviennent lents et lourds ; le premier proc retarde la prochaine attaque. L'Amélioration original reste actif."
+		"lumiere": return "Les impacts rendent une part des dégâts sous forme de vie. L'Amélioration original reste actif."
+		"tenebres": return "Certains projectiles deviennent des surcharges dévastatrices. L'Amélioration original reste actif."
 	return ""

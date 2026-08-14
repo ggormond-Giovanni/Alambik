@@ -2,7 +2,7 @@ extends RefCounted
 
 func test_le_niveau_de_run_vient_de_l_experience(v: Verif) -> void:
 	Jeu.demarrer_run(1)
-	v.egal(Jeu.niveau_run, 0, "la run commence sans Augment")
+	v.egal(Jeu.niveau_run, 0, "la run commence sans Amélioration")
 	v.egal(Jeu.gagner_experience_run(Reglages.XP_RUN_SEUILS[0]), 1,
 		"atteindre le seuil ouvre un level-up immediat")
 
@@ -12,7 +12,7 @@ func test_la_courbe_place_les_six_choix_avant_les_boss(v: Verif) -> void:
 	for salle in range(1, Reglages.SALLES_PAR_RUN + 1):
 		if cibles.has(salle):
 			v.egal(Jeu.niveau_run, cibles[salle],
-				"%d Augments sont disponibles avant la salle %d" % [cibles[salle], salle])
+				"%d Améliorations sont disponibles avant la salle %d" % [cibles[salle], salle])
 		for vague in Vagues.pour_salle(salle, 0, 42, "grimoire"):
 			for id in vague:
 				Jeu.gagner_experience_run(int(CatalogueEnnemis.par_id(id)["experience"]))
@@ -49,7 +49,26 @@ func test_les_modes_ont_la_bonne_longueur(v: Verif) -> void:
 	Jeu.demarrer_run(1, 1, 7, "retro")
 	v.egal(Jeu.salles_du_chapitre(), 1, "le prototype retro tient dans une salle")
 	v.vrai(Jeu.est_retro(), "le rendu peut reconnaitre explicitement le prototype")
-	v.egal(Jeu.nom_run(), "Prototype 16-bit", "le prototype est identifie dans le HUD")
+	v.egal(Jeu.nom_run(), "Vision enchantée", "la vision est identifiee dans le HUD")
+
+func test_chaque_boss_d_epreuve_recoit_une_fusion_aleatoire(v: Verif) -> void:
+	Jeu.demarrer_run(31415, 1, 0, "epreuve_sorts")
+	var augments := {}
+	var elements := {}
+	for rituel in 5:
+		var avant := Jeu.inventaire.size()
+		var resultat := Jeu.ajouter_fusion_aleatoire_epreuve()
+		v.vrai(not resultat.is_empty(), "le rituel %d produit une fusion" % (rituel + 1))
+		v.egal(Jeu.inventaire.size(), avant + 2,
+			"le rituel ajoute l'Amelioration et sa transformation")
+		v.vrai(CatalogueReactifs.par_id(str(resultat["augment"])) != null,
+			"l'Amelioration tiree existe")
+		v.vrai(CatalogueElements.est_fusion(str(resultat["fusion"])),
+			"le second gain est une fusion elementaire")
+		augments[resultat["augment"]] = true
+		elements[resultat["element"]] = true
+	v.egal(augments.size(), 5, "les cinq boss recoivent cinq Ameliorations differentes")
+	v.egal(elements.size(), 5, "les cinq premiers Alambics tirent cinq Elements differents")
 
 func test_chaque_miniboss_recompense_par_une_capacite(v: Verif) -> void:
 	var rng := RandomNumberGenerator.new()

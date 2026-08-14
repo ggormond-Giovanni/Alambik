@@ -17,7 +17,8 @@ func test_mode_dev_donne_acces_sans_modifier_le_build(v: Verif) -> void:
 	r.mode_dev = true
 	r.rangs_competences = {}
 	v.vrai(r.chapitre_debloque(2), "le mode dev ouvre tous les chapitres")
-	v.egal(r.rang_competence("force"), 1, "le mode dev ouvre toutes les Maitrises")
+	v.egal(r.rang_competence("force"), ArbreCompetences.rangs("force"),
+		"le mode dev ouvre toutes les Maitrises a leur rang maximal")
 	v.egal(r.niveau_compte_effectif(), 1, "le mode dev ne change pas le niveau global")
 	v.egal(r.gouttes_affichees(), "∞", "les gouttes sont infinies")
 	v.vrai(r.rangs_competences.is_empty(), "les vrais rangs sauvegardes ne sont pas ecrases")

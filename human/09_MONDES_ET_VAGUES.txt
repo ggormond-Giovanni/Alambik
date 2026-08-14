@@ -1,0 +1,48 @@
+MONDES, CHAPITRES ET VAGUES
+==========================
+
+STRUCTURE ACTUELLE
+10 mondes × 3 chapitres × 20 salles. Alambics après 4/9/14. Miniboss 5/10/15.
+Boss final 20. Le chapitre 3 utilise le gros boss du monde ; chapitres 1 et 2
+utilisent un miniboss. Dans chaque chapitre, PV ennemis vont progressivement
+jusqu'à ×4 par rapport au début et dégâts jusqu'à ×1,75.
+
+MONDE | SOUS-TITRE | BOSS | MULT PV BASE | MULT DEGATS BASE
+I Encres | Les créatures quittent leurs lignes. | Archiscribe | 1,00 | 1,00
+II Braises | Chaque salle conserve une étincelle. | Roi des Braises | 1,50 | 1,18
+III Givre | Le papier craque sous le froid. | Reine du Givre | 2,25 | 1,39
+IV Orages | Les phrases grondent avant de frapper. | Maître des Orages | 3,38 | 1,64
+V Venins | L'encre ronge ceux qui la lisent. | Hydre des Venins | 5,06 | 1,94
+VI Échos | Chaque attaque revient une seconde fois. | Chœur infini | 7,59 | 2,29
+VII Ombres | Les mots se déplacent quand on détourne les yeux. | Souverain | 11,39 | 2,70
+VIII Runes | Des signes anciens défendent leurs secrets. | Gardien | 17,09 | 3,19
+IX Néant | Certaines salles auraient dû rester scellées. | Dévoreur | 25,63 | 3,76
+X Alambic | Toutes les formules convergent ici. | Grand Alambic | 38,44 | 4,44
+NOTE = chapitres 2 et 3 multiplient encore PV par 1,12 et dégâts par 1,06 à chaque rang.
+La fin absolue culmine à environ ×193 PV et ×8,7 dégâts. Doubler chaque Monde
+aurait donné ×512 dès l'entrée du Monde X et rendu les premiers bonus inutiles.
+
+VAGUES ACTUELLES (A / B)
+1 rampant+sentinelle / 2 rampants
+2 sentinelle+rampant / véloce+rampant
+3 rampant+véloce+sentinelle / 2 rampants+sentinelle
+4 véloce+sentinelle+rampant / véloce+rampant+sentinelle
+5 MINIBOSS
+6 sentinelle+orbiteur+rampant / 2 véloces+rampant
+7 essaimeur+sentinelle / orbiteur+véloce+rampant
+8 véloce+harceleuse+sentinelle / essaimeur+rampant+orbiteur
+9 bélier+sentinelle+véloce / harceleuse+rampant+orbiteur
+10 MINIBOSS
+11 volatile+miroir+véloce / essaimeur+rampant+harceleuse
+12 tisseur+orbiteur / sentinelle+bélier+rampant
+13 phaseur+harceleuse+sentinelle / miroir+volatile+orbiteur
+14 essaimeur+tisseur+orbiteur / bélier+harceleuse+rampant
+15 MINIBOSS
+16 essaimeur+bélier+phaseur / miroir+harceleuse+véloce
+17 tisseur+orbiteur+bélier / essaimeur+miroir+volatile
+18 essaimeur+véloce+harceleuse / tisseur+miroir+orbiteur
+19 phaseur+bélier+sentinelle / volatile+harceleuse+miroir
+20 BOSS FINAL
+
+Tu peux remplacer chaque ligne, ajouter une troisième vague, préciser une
+variante par monde ou demander des règles de génération.

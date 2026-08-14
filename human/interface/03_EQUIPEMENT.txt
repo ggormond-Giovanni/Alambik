@@ -1,0 +1,26 @@
+ECRAN EQUIPEMENT
+================
+
+CONTENU REEL DU JEU
+-------------------
+3 slots actuels : anneau gauche, anneau droit, collier.
+30 objets prévus ; niveau de forge ; Pierres de forge ; bonus dégâts et PV.
+
+COMPOSITION VALIDEE ET INTEGREE
+-------------------------------
+Haut = titre enchâssé + retour + Pierres de forge
+Centre = héros sur socle illustré
+Autour du héros = les 3 grands slots équipés, pas six faux emplacements
+Sous le héros = résumé clair des bonus actuels
+Bas = inventaire en grille, filtres sobres, objet sélectionné mis en valeur
+Côté = détails ; bas = trois actions ÉQUIPER / RETIRER / AMÉLIORER
+
+COMPORTEMENT REEL
+-----------------
+Toucher un slot choisit Anneau gauche, Collier ou Anneau droit.
+La grille n'affiche que les objets compatibles avec le slot choisi.
+L'inventaire montre six objets par page et permet d'accéder aux trente objets.
+ÉQUIPER remplace librement l'objet du slot choisi.
+RETIRER laisse volontairement le slot vide et cet état est sauvegardé.
+AMÉLIORER dépense les Pierres de forge sur l'objet sélectionné.
+Le niveau appartient à l'objet et le suit lorsqu'il est retiré ou déplacé.

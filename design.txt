@@ -24,7 +24,7 @@ Le gameplay de base du héros existe déjà et est globalement satisfaisant.
 Les gros chantiers sont surtout :
 
 * structure des runs ;
-* Augments ;
+* Améliorations ;
 * Alambic ;
 * progression ;
 * équilibrage ;
@@ -349,18 +349,18 @@ Le niveau de run possède seulement :
 
 Chaque montée de niveau donne :
 
-**un choix entre 3 Augments aléatoires.**
+**un choix entre 3 Améliorations aléatoires.**
 
 L'XP nécessaire doit être calibrée pour obtenir approximativement :
 
-* 2 Augments avant la salle 5 ;
-* 4 Augments avant la salle 10 ;
-* 5 Augments avant la salle 15 ;
-* 6 Augments avant la salle 20.
+* 2 Améliorations avant la salle 5 ;
+* 4 Améliorations avant la salle 10 ;
+* 5 Améliorations avant la salle 15 ;
+* 6 Améliorations avant la salle 20.
 
 Donc une run complète contient au maximum :
 
-**6 Augments standards.**
+**6 Améliorations standards.**
 
 Les niveaux de run sont entièrement reset au chapitre suivant.
 
@@ -370,21 +370,21 @@ Les niveaux de run sont entièrement reset au chapitre suivant.
 
 Lorsqu'un niveau de run est gagné :
 
-**le combat se met en pause immédiatement** et le choix d'Augment apparaît.
+**le combat se met en pause immédiatement** et le choix d'Amélioration apparaît.
 
 Principe similaire à Archero.
 
-Le joueur choisit 1 Augment parmi 3.
+Le joueur choisit 1 Amélioration parmi 3.
 
 Des rerolls pourront être obtenus via les Maîtrises permanentes.
 
-Les Augments ne doivent PAS être uniquement :
+Les Améliorations ne doivent PAS être uniquement :
 
 * +10 % ATK ;
 * +5 % critique ;
 * +15 % PV.
 
-Les Augments servent principalement à modifier le comportement du build.
+Les Améliorations servent principalement à modifier le comportement du build.
 
 Les petits bonus statistiques appartiennent davantage :
 
@@ -416,11 +416,11 @@ Lorsqu'un Alambic est utilisé :
 
 C'est la principale source de soin garantie/native de la structure d'une run.
 
-Cela ne signifie PAS qu'aucun Augment, équipement ou Passif ne peut produire du soin.
+Cela ne signifie PAS qu'aucun Amélioration, équipement ou Passif ne peut produire du soin.
 
 Exemple :
 
-Régénération reste un Augment possible.
+Régénération reste un Amélioration possible.
 
 ---
 
@@ -430,14 +430,14 @@ Lors de chaque utilisation :
 
 1. le joueur récupère 20 % de ses PV max ;
 2. l'Alambic génère **un Élément aléatoire** ;
-3. le joueur choisit l'un de ses Augments ;
-4. cet Augment fusionne avec l'Élément ;
-5. l'Augment conserve son effet original ;
+3. le joueur choisit l'un de ses Améliorations ;
+4. cet Amélioration fusionne avec l'Élément ;
+5. l'Amélioration conserve son effet original ;
 6. il gagne en plus une transformation correspondant à l'Élément.
 
 IMPORTANT :
 
-**les Éléments ne sont PAS des Augments standards.**
+**les Éléments ne sont PAS des Améliorations standards.**
 
 Ils n'apparaissent jamais lors des level-ups.
 
@@ -449,7 +449,7 @@ Ils existent exclusivement via l'Alambic.
 
 L'Élément n'a PAS un comportement universel.
 
-Son effet dépend de la famille d'Augment avec laquelle il est fusionné.
+Son effet dépend de la famille d'Amélioration avec laquelle il est fusionné.
 
 C'est un point critique.
 
@@ -467,11 +467,11 @@ ne signifie PAS que les attaques du héros brûlent.
 
 Il provoque une transformation du héros de type Phénix.
 
-Ne jamais appliquer automatiquement la propriété offensive d'un Élément lorsqu'il est fusionné avec un Augment défensif/Héros.
+Ne jamais appliquer automatiquement la propriété offensive d'un Élément lorsqu'il est fusionné avec un Amélioration défensif/Héros.
 
 ---
 
-# 18. FAMILLES D'AUGMENTS
+# 18. FAMILLES D'AMÉLIORATIONS
 
 Trois familles principales actuellement retenues :
 
@@ -530,9 +530,9 @@ Régénération × Feu
 Avidité × Feu
 etc.
 
-Si un Augment Héros est fusionné avec Feu :
+Si un Amélioration Héros est fusionné avec Feu :
 
-* l'Augment Héros original continue de fonctionner ;
+* l'Amélioration Héros original continue de fonctionner ;
 * le héros reçoit la transformation Feu.
 
 Cela permet de garder un système compréhensible et raisonnable à produire.
@@ -715,11 +715,11 @@ Le joueur échange donc la sécurité contre la puissance.
 
 ---
 
-# 25. AUGMENTS PROJECTILE — POOL ACTUEL
+# 25. AMÉLIORATIONS PROJECTILE — POOL ACTUEL
 
 Le pool n'est PAS définitif.
 
-Quelques Augments supplémentaires seront probablement ajoutés plus tard.
+Quelques Améliorations supplémentaires seront probablement ajoutés plus tard.
 
 ## Tir multiple
 
@@ -763,11 +763,11 @@ Les projectiles peuvent suivre/rechercher leurs cibles.
 
 ---
 
-# 26. SYNERGIES NATURELLES ENTRE AUGMENTS
+# 26. SYNERGIES NATURELLES ENTRE AMÉLIORATIONS
 
 Point très important :
 
-les Augments peuvent produire des interactions extrêmement puissantes **sans passer par l'Alambic**.
+les Améliorations peuvent produire des interactions extrêmement puissantes **sans passer par l'Alambic**.
 
 Exemple :
 
@@ -801,7 +801,7 @@ Il ne doit PAS empêcher l'existence de power spikes spectaculaires.
 
 ---
 
-# 27. AUGMENTS HÉROS — POOL ACTUEL
+# 27. AMÉLIORATIONS HÉROS — POOL ACTUEL
 
 ## Égide
 
@@ -829,7 +829,7 @@ Augmente les dégâts progressivement lorsque les PV du héros diminuent.
 
 Augmente les statistiques lorsque le héros reste immobile.
 
-Cet Augment doit exploiter le gameplay fondamental :
+Cet Amélioration doit exploiter le gameplay fondamental :
 
 **immobile = attaque automatique.**
 
@@ -837,7 +837,7 @@ Il récompense les longues fenêtres pendant lesquelles le joueur réussit à DP
 
 ---
 
-# 28. AUGMENTS PHÉNOMÈNE — POOL ACTUEL
+# 28. AMÉLIORATIONS PHÉNOMÈNE — POOL ACTUEL
 
 ## Familier tireur
 
@@ -899,7 +899,7 @@ Valeurs exactes : À TESTER.
 
 ---
 
-# 29. NOMBRE D'AUGMENTS
+# 29. NOMBRE D'AMÉLIORATIONS
 
 Pool actuel :
 
@@ -917,11 +917,11 @@ Pool actuel :
 
 Total actuel :
 
-**16 Augments standards.**
+**16 Améliorations standards.**
 
 Ce n'est PAS le pool final.
 
-Quelques Augments supplémentaires doivent probablement être ajoutés avant la version finale.
+Quelques Améliorations supplémentaires doivent probablement être ajoutés avant la version finale.
 
 Ne pas en ajouter automatiquement lors de l'implémentation sans nouvelle décision de design.
 
@@ -1108,6 +1108,13 @@ Débloquer le palier Monde 2 permettrait également aux objets Monde 1 d'atteind
 Ainsi :
 
 **la progression détermine les stats brutes ; le choix d'objet détermine l'effet spécial.**
+
+La cible de fin de jeu est une puissance permanente globale voisine de dix fois
+celle du héros de départ. Stuff, Maîtrises et Passifs représentent chacun
+environ un tiers de ce budget. Cette répartition mesure une puissance équivalente
+incluant attaque, défense et utilitaire ; elle ne signifie pas que chaque source
+multiplie toutes les statistiques par 3,33. Les bonus bruts des trois sources ne
+doivent pas se composer en un multiplicateur proche de ×37.
 
 Le déclencheur exact du rattrapage reste :
 
@@ -1338,7 +1345,7 @@ Certains nœuds majeurs :
 
 Exemples validés comme direction :
 
-* +1 reroll d'Augment ;
+* +1 reroll d'Amélioration ;
 * potentiellement deuxième reroll plus tard ;
 * deuxième slot Passif.
 
@@ -1348,7 +1355,7 @@ L'arbre complet n'est PAS encore conçu.
 
 # 49. REROLLS
 
-Les level-ups proposent 3 Augments aléatoires.
+Les level-ups proposent 3 Améliorations aléatoires.
 
 Les Maîtrises permettent progressivement d'obtenir :
 
@@ -1487,7 +1494,7 @@ Le changement éventuel doit être prototypé séparément.
 
 10. Changer d'équipement ne doit pas détruire les investissements permanents.
 
-11. Les Augments doivent principalement modifier le gameplay.
+11. Les Améliorations doivent principalement modifier le gameplay.
 
 12. Les builds extrêmement puissants sont autorisés.
 
@@ -1501,7 +1508,7 @@ Le changement éventuel doit être prototypé séparément.
 
 17. Un Élément n'a pas la même fonction selon qu'il est fusionné avec Projectile, Phénomène ou Héros.
 
-18. Les 6 Augments d'une run doivent produire des décisions importantes plutôt qu'une accumulation de petits bonus.
+18. Les 6 Améliorations d'une run doivent produire des décisions importantes plutôt qu'une accumulation de petits bonus.
 
 19. Après le dernier Alambic, le joueur doit avoir suffisamment de temps pour profiter de son build final.
 
@@ -1537,14 +1544,14 @@ Le changement éventuel doit être prototypé séparément.
 * 10 boss signature ;
 * mécanique environnementale par monde ;
 * environ 4/5/6 types de monstres sur les chapitres 1/2/3 ;
-* 6 Augments maximum par run ;
-* choix entre 3 Augments ;
-* progression approximative 2/4/5/6 Augments avant 5/10/15/20 ;
+* 6 Améliorations maximum par run ;
+* choix entre 3 Améliorations ;
+* progression approximative 2/4/5/6 Améliorations avant 5/10/15/20 ;
 * 3 Alambics ;
 * Alambics avant 5/10/15 ;
 * Alambic soigne 20 % PV max ;
 * Alambic fournit un Élément aléatoire ;
-* Élément fusionné à un Augment choisi ;
+* Élément fusionné à un Amélioration choisi ;
 * Élément exclu des level-ups ;
 * familles Projectile / Héros / Phénomène ;
 * Élément × Projectile = propriété offensive sur projectile ;
@@ -1560,6 +1567,11 @@ Le changement éventuel doit être prototypé séparément.
 * Campagne = équipements/progression principale ;
 * Mine = énorme vague / Pierres de forge ;
 * Épreuves rituelles = 5 miniboss / capacités ;
+
+Chaque combat d'Épreuve commence avec une Amélioration aléatoire nouvelle et
+un Élément d'Alambic aléatoire, ajoutés automatiquement sous forme originale et
+fusionnée. Aucun choix d'Amélioration ou d'Élément n'interrompt l'Épreuve ; la
+récompense de capacité permanente reste accordée après le miniboss.
 * 1 Sort ;
 * 1 Passif ;
 * 1 Ultime ;
@@ -1584,8 +1596,8 @@ Codex ne doit pas prendre de décisions de game design définitives à leur suje
 * vitesse ;
 * timers ;
 * scaling précis ;
-* nombre final d'Augments ;
-* nouveaux Augments ;
+* nombre final d'Améliorations ;
+* nouveaux Améliorations ;
 * nombre final d'Éléments ;
 * mécanique finale de Foudre ;
 * identité finale de l'Air ;
@@ -1631,7 +1643,7 @@ Produire :
 * systèmes déjà présents ;
 * structure actuelle des chapitres ;
 * level-up actuel ;
-* Augments existants ;
+* Améliorations existants ;
 * ennemis existants ;
 * progression actuelle ;
 * économie actuelle ;
@@ -1654,9 +1666,9 @@ Adapter progressivement :
 
 Tester avant de continuer.
 
-## Étape 3 — Augments
+## Étape 3 — Améliorations
 
-Mapper les Augments existants.
+Mapper les Améliorations existants.
 
 Conserver/réutiliser ce qui peut correspondre.
 
@@ -1668,7 +1680,7 @@ Implémenter le système élémentaire comme système séparé.
 
 Éviter une architecture hardcodée impossible à étendre.
 
-Chaque Augment doit exposer suffisamment d'informations pour pouvoir recevoir une transformation élémentaire.
+Chaque Amélioration doit exposer suffisamment d'informations pour pouvoir recevoir une transformation élémentaire.
 
 ## Étape 5 — Progression permanente
 

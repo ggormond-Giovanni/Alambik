@@ -2,6 +2,8 @@ class_name OngletMenu
 extends Button
 
 var symbole := "stats"
+var libelle := ""
+var index_icone := 0
 var _selection := 0.0
 var _pression := 0.0
 var actif := false:
@@ -9,11 +11,13 @@ var actif := false:
 		actif = valeur
 		queue_redraw()
 
-func configurer(symbole_: String) -> void:
+func configurer(symbole_: String, libelle_ := "", index_icone_ := 0) -> void:
 	symbole = symbole_
+	libelle = libelle_
+	index_icone = index_icone_
 	flat = true
 	focus_mode = Control.FOCUS_NONE
-	custom_minimum_size = Vector2(0.0, 122.0)
+	custom_minimum_size = Vector2(0.0, 172.0)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button_down.connect(func() -> void: _pression = 1.0)
 	button_up.connect(func() -> void: _pression = 0.0)
@@ -28,19 +32,19 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 func _draw() -> void:
-	var centre := size * Vector2(0.5, 0.46) - Vector2(0.0, _selection * 7.0)
+	var centre := Vector2(size.x * 0.5, 69.0 - _selection * 6.0)
 	var couleur := Palette.TEXTE_ATTENUE.lerp(Palette.OR, _selection)
-	var taille_icone := 31.0 * (1.0 - _pression * 0.07)
+	var taille_icone := 84.0 * (1.0 - _pression * 0.07)
 	if _selection > 0.001:
 		var fond := Rect2(Vector2(5.0, 4.0), size - Vector2(10.0, 8.0))
 		draw_rect(fond, Color(Palette.OR, 0.16 * _selection))
 		draw_rect(fond, Color(Palette.OR, 0.72 * _selection), false, 3.0)
-		draw_circle(Vector2(size.x * 0.5, size.y - 10.0), 4.0 * _selection, Palette.OR)
-	match symbole:
-		"stuff": _dessiner_bouclier(centre, taille_icone, couleur)
-		"grimoire": _dessiner_livre(centre, taille_icone, couleur)
-		"sorts": _dessiner_sort(centre, taille_icone * 0.97, couleur)
-		"arbre": _dessiner_arbre(centre, taille_icone * 0.97, couleur)
+		draw_circle(Vector2(size.x * 0.5, size.y - 8.0), 4.0 * _selection, Palette.OR)
+	Retro16.dessiner_icone_interface(self, index_icone,
+		Rect2(centre - Vector2.ONE * taille_icone * 0.5, Vector2.ONE * taille_icone),
+		Color.WHITE.lerp(couleur, 0.10))
+	draw_string(Polices.CORPS, Vector2(8.0, size.y - 24.0), libelle,
+		HORIZONTAL_ALIGNMENT_CENTER, size.x - 16.0, 18, couleur)
 
 func _dessiner_bouclier(centre: Vector2, taille: float, couleur: Color) -> void:
 	var forme := PackedVector2Array([

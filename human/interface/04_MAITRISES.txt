@@ -1,0 +1,20 @@
+ECRAN MAITRISES
+===============
+
+CONTENU REEL DU JEU
+-------------------
+30 Maîtrises : 10 Offensives, 10 Défensives, 10 Utilitaires.
+Chaque nœud possède actuellement un rang unique, un coût et un prérequis.
+
+COMPOSITION VALIDEE ET INTEGREE
+-------------------------------
+Trois colonnes visibles : Attaque orange, Défense bleue, Utilitaire verte.
+Chaque branche a son propre fond vertical et ses connexions lumineuses.
+Les nœuds achetés, disponibles et verrouillés ont des silhouettes différentes.
+Bas = points disponibles et réinitialisation.
+Toucher un nœud = panneau détaillé illustré, sans quitter l'arbre.
+
+Sur téléphone, une branche occupe la zone centrale afin que ses dix nœuds et
+leurs chemins restent grands et lisibles. Les trois onglets donnent accès aux
+branches Offensive, Défensive et Utilitaire. Achat, verrouillage, prérequis,
+coût, rang et réinitialisation utilisent les vraies données du joueur.

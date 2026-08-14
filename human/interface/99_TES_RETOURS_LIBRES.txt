@@ -1,0 +1,23 @@
+TES RETOURS LIBRES SUR L'INTERFACE
+=================================
+
+Tu peux écrire ici sans aucune structure.
+
+ECRAN CONCERNE =
+
+J'AIME =
+
+JE N'AIME PAS =
+
+JE VEUX PLUS =
+
+JE VEUX MOINS =
+
+CET ELEMENT DOIT ETRE PLUS GRAND =
+
+CET ELEMENT DOIT DISPARAITRE =
+
+IMAGE DE REFERENCE =
+
+COMMENTAIRES =
+

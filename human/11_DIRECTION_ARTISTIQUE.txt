@@ -1,0 +1,80 @@
+DIRECTION ARTISTIQUE — SOURCE DE VERITE
+========================================
+
+ETAT = APPLIQUEE_AU_SOCLE_VISUEL
+
+IDENTITE
+Pixel art moderne inspiré de l'ère 16-bit. Le jeu choisit volontairement les
+pixels ; il ne simule pas les limitations techniques d'une ancienne console.
+Ambiance fantasy alchimique, merveilleuse et aventureuse. Éviter le lugubre
+omniprésent : les ombres peuvent être profondes, mais toujours colorées.
+
+FORMES ET SPRITES
+- Pixels nets, filtre nearest-neighbour, sans obligation de simuler les limites
+  d'une vraie console 16-bit.
+- Silhouettes immédiatement reconnaissables sur un téléphone.
+- Davantage de détails internes, sans bruit visuel.
+- Contours propres et colorés plutôt que noirs partout.
+- Ombre portée, face moyenne et rim light pour donner du volume.
+- Palette riche : bleus célestes, violets magiques, verts émeraude, or chaud.
+
+ENVIRONNEMENTS
+- Profondeur en plusieurs plans : ciel, silhouettes lointaines, architecture,
+  sol jouable et détails proches.
+- Variations de teinte et lumière d'ambiance par monde.
+- Détails au sol placés hors des trajectoires importantes.
+- Centre de l'arène calme ; bordures plus riches.
+- Le danger reste toujours plus saturé et contrasté que le décor.
+
+EFFETS MODERNES
+- Particules pixelisées, halos, trails, flashes et impacts en plusieurs temps.
+- Petites compressions/étirements pendant les attaques.
+- Mouvement secondaire des capes, ornements, familiers et couronnes.
+- Glow dessiné en aplats transparents, jamais de flou sur le sprite principal.
+- Option Effets réduits conservée pour accessibilité et performance.
+
+INTERFACE
+- Panneaux bleu-saphir translucides avec profondeur et ombres colorées.
+- Bordures or, essence ou couleur contextuelle.
+- Titres crème très lisibles ; textes secondaires bleu-lavande clair.
+- Cibles tactiles grandes, états appuyés lumineux et animations courtes.
+- Accueil organisé comme un hub mobile : profil et monnaie utile en haut,
+  héros central, systèmes réellement disponibles sur les côtés, chapitre et
+  bouton Jouer en bas, navigation illustrée permanente.
+- Les écrans secondaires utilisent un scriptorium bleu-saphir plus calme que
+  l'accueil afin que listes, statistiques et choix restent prioritaires.
+- Transitions avec glissement, zoom court et fondu ; aucun changement sec.
+
+PRIORITES
+1. Lisibilité pendant le combat.
+2. Cohérence de toute l'expérience.
+3. Identité forte et fantasy.
+4. Richesse visuelle.
+5. Fidélité historique au 16-bit — non prioritaire.
+
+INTERDIT
+- Retour à un fond presque noir uniforme.
+- Sprites ternes ou entièrement entourés de noir.
+- Particules couvrant un télégraphe ennemi.
+- Détails décoratifs confondus avec projectiles, zones dangereuses ou portails.
+- Effet moderne qui floute la grille ou rend la hitbox ambiguë.
+
+ASSETS DE REFERENCE ACTUELS
+---------------------------
+- assets/visual/hero_alchimiste.png : 8 poses, grille 4 x 2.
+- assets/visual/ennemis.png : 11 monstres communs, grille 4 x 3.
+- assets/visual/miniboss.png : 10 miniboss, grille 5 x 2.
+- assets/visual/boss.png : 5 familles x 2 versions, grille 5 x 2.
+- assets/visual/projectile.png : boucle magique de 8 images, grille 4 x 2.
+- assets/visual/obstacles.png : muret, bosquet et rochers, grille 3 x 1.
+- assets/visual/arene_atelier_verdoyant_v2.png : terrain de combat très dégagé.
+- assets/visual/menu_vallee_alambics.png : peinture du menu principal.
+- assets/visual/fond_interface_scriptorium.png : fond calme des sous-menus.
+- assets/visual/icones_interface_normalisees.png : atlas 5 x 3 des commandes.
+
+HEROS RETENU
+------------
+Jeune alchimiste-mage androgyne, grand chapeau violet asymétrique, liserés
+cuivre-or, écharpe turquoise, sacoche de fioles et baguette en forme de cornue.
+Silhouette chaleureuse, aventureuse et capable. La magie violette est son
+identité de base, puis les tirs sont teintés par les éléments équipés.

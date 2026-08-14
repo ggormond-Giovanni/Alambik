@@ -1,0 +1,81 @@
+BIBLE UI PREMIUM — PROPOSITION V1
+=================================
+
+STATUT = MAQUETTES EN COURS, AUCUNE INTEGRATION AVANT VALIDATION
+
+PROMESSE
+--------
+Chaque écran doit sembler assemblé par un artisan de l'Académie : châssis de
+métal sombre, inserts d'encre bleue, attaches cuivre, magie violette/turquoise
+et illustrations généreuses. L'interface est une architecture, jamais une pile
+de composants génériques.
+
+PROFONDEUR EN 5 PLANS
+---------------------
+1. Décor vivant, assombri seulement là où le texte l'exige.
+2. Grand châssis extérieur attaché aux bords de l'écran.
+3. Panneaux fonctionnels emboîtés et séparateurs physiques.
+4. Cartes, slots et commandes légèrement surélevés.
+5. Lumières, reflets, particules et réponse au toucher.
+
+FORMES
+------
+- Angles coupés, traverses supérieures, décrochements et attaches visibles.
+- Double liseré : ombre cuivre externe, filet or éclairé interne.
+- Coins spécifiques selon la fonction, jamais un rayon arrondi uniforme.
+- Bouton principal : grande plaque or/cuivre avec centre lumineux.
+- Bouton secondaire : plaque bleu acier, icône enchâssée à gauche.
+- Danger/quitter : petite plaque rouge sombre, jamais l'action la plus attirante.
+
+HIERARCHIE
+----------
+- Un point focal illustré par écran.
+- Une seule action principale très lumineuse.
+- Les informations secondaires utilisent des compartiments, pas des bulles.
+- Les nombres importants possèdent un symbole, un fond propre et assez d'air.
+- Les textes longs vivent dans un panneau de détail, jamais sur tous les objets.
+
+COULEURS FONCTIONNELLES
+-----------------------
+Fond encre = #07121C / #0B1D29
+Métal cuivre = #6D4526 / #B97932
+Or éclairé = #F6C75C
+Texte crème = #F7E8BE
+Magie = violet #9B4DFF + turquoise #28D7C0
+Offensif = orange braise
+Défensif = bleu azur
+Utilitaire = vert alchimique
+Danger = rouge oxyde
+
+MOUVEMENT
+---------
+- Entrée : décor avance de 2 %, châssis apparaît depuis les quatre coins, puis
+  contenu en cascade. Durée totale visée : 0,45 à 0,65 s.
+- Onglet : le châssis reste fixe ; seul le contenu glisse derrière un masque.
+- Sélection : l'objet monte de 4 px, reflet diagonal, panneau de détail déployé.
+- Retour : contenu rentre, traverses se ferment, décor recule légèrement.
+- Jouer : les panneaux latéraux se verrouillent, le portail aspire la lumière,
+  transition par iris alchimique vers l'arène.
+- Navigation principale : barre inférieure toujours fixe dans Equipement,
+  Aventure, Maitrises et Sorts ; le contenu glisse derrière lors d'un swipe.
+- Pause : combat figé, profondeur floutée/assombrie visuellement, panneau descend
+  avec un choc métallique discret et ses boutons s'allument l'un après l'autre.
+- Am?lioration : cartes projetées depuis le fond, impact lumineux à la pose, illustration
+  révélée après le cadre. Le nouveau tirage fait tourner un anneau alchimique.
+
+CONFORT
+-------
+- Cible tactile minimale 96 px, mais la zone visuelle peut sembler plus fine.
+- Texte principal au moins 28 px sur le canevas 1080 × 1920.
+- Contraste porté par un voile local, jamais en assombrissant tout le décor.
+- Éléments interactifs éclairés ; décoration mate et moins saturée.
+- Aucun mouvement permanent derrière une longue lecture.
+
+INTERDIT DEFINITIF
+------------------
+- Gros rectangles translucides aux coins arrondis.
+- Même StyleBox appliqué à tous les écrans.
+- Icône décorative flottant dans un bouton trop grand et vide.
+- Tous les textes centrés, sans structure.
+- Panneaux indépendants qui semblent collés sur le décor.
+- Transition limitée à un simple fondu de toute la page.

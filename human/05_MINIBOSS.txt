@@ -1,0 +1,69 @@
+MINIBOSS
+========
+
+Règles communes : phase 2 sous 50 % PV ; portée 1400 ; XP 12 ; recharge 1,2 s ;
+3 invocations maximum par motif ; rayon = 104, 109 ou 114 selon le profil.
+
+FORMAT : ID | NOM | PV | VITESSE | DEGATS | PROJECTILE | COULEUR
+Puis silhouette et cycles exacts. « pause » utilise 1,8 s en phase 1 et 1,4 s en phase 2.
+
+[la_rature] ETAT=ACTUEL
+La Rature | 270 | 260 | 18 | 400 | orange
+DESIGN=rature dentelée traversée de trois barres sombres.
+PHASE_1=griffure > charge > pause
+PHASE_2=griffure > barrage_croise > charge > pause
+
+[l_errata] ETAT=ACTUEL
+La Faute vive | 280 | 285 | 19 | 425 | rouge rose
+DESIGN=trois noyaux/taches orbitant ensemble.
+PHASE_1=echo_errata > invocation > pause
+PHASE_2=echo_errata > eventail_lent > invocation > pause
+
+[le_correcteur] ETAT=ACTUEL
+Le Correcteur | 300 | 220 | 15 | 450 | violet
+DESIGN=masque hexagonal barré comme un correcteur typographique.
+PHASE_1=quadrillage > eventail_lent > pause
+PHASE_2=quadrillage > barrage_croise > charge > pause
+
+[reliure_affamee] ETAT=ACTUEL
+La Reliure affamée | 285 | 245 | 18 | 475 | violet sombre
+DESIGN=livre ouvert en mâchoire avec dents de papier.
+PHASE_1=machoire > charge > pause
+PHASE_2=machoire > invocation > poursuite > charge > pause
+
+[virgule_noire] ETAT=ACTUEL
+La Virgule noire | 260 | 300 | 17 | 400 | bleu
+DESIGN=grosse goutte en virgule suivie de quatre perles.
+PHASE_1=calligraphie > eventail_lent > pause
+PHASE_2=calligraphie > anneau_breche > spirale > pause
+
+[index_brise] ETAT=ACTUEL
+L'Index brisé | 320 | 235 | 20 | 425 | or
+DESIGN=main à cinq doigts de longueurs différentes.
+PHASE_1=indexation > pluie > pause
+PHASE_2=indexation > charge > pluie > pause
+
+[marge_hurlante] ETAT=ACTUEL
+La Marge hurlante | 275 | 275 | 18 | 450 | vert
+DESIGN=colonne centrale entre deux grandes marges verticales.
+PHASE_1=onde_marge > invocation > pause
+PHASE_2=onde_marge > eventail_lent > anneau_breche > pause
+
+[enlumineur_fou] ETAT=ACTUEL
+L'Enlumineur fou | 305 | 230 | 19 | 475 | jaune-or
+DESIGN=étoile/rosace à douze rayons et cœur animé.
+PHASE_1=rosace > spirale > pause
+PHASE_2=rosace > pluie > barrage_croise > pause
+
+[signet_sanglant] ETAT=ACTUEL
+Le Signet sanglant | 295 | 310 | 21 | 400 | rouge sombre
+DESIGN=sceau carré incliné avec traîne de gouttes.
+PHASE_1=estampille > charge > pause
+PHASE_2=estampille > charge > anneau_breche > pause
+
+[copiste_aveugle] ETAT=ACTUEL
+Le Copiste aveugle | 330 | 210 | 16 | 425 | lavande
+DESIGN=deux visages pentagonaux jumeaux.
+PHASE_1=copie_double > pluie > pause
+PHASE_2=copie_double > invocation > spirale > poursuite > pause
+

@@ -3,8 +3,17 @@ extends RefCounted
 
 # Un objet precis par chapitre : deux Anneaux puis un Collier dans chaque
 # monde. Les anciens ids sont conserves uniquement pour migrer les sauvegardes.
-# Les effets speciaux restent volontairement absents tant que leur pool n'est
-# pas concu dans le document de design.
+#
+# Chaque emplacement porte un profil de statistiques, et la valeur d'un objet
+# croit avec le Monde dont il provient. Auparavant les trente objets etaient
+# rigoureusement identiques : seul le niveau de Forge comptait, donc trouver
+# l'Anneau du Monde X n'apportait rien de plus que celui du Monde I. La Forge
+# multiplie desormais le profil de l'objet au lieu de le remplacer.
+const PROFILS := [
+	{"degats": 0.11, "cadence": 0.010},                   # Anneau I  — offensif
+	{"degats": 0.03, "cadence": 0.015, "collecte": 0.05}, # Anneau II — soutien
+	{"pv": 0.20, "degats": 0.03},                         # Collier   — defensif
+]
 
 const IDS_PAR_MONDE := [
 	["plume_encres", "robe_enluminee", "sceau_scribe"],
@@ -34,6 +43,7 @@ static func _construire() -> Dictionary:
 				"monde": monde,
 				"chapitre_monde": index + 1,
 				"chapitre": monde * 3 + index,
+				"profil": PROFILS[index],
 				"teinte": donnees_monde["teinte"],
 			}
 	return resultat
@@ -63,12 +73,28 @@ static func compatible(slot: String, id: String) -> bool:
 	return (slot in ["anneau_gauche", "anneau_droit"] and OBJETS[id]["slot"] == "anneau") \
 		or (slot == "collier" and OBJETS[id]["slot"] == "collier")
 
+# Ce que vaut un objet a un niveau de Forge donne. La Forge multiplie le profil
+# plutot que de s'y ajouter : forger un objet tardif rapporte donc davantage que
+# forger un objet du premier Monde, ce qui donne enfin un ordre de priorite.
+static func bonus_objet(id: String, niveau: int) -> Dictionary:
+	var resultat := {}
+	if not OBJETS.has(id):
+		return resultat
+	var donnees: Dictionary = OBJETS[id]
+	var facteur := pow(Reglages.OBJET_CROISSANCE_PAR_MONDE, float(int(donnees["monde"]))) \
+		* (1.0 + float(maxi(0, niveau)) * Reglages.FORGE_BONUS_PAR_NIVEAU)
+	var profil: Dictionary = donnees["profil"]
+	for champ in profil:
+		resultat[champ] = float(profil[champ]) * facteur
+	return resultat
+
 static func bonus_effectifs(equipements: Dictionary, forge_niveaux: Dictionary) -> Dictionary:
 	var bonus := {"degats": 0.0, "cadence": 0.0, "pv": 0.0, "vitesse": 0.0, "collecte": 0.0}
 	for slot in ["anneau_gauche", "anneau_droit", "collier"]:
-		if not compatible(slot, str(equipements.get(slot, ""))):
+		var id := str(equipements.get(slot, ""))
+		if not compatible(slot, id):
 			continue
-		var niveau := maxi(0, int(forge_niveaux.get(slot, 0)))
-		bonus["degats"] += float(niveau) * Reglages.FORGE_DEGATS_PAR_NIVEAU
-		bonus["pv"] += float(niveau) * Reglages.FORGE_PV_PAR_NIVEAU
+		var part := bonus_objet(id, int(forge_niveaux.get(id, 0)))
+		for champ in part:
+			bonus[champ] = float(bonus.get(champ, 0.0)) + float(part[champ])
 	return bonus

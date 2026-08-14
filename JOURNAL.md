@@ -3,12 +3,196 @@
 Historique des décisions et des mesures. Jamais lu automatiquement ; on vient y
 chercher pourquoi une chose est comme elle est.
 
+## 2026-08-14 — Le niveau porte le socle, les capacités deviennent fortes
+
+Le niveau de compte ne donnait aucune statistique : monter de niveau ne changeait
+rien au combat. Il porte désormais le socle — dégâts, PV et cadence de base — que
+les Maîtrises, l'équipement et les Passifs multiplient. Le budget total étant
+conservé, la Forge passe de +2,5 % à +1,5 % par niveau pour laisser sa place au
+niveau. Vérifié : un compte entièrement farmé gagne toujours cinq fois sur cinq
+au chapitre 30, entre 2 min 27 s et 3 min 26 s.
+
+La sonde `--maxe` monte maintenant aussi le niveau de compte. Sans cela elle
+mesurait un compte « complet » resté au niveau 1, et faisait apparaître une
+régression qui n'existait pas.
+
+Les Passifs étaient les plus faibles du jeu, et pour une raison précise : les
+crochets `Sorts.multiplicateur_*` renvoyaient tous `1.0`. Aucun Passif ne
+changeait une statistique ; seuls quelques effets ponctuels étaient câblés dans
+le combat. Chacun porte maintenant un effet permanent réellement branché :
+Rempart initial retire 18 % des dégâts subis, Sang-froid 30 % de la recharge du
+Sort, Réserve d'ultime 20 % de la charge requise. Les effets ponctuels sont
+relevés d'autant : Seconde chance se réarme à chaque salle et non plus une fois
+par grimoire, Héritage réactif donne deux Améliorations, Moisson vitale soigne
+toutes les six éliminations, la Riposte repousse enfin ce qu'elle frappe.
+
+Les Sorts frappaient pour deux à cinq fois un tir, là où le héros en place plus
+de quatre par seconde : un Sort pesait moins qu'une seconde de tir automatique.
+Ils sont recalés pour ajouter environ un quart de la puissance soutenue, et les
+Ultimes pour effacer une rencontre. Une suite mesure ce rapport, afin qu'une
+retouche ne les renvoie pas dans l'insignifiance.
+
+Dans les Maîtrises, toucher un nœud déclenchait l'achat immédiat : un doigt posé
+au mauvais endroit dépensait des Gouttes sans confirmation. Toucher ne fait
+désormais que consulter, un bouton dédié améliore. Chaque nœud affiche le prix
+de son prochain rang, et le détail compare ce que l'on a à ce que le rang suivant
+donnera.
+
+## 2026-08-14 — Accueil : nouvelle peinture, repères partagés, zones invisibles
+
+`futurfond.png` devient la peinture d'accueil, sous le nom
+`assets/visual/menu_futur.png`. Les deux anciennes compositions restent dans le
+dépôt : repointer `Retro16.MENU_PREMIUM_CLASSIQUE` suffit à revenir en arrière.
+
+Une seule peinture sert maintenant toutes les proportions d'écran. Il y en avait
+deux, une « classique » et une « haute », donc deux jeux de repères et deux
+occasions de les désaccorder ; la bande centrale de `FondAdaptatif` absorbe
+très bien la hauteur supplémentaire.
+
+Le vrai défaut d'alignement venait d'ailleurs. Le menu posait ses zones et ses
+libellés à une distance fixe du bas de l'écran — et retranchait en plus la marge
+système — pendant que la peinture, elle, étirait sa bande centrale. Les textes
+flottaient donc au-dessus de leur plaque, d'autant plus que l'écran s'allongeait.
+Les repères vivent désormais dans la référence de la peinture et passent par
+`Retro16.rect_menu` : le décor, le texte et sa zone tactile partagent une seule
+source. Vérifié par capture en 540×810, 540×960, 540×1200 et 1080×1920.
+
+Les écrans premium sont peints et leurs boutons ne sont que des zones tactiles
+posées dessus. Or `flat` n'enlève à un Button que son état normal : Godot
+continuait de dessiner ses cadres de survol, de clic et de focus par-dessus le
+décor. `StyleInterface.zone_tactile` centralise le motif, qui était dupliqué
+dans huit fichiers, et neutralise les cinq styleboxes.
+
+Cette peinture grave un libellé d'exemple dans la bande de chapitre et dans la
+plaque d'étage. Le texte réel recouvre donc sa plaque avec un cartouche en
+creux. C'est un pansement : une version de l'image sans texte incrusté serait
+préférable.
+
+## 2026-08-14 — Contenu : Améliorations, équipement, Sorts, et une première heure mesurable
+
+Six Améliorations rejoignent les seize existantes, chacune pensée pour un
+Élément : Frappe lourde concentre l'attaque que la brûlure du Feu et le bonus de
+la Terre calculent dessus ; Cadence fébrile multiplie les impacts dont vivent le
+vol de vie de la Lumière et la surcharge des Ténèbres ; Trait transperçant
+touche un rang entier, que l'Eau ralentit et que le Feu enflamme ; Peau de
+pierre et Soif de sang tiennent la ligne de front ; Chaîne alchimique est le
+premier Phénomène qui frappe plusieurs corps, et propage son Élément à chaque
+maillon. Le drapeau `perfore_tout` existait dans le moteur sans qu'aucune
+Amélioration ne l'active : il porte désormais Trait transperçant.
+
+Mesure faite avec le pool complet, les multiplicateurs s'additionnant, une main
+qui paie tout en dégâts tombait à ×0,28. Cadence fébrile paie donc en portée et
+Trait transperçant en vitesse. Une suite vérifie maintenant que toute
+Amélioration qui coûte des dégâts rend des impacts, et qu'aucune ne coûte plus
+de 30 % à elle seule.
+
+L'équipement portait un vrai trou : les trente objets étaient rigoureusement
+identiques et seul le niveau de Forge comptait, donc l'Anneau du Monde X ne
+valait pas mieux que celui du Monde I. Chaque emplacement porte désormais un
+profil — Anneau I offensif, Anneau II de soutien, Collier défensif — multiplié
+par ×1,30 par Monde d'origine. La Forge multiplie ce profil au lieu de le
+remplacer : forger un objet tardif rapporte donc davantage.
+
+Les Sorts sont rechiffrés au rendement, dégâts rapportés à la recharge, et les
+Ultimes au nombre d'éliminations. Les nombres des Passifs vivaient en dur dans
+le combat, contre la règle du dépôt ; ils sont remontés dans `reglages.gd`.
+
+Deux blocages corrigés. Un pool d'Améliorations épuisé ouvrait un écran de
+niveau sans aucune carte, donc impossible à fermer : la descente restait figée.
+Et la sonde écrivait dans la sauvegarde du joueur — vingt runs automatiques
+gonflaient ses compteurs, sa monnaie et ses déblocages.
+
+Ce dernier point cachait le plus important. La sauvegarde de test portait
+`mode_dev=true`, qui ouvre toutes les Maîtrises au rang maximal : toutes les
+mesures dites « sans Maîtrise » étaient fausses. Un argument `--vierge` mesure
+enfin un compte neuf, et le verdict était net : mort salle 3 du premier
+chapitre, donc avant le coffre de la salle 5, donc sans jamais gagner la
+moindre Goutte. La campagne ne finançait pas sa propre progression.
+
+Les six premiers paliers sont donc adoucis — ×0,62 au premier chapitre,
+rejoignant la courbe pleine à la fin du Monde II — sans rien changer au-delà.
+Un compte neuf atteint maintenant les salles 5 à 13 sur cinq graines, et le
+premier coffre est acquis à chaque tentative.
+
+## 2026-08-14 — Refonte de la courbe longue et de la progression permanente
+
+La difficulté de campagne ne vit plus dans une table de dix Mondes. Elle est
+devenue une fonction du palier, c'est-à-dire du rang du chapitre dans la
+campagne : `COURBE_PV_PAR_PALIER` et `COURBE_DEGATS_PAR_PALIER`. La marche
+d'entrée de Monde était le vrai mur — un chapitre 1 valait +50 % de PV d'un
+coup, contre +12 % entre deux chapitres du même Monde. La montée est maintenant
+identique à chaque passage de chapitre et un Monde entier vaut x1,45 en PV. La
+formule reste définie au-delà du trentième palier : ajouter un onzième Monde ne
+demandera qu'une entrée dans `MONDES`.
+
+Les PV du dernier chapitre passent d'environ x193 à x131 sur sa dernière salle,
+et les dégâts finaux restent sous x10 pour rester esquivables.
+
+En face, tout ce qui se farme peut désormais être poussé au maximum. Les
+trente Maîtrises passent du rang unique à cinq rangs, dont la valeur est
+exprimée par rang et dont le coût est multiplié par 1,85 à chaque rang. Les
+déblocages font exception et gardent un ou deux rangs : un second Passif obtenu
+cinq fois ne veut rien dire. La Forge monte à soixante niveaux avec un coût
+géométrique, les rangs de capacité passent de cinq à dix, et la Mine indexe ses
+Pierres sur le palier atteint pour rester une source après le dernier Monde.
+
+Budgets visés et vérifiés par les suites : branche offensive entièrement poussée
+x11 en DPS, branche défensive x11 en survie effective — même prix, même
+rendement, donc aucune des deux n'est le seul chemin viable. Avec les trois
+objets à la Forge maximale, l'arsenal permanent complet vaut environ 1,7 fois la
+difficulté d'entrée du dernier chapitre, et reste sous celle de sa dernière
+salle : le farm met devant la courbe sans effacer la descente.
+
+Mesure : sonde de cinq graines au chapitre 30 avec un compte entièrement farmé
+(`--maxe`), salle 20 atteinte sur les cinq, trois victoires. Le bot n'utilise ni
+Sort ni Ultime, sa mesure est donc un plancher.
+
+## 2026-08-14 — Raccourcis de Sort et balayage des listes
+
+Le Sort et l'Ultime gardent leur icône sur le bord droit. Le Sort accepte en
+plus un raccourci réglable : icône seule, tape rapide, ou double tape rapide
+dans la zone de déplacement. La détection borne la durée et la distance du
+geste, faute de quoi chaque correction de trajectoire lancerait le Sort.
+
+Les listes paginées n'offraient que deux flèches de cent pixels posées sur les
+bords : rien n'indiquait au pouce qu'une seconde page existait. L'Équipement,
+les Sorts et la sélection de grimoire acceptent maintenant le balayage
+horizontal, et un balayage ne sélectionne plus la case où le doigt se relâche.
+
+Les éclats de Fragmentation naissaient dans la créature percutée et la
+refrappaient à bout portant, ce qui transformait l'Amélioration en
+multiplicateur de dégâts sur cible unique. Ils excluent désormais leur cible
+d'origine.
+
+## 2026-08-14 — Typographie et cadrage de l'interface
+
+La police monospace de prototype a été retirée de toute l'interface. Les titres
+fantasy restent dessinés dans les cadres ornementaux, tandis que les textes
+fonctionnels utilisent désormais DM Sans, embarquée avec le jeu. Les Réglages,
+Maîtrises, Sorts et l'Équipement ont été revérifiés à 450 × 800 ; les libellés
+ont reçu davantage de marge intérieure et les descriptions de Sorts ont été
+agrandies pour rester confortables sur mobile.
+
+## 2026-08-14 — Pixel art moderne et fantasy lumineuse
+
+La grille de quatre pixels reste le socle, mais la fidélité aux limitations
+historiques du 16-bit ne guide plus la direction. Le jeu vise désormais un pixel
+art moderne : ciel et profondeur en plusieurs plans, ombres colorées, palette
+fantasy plus riche, volumes à trois tons, rim lights, trails, doubles impacts,
+particules et halos. Les dangers restent plus saturés que le décor.
+
+Le fond presque noir, les panneaux austères et les mentions de prototype ont
+été retirés de la présentation active. Les écrans partagent un ciel saphir et
+violet, l'arène devient une terrasse émeraude enchantée et l'interface adopte
+des surfaces bleues translucides bordées d'or ou d'essence. La source de vérité
+visuelle est `human/11_DIRECTION_ARTISTIQUE.txt`.
+
 ## 2026-08-11 — Première tranche de la refonte `design.txt`
 
 La boucle historique de trente salles et de fusions destructrices a été
 remplacée sans reconstruire le combat. Une run de campagne contient maintenant
 vingt salles, six choix aux paliers 2/4/7/9/14/19 et trois Alambics après
-4/9/14. L'Alambic tire un Élément, puis ajoute sa transformation à l'Augment
+4/9/14. L'Alambic tire un Élément, puis ajoute sa transformation à l'Amélioration
 choisi : l'original reste dans l'inventaire et continue de fonctionner.
 
 Les dix thèmes existants servent désormais de mondes, chacun décliné en trois
@@ -25,7 +209,7 @@ cinq miniboss consécutifs.
 Mesure : `./verifier.sh` charge tout le projet et termine avec 25 suites,
 9 058 assertions, 0 échec et aucun effet déclaré mais inerte. Un smoke test
 headless a traversé le premier draft et le premier Alambic : l'inventaire passe
-de l'Augment original à original + nouvel Augment + Fusion, ce qui confirme que
+de l'Amélioration original à original + nouvel Amélioration + Fusion, ce qui confirme que
 rien n'est consommé.
 
 ## 2026-08-05 — Implémentation de la V1
@@ -240,8 +424,8 @@ barrages, spirales, pluies et anneaux à brèche composent des répertoires prop
 complétés par dix ornements et sigils de combat.
 
 Les trois Alambics tirent désormais sans remise parmi les six Éléments : aucun
-Élément ne peut donc occuper toute une run. Une Fusion marque aussi son Augment
-source. L'effet original reste actif, mais cet Augment disparaît des Alambics
+Élément ne peut donc occuper toute une run. Une Fusion marque aussi son Amélioration
+source. L'effet original reste actif, mais cet Amélioration disparaît des Alambics
 suivants et toute tentative de seconde Fusion est refusée par la logique, pas
 seulement masquée par l'interface.
 
@@ -356,3 +540,150 @@ L'icône active est désormais une cornue en blocs originale.
 Deux compositions peuvent être choisies dans les Réglages : First Arcade et
 Dynamic Arcade. Le choix est sauvegardé et le lecteur de combat recharge la
 piste immédiatement sans toucher au volume des effets.
+
+## 2026-08-14 — Intégration de la direction premium validée
+
+L'accueil validé n'est plus une simple maquette : ses zones Campagne, Mine,
+Épreuve, Livre, chapitre et Jouer sont tactiles, la barre Équipement / Aventure /
+Maîtrises / Sorts reste navigable au toucher et au swipe, et Jouer lance le
+chapitre mémorisé sans écran intermédiaire. Le héros a été séparé du décor afin
+d'obtenir une respiration légère sans déformer tout l'écran.
+
+Le Pause validé est maintenant un calque transparent au-dessus du vrai combat.
+Ses cinq actions fonctionnent et ses valeurs viennent de la run. Le choix de
+niveau utilise également le châssis validé, mais ses trois cartes, leurs icônes,
+familles, textes et relances sont alimentés par le catalogue réel.
+
+La Mine montrait auparavant 68 % du fond alors que sa caméra révélait 100 % de
+la surface de monde dézoomée. Le fond couvre désormais le même rectangle que la
+caméra et les limites physiques. Validation : 23 suites, 8 000 assertions,
+aucun échec, plus quatre captures réelles contrôlées.
+
+### Équipement, Maîtrises et Sorts premium
+
+Les trois autres pages de la barre permanente utilisent maintenant des châssis
+illustrés dédiés dans le même style que l'accueil validé. Elles ne sont pas des
+maquettes : tous les nœuds, cartes, slots et boutons sont branchés aux données
+réelles. L'Équipement permet de changer un objet, le retirer pour se déstuff et
+l'améliorer. La Forge appartient désormais à l'objet lui-même et ne se transfère
+plus artificiellement quand un autre objet prend sa place.
+
+La Maîtrise affiche les dix nœuds de chaque branche avec leurs prérequis et la
+réinitialisation. Les Sorts conservent Actifs, Passifs et Ultimes afin de rester
+compatibles avec le combat actuel ; les quatre slots du build sont toujours
+visibles. Validation : 23 suites, 8 007 assertions, aucun échec, et compilation
+exhaustive de toutes les scènes et de tous les scripts.
+
+### HUD, Campagne, Réglages, murs et portail
+
+Les Réglages et la sélection Monde/Chapitre possèdent désormais leurs propres
+châssis premium illustrés. La Campagne se parcourt par Monde puis par l'un de ses
+trois Chapitres, avec verrouillage, progression et gardien réels. Le HUD adopte
+le même métal anguleux pour Pause, Salle, Niveau, XP, Essence, Améliorations,
+Sort actif, Ultime et toutes les barres de PV.
+
+La zone jouable ne recouvre plus les remparts peints. Quatre corps statiques
+continus ferment chaque arène et la contrainte tient compte du rayon de chaque
+entité, ce qui empêche héros, monstres, boss et projectiles de traverser la
+pierre. Le portail circulaire est remplacé par une arche 16-bit illustrée,
+animée par halo et particules, avec un seuil et une hitbox concordants.
+
+Validation : 23 suites, 8 009 assertions, aucun échec ; chargement exhaustif de
+tous les scripts et scènes sans erreur.
+
+### Fermeture de la passe sur toutes les interfaces et rythme joueur
+
+L'audit des écrans encore construits avec l'ancien fond a identifié l'Alambic,
+la récompense de miniboss et le bilan de fin de run. Ils possèdent désormais
+trois châssis illustrés distincts : laboratoire mécanique, trophée arcanique et
+coffre de synthèse. La liste des Améliorations ouverte depuis Pause reprend les
+vraies cartes du jeu sur le scriptorium premium ; le joystick gagne un cerclage
+alchimique cuivre/cyan. Les transitions conservent leur dessin animé commun,
+car leur rôle est précisément de recouvrir les scènes plutôt que d'afficher un
+panneau statique.
+
+Le passage de 560 à 620 px/s pour le héros et de 900 à 1 050 px/s pour ses
+projectiles rendait le contrôle trop nerveux. Ces deux valeurs, ainsi que
+l'accélération et le freinage associés, reviennent à leur version d'origine.
+Le multiplicateur ×1,10 des monstres n'est pas annulé : il relève de leur
+pression de combat et non du confort de déplacement du joueur.
+
+### Correction des proportions internes des menus
+
+Le premier châssis Réglages était visuellement réussi mais son contenu ne
+respectait pas ses proportions : contrôles minuscules, lignes abandonnées et
+phrases flottantes dans de grands cadres. Chaque onglet remplit maintenant ses
+cinq emplacements avec un contrôle réel ou une information utile, avec titres,
+valeurs et zones interactives agrandis. La même passe de lisibilité augmente les
+textes des Maîtrises, des Sorts et des détails d'Équipement, puis raccourcit les
+libellés susceptibles de déborder.
+
+### Formats mobiles adaptatifs et arène resserrée
+
+L'accueil validé possède désormais deux compositions peintes, une pour le 9:16
+et une pour les téléphones hauts. Aucun ratio ne révèle le fond noir : les autres
+menus conservent leurs cadres supérieurs et inférieurs intacts et remplissent la
+hauteur supplémentaire avec un décor continu. Les zones tactiles suivent les
+mêmes coupures que l'image, sans décalage entre le dessin et l'action.
+
+Le cartouche de progression de l'accueil est dynamique. Il indique le monde,
+le chapitre et le meilleur étage réellement atteints. L'étoile « monde terminé »
+n'est dessinée qu'après la complétion des trois chapitres du monde affiché.
+
+Le combat utilise une peinture 9:16 ou haute selon le ratio. Sur écran haut, la
+zone praticable est plafonnée puis recentrée afin de ne pas transformer la salle
+en couloir vide. Les personnages et ennemis gagnent 8 % de taille visuelle, sans
+grossir leurs hitbox. Après cette modification, le pilote des sondes apprend à
+contourner les obstacles devant le portail ; les vingt graines se terminent à
+nouveau sans blocage.
+
+### Nouvelle icône du jeu
+
+L'ancienne cornue géométrique ne représentait plus la direction artistique de
+l'accueil. L'icône officielle montre désormais le héros-alchimiste au premier
+plan, avec son chapeau violet, sa fiole cyan et son orbe magique, dans un cadre
+métallique sombre assorti aux menus. Sa composition reste lisible après la
+réduction et garde les éléments importants dans la zone sûre Android.
+
+### Assainissement de l'export Android
+
+Le paquet de test conservait par erreur le numéro historique 0.2 et exportait
+toutes les ressources, y compris les captures temporaires et les maquettes. Le
+code Android devient 20260814, la version 0.3.20260814 et l'application est
+explicitement visible dans le lanceur. Les dossiers de travail et anciens
+visuels sans référence sont archivés hors du dépôt ; ils ne peuvent plus être
+embarqués dans l'APK.
+
+### Cible d'équilibrage permanent et Sorts volontaires
+
+La puissance permanente de fin de jeu vise environ ×10 par rapport au héros
+neuf. Stuff, Maîtrises et Passifs portent chacun près d'un tiers de ce budget,
+en comptant attaque, défense et utilitaire plutôt qu'en multipliant trois fois
+toutes les statistiques par 3,33. L'audit initial révèle que la branche
+offensive des Maîtrises atteint déjà environ ×8,25 en DPS et que la Forge ne
+possède aucun plafond ; leurs courbes doivent donc être normalisées avant de
+prétendre respecter cette cible.
+
+Les Sorts actifs et Ultimes peuvent maintenant être retirés comme les Passifs.
+Toucher une carte déjà équipée ou son emplacement dans le bandeau supérieur
+libère le slot. Les emplacements vides restent un choix valide et persistant.
+
+### Courbe des dix Mondes et rituels automatiques
+
+Un doublement par Monde aurait placé l'entrée du Monde X à ×512. La courbe
+retenue rend tout de même chaque Monde nettement plus lourd : environ ×1,50 PV
+et ×1,18 dégâts, avec ×4 PV et ×1,75 dégâts entre les salles 1 et 20. La fin du
+trentième chapitre atteint ainsi environ ×193 PV et ×8,7 dégâts, ce qui laisse
+de la place aux statistiques permanentes et au build de run sans produire des
+nombres artificiellement exponentiels.
+
+La Mine démarre à 75 % des PV de base et 30 % des dégâts, monte avec la horde,
+puis donne à son boss une vraie phase renforcée. Les Épreuves ajoutent avant
+chacun de leurs cinq miniboss une Amélioration nouvelle et sa Fusion avec un
+Élément nouveau. Il n'existe aucun choix de niveau dans ce mode ; la capacité
+permanente reste la récompense du miniboss.
+
+La Forge est plafonnée au niveau 30 et ses PV deviennent un vrai pourcentage,
+symétrique aux dégâts. Les branches offensive et défensive complètes des
+Maîtrises sont ramenées respectivement autour de ×3,08 DPS et ×3,14 survie
+effective, au lieu de laisser la seule branche offensive dépasser ×8.

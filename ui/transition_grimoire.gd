@@ -50,7 +50,7 @@ func _draw() -> void:
 		draw_circle(p, 2.0 + float(i % 3), Color(Palette.ESSENCE, 0.28 + ouverture * 0.28))
 	var position_heros := centre + Vector2(0.0, lerpf(120.0, 18.0, ease(progression, 0.35)))
 	_dessiner_heros(position_heros, 0.82 + progression * 0.18)
-	var police := ThemeDB.fallback_font
+	var police := Polices.CORPS
 	var nom := str(_livre.get("nom", "GRIMOIRE"))
 	draw_string(police, Vector2(0.0, taille.y * 0.18), "OUVERTURE DU GRIMOIRE",
 		HORIZONTAL_ALIGNMENT_CENTER, taille.x, 42, Palette.TEXTE)
@@ -63,6 +63,6 @@ func _draw() -> void:
 	draw_rect(Rect2(rail.position, Vector2(rail.size.x * progression, rail.size.y)), Palette.ESSENCE)
 
 func _dessiner_heros(position: Vector2, echelle: float) -> void:
-	draw_set_transform(position, 0.0, Vector2.ONE * (2.8 * echelle))
+	draw_set_transform(position, 0.0, Vector2.ONE * (2.05 * echelle))
 	Retro16.dessiner_heros(self, _temps, false, Vector2.UP, Palette.OR)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

@@ -161,4 +161,10 @@ func _aller_au_portail() -> void:
 	if salle == null or not salle.portail_ouvert():
 		_heros.definir_intention(Vector2.ZERO)
 		return
-	_heros.definir_intention(_heros.global_position.direction_to(salle.position_portail()), 1.0)
+	var portail: Vector2 = salle.position_portail()
+	if not _ligne_libre(_heros.global_position, portail):
+		var passage := _point_de_tir(portail)
+		if passage != Vector2.ZERO:
+			_heros.definir_intention(_devier(_heros.global_position.direction_to(passage)), 1.0)
+			return
+	_heros.definir_intention(_devier(_heros.global_position.direction_to(portail)), 1.0)

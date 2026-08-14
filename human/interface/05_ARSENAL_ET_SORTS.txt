@@ -1,0 +1,20 @@
+ECRAN ARSENAL ET SORTS
+======================
+
+CONTENU REEL DU JEU
+-------------------
+5 sorts actifs ; 3 Ultimes ; 10 Passifs. Emplacements équipés en bas.
+
+COMPOSITION VALIDEE ET INTEGREE
+-------------------------------
+Haut = titre enchâssé, retour, onglets Actifs / Passifs / Ultimes
+Centre = grille de grandes cartes illustrées, 2 colonnes sur téléphone
+Chaque carte = illustration dominante, nom, niveau/état, courte fonction
+Bas = bandeau de slots équipés toujours visible
+Toucher = équiper le Sort actif ou l'Ultime ; ajouter/retirer un Passif.
+
+Les quatre emplacements du build restent visibles en haut : Actif, Passif 1,
+Passif 2 et Ultime. Passif 2 affiche VERROUILLÉ tant que la Maîtrise requise
+n'est pas obtenue. Les trois onglets Actifs / Passifs / Ultimes sont conservés,
+car le combat utilise déjà ces trois familles. Chaque carte affiche le vrai nom,
+la description, le rang, le verrouillage et l'état équipé.

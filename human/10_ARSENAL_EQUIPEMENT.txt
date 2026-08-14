@@ -1,0 +1,60 @@
+ARSENAL, EQUIPEMENT ET RECOMPENSES
+=================================
+
+SORTS ACTIFS — recharge / rayon / multiplicateur dégâts / effet
+Onde alchimique       : 10 s / 290 / ×2,0 / repousse
+Nova de givre         : 14 s / 380 / ×1,7 / givre
+Barrage de braise     : 15 s / 480 / ×2,2 / brûlure
+Impulsion foudroyante : 17 s / 560 / ×2,7 / aucun
+Explosion corrosive   : 18 s / 440 / ×3,2 / acide
+
+ULTIMES — éliminations nécessaires / multiplicateur dégâts / effet
+Le Grand Œuvre        : 25 / ×5,0 / aucun
+Temps suspendu        : 30 / ×3,5 / givre
+Transmutation totale  : 40 / ×8,0 / acide
+
+PASSIFS
+Rempart initial=un bouclier par salle
+Héritage réactif=un Am?lioration aléatoire au début
+Moisson vitale=8 % PV toutes les 10 éliminations
+Riposte alchimique=explosion rayon 270, dégâts ×1,5 quand touché
+Seconde chance=une survie à 35 % PV par grimoire
+Réserve d'ultime=+5 charges au début de chaque salle
+Sang-froid=réinitialise le sort actif toutes les 12 éliminations
+Dernier rempart=sous 30 % PV, -35 % dégâts reçus
+Audace=sous 50 % PV, +30 % dégâts
+Écho alchimique=30 % de chance de répéter le sort actif
+
+EQUIPEMENT
+Slots=Anneau gauche + Anneau droit + Collier
+Contenu=30 objets, un par chapitre ; actuellement sans effet unique.
+Forge par niveau : +2,5 % dégâts et +2,5 % PV pour chaque objet équipé.
+Niveau maximal de Forge : 30 par objet.
+Coût forge niveau suivant = 10 + 4 × niveau actuel.
+Le niveau de Forge appartient à l'objet : changer de slot ou retirer l'objet ne
+transfère et n'efface jamais son niveau.
+Chaque slot peut volontairement rester vide. Depuis l'écran Équipement, on peut
+sélectionner un objet compatible, l'équiper, le retirer et l'améliorer.
+
+CIBLE DE PUISSANCE FIN DE JEU
+La puissance globale permanente vise environ 1000 % du héros de départ, soit
+approximativement ×10. Le budget est réparti à parts comparables entre Stuff,
+Maîtrises et Passifs : environ un tiers de la progression pour chaque source.
+Ces tiers sont des budgets de puissance équivalente, pas +333 % dégâts chacun.
+Ils peuvent être dépensés en attaque, défense ou utilitaire. Les trois sources
+ne doivent jamais produire ×3,33 chacune puis être multipliées entre elles, car
+cela donnerait environ ×37 au lieu de ×10.
+
+Tous les emplacements de Sort sont volontaires. Toucher un Actif, un Passif ou
+un Ultime déjà équipé le retire ; toucher directement son emplacement équipé le
+retire également.
+
+COFFRES — salle / Gouttes / chance objet
+5 Mini=35–55 / 2 %
+10 Petit=70–100 / 5 %
+15 Moyen=120–170 / 10 %
+20 Grand=250–350 / 25 % ; objet garanti après 5 Grands sans objet
+Multiplication des Gouttes par chapitre=×1,11 par chapitre.
+
+MINE=5 minutes ; récompense 25 Pierres ; soin 30 % à chaque niveau ; boss final.
+

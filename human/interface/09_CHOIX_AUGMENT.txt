@@ -1,0 +1,21 @@
+CHOIX D'UNE AMELIORATION
+==================
+
+CONTENU REEL DU JEU
+-------------------
+3 propositions ; nom ; description ; statistiques ; rareté éventuelle ;
+nouveau tirage et nombre restant.
+
+COMPOSITION PROPOSEE D'APRES TA REFERENCE
+-----------------------------------------
+Trois grandes cartes verticales occupant presque tout l'écran utile.
+Chaque carte possède son propre cadre, sa couleur, une grande illustration,
+son nom, un cartouche de catégorie/rareté et son effet exact.
+Le nouveau tirage est un cartouche construit sous les cartes.
+
+TOI > Les cartes doivent-elles avoir une rareté colorée ?
+TOI > Illustration : symbole simple / véritable illustration / effet animé :
+TOI > Texte : très court / effet précis complet / les deux séparés :
+TOI > Montrer l'amélioration des copies avec étoiles ou chiffres ?
+TOI > Nouveau tirage : discret / important :
+TOI > Référence précise ou commentaire libre :

@@ -1,0 +1,59 @@
+INTERFACE, ARENE ET SENSATION DE JEU
+===================================
+
+ETAT = ACTUEL
+
+[ACCUEIL]
+STRUCTURE = profil, niveau, barre XP et Essence utile en haut ; Réglages à droite
+CENTRE = héros alchimiste sur la place de l'académie
+ACCES_GAUCHE = Équipement ; Expéditions
+ACCES_DROITE = Maîtrise ; Arsenal
+BAS = chapitre courant ; gros bouton Jouer ; navigation illustrée
+INTERDIT = endurance, diamants premium, boutique, pass saison ou fonction factice
+
+[SOUS_MENUS]
+FOND = scriptorium bleu-saphir calme
+PANNEAUX = cadres épais bleu nuit, double liseré contextuel, ombre profonde
+BOUTONS = grandes cibles tactiles, icônes cohérentes, état appuyé lumineux
+ECRANS_CONCERNES = sélection de mode, équipement, maîtrise, arsenal, réglages,
+draft d'Am?liorations, Alambic, pause, récompenses et fin de run
+
+[TRANSITIONS]
+OUVERTURE = fondu + arrivée verticale + zoom de 92,5 % à 100 %
+CHANGEMENT_DE_CONTENU = glissement latéral de 112 px + zoom court
+FERMETURE = fondu + zoom à 106,5 % avant l'action
+EFFETS_REDUITS = mêmes intentions avec distances et durées raccourcies
+
+[ARENE]
+DECOR = luxuriant aux bords ; centre environ 90 % ouvert
+LIMITES = gauche/droite 78 px ; haut 244 px ; bas 220 px
+MURS = quatre collisions physiques continues suivent le bord intérieur du décor
+MARGE_CORPS = le rayon réel du héros, du monstre ou du boss reste hors du mur
+OBSTACLES = 0 ou 1 maximum ; largeur visuelle 78 à 138 px
+COLLISION_OBSTACLE = 76 % de la largeur et 42 % de la hauteur visuelle
+BUT = conserver la richesse du décor sans masquer les esquives ni les tirs
+
+[RYTHME]
+HERO_VITESSE = 560 pixels/seconde
+HERO_ACCELERATION = 3100
+HERO_FREINAGE = 4200
+PROJECTILE_HERO_VITESSE = 900 pixels/seconde
+MONSTRES_VITESSE = vitesse propre de chaque monstre × 1,10
+
+[HITBOX]
+HERO = rayon 24 px
+PROJECTILE_HERO = rayon 10 px
+MONSTRE = 72 % du rayon visuel de sa fiche
+BOSS = 74 % du rayon visuel de sa fiche
+PRINCIPE = la collision correspond au corps ou à la base, jamais aux ornements,
+au chapeau, aux ailes, aux halos ou à la hauteur décorative du sprite
+
+[PORTAIL]
+STYLE = arche de pierre moussue, or alchimique, cristaux cyan et vortex violet
+POSITION = posé sur le sol dans la partie haute, sous le HUD
+HITBOX = cercle centré dans l'ouverture et seuil visuel clairement identifiable
+ANIMATION = pulsation douce, halo et particules orbitales ; libellé SORTIE
+
+POUR MODIFIER
+Écris directement tes valeurs ou intentions ici, passe ETAT à A_MODIFIER, puis
+dis : « Lis human et applique mes changements d'interface et de combat ».

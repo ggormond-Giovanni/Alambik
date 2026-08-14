@@ -1,0 +1,90 @@
+MONSTRES COMMUNS
+================
+
+COMPTE = 11 actuels / objectif environ 30. Toutes les distances sont en pixels.
+PV et dégâts sont des bases avant multiplication par monde, chapitre et salle.
+
+[encrier_rampant] ETAT=ACTUEL
+NOM=Encrier rampant | ROLE=mêlée simple | CERVEAU=rampant
+STATS=PV 30 ; vitesse 150 ; dégâts contact 8 ; portée 60 ; rayon 30 ; XP 1
+COMPORTEMENT=avance droit vers le héros ; frappe à 60 ; ne fuit jamais.
+DESIGN=goutte d'encre violette claire, corps massif et jambes courtes.
+
+[plume_sentinelle] ETAT=ACTUEL
+NOM=Plume-sentinelle | ROLE=tourelle | CERVEAU=sentinelle
+STATS=PV 24 ; immobile ; dégâts 10 ; rayon 28 ; XP 2
+ATTAQUE=3 projectiles en éventail 0,30 rad ; recharge 1,15 s ; télégraphe 0,40 s ; vitesse 620 ; portée 2200 ; chaque projectile 72 % des dégâts.
+COMPORTEMENT=ne bouge et ne fuit jamais ; tire dès que la recharge finit.
+DESIGN=grande plume lavande verticale, trait rouge de télégraphe.
+
+[tache_veloce] ETAT=ACTUEL
+NOM=Tache véloce | ROLE=chargeur rapide | CERVEAU=véloce
+STATS=PV 18 ; vitesse charge 640 ; dégâts 12 ; portée contact 70 ; rayon 26 ; XP 2
+COMPORTEMENT=approche à 45 % de vitesse si distance >900 ; prépare 0,70 s ; charge 0,50 s ; repos 0,80 s.
+DESIGN=dard rouge/rose étiré dans le sens de la charge.
+
+[scribe_essaimeur] ETAT=ACTUEL
+NOM=Scribe essaimeur | ROLE=invocateur fuyard | CERVEAU=essaimeur
+STATS=PV 46 ; vitesse 190 ; dégâts 10 ; distance voulue 500 ; rayon 38 ; XP 3
+COMPORTEMENT=recule sous 300 ; avance au-delà de 800 ; sinon invoque quand prêt.
+ATTAQUE=toutes les 2,95 s invoque 2 Encriers ; maximum 6 invocations ; cercle de 7 projectiles, vitesse 460, portée 1000, dégâts 45 %.
+DESIGN=masque vert menthe avec noyau d'encre.
+
+[folio_orbiteur] ETAT=ACTUEL
+NOM=Folio orbiteur | ROLE=mobile circulaire | CERVEAU=orbiteur
+STATS=PV 28 ; vitesse 255 ; dégâts 9 ; distance voulue 430 ; rayon 27 ; XP 2
+COMPORTEMENT=recule sous 301 ; avance au-delà de 581 ; sinon orbite ; tire toutes les 1,65 s.
+ATTAQUE=projectile vitesse 500, portée 1300, dégâts 62 %.
+DESIGN=pages bleues en orbite autour d'un cœur sombre.
+
+[sceau_belier] ETAT=ACTUEL
+NOM=Sceau-bélier | ROLE=chargeur lourd | CERVEAU=véloce
+STATS=PV 58 ; vitesse charge 500 ; dégâts 16 ; portée 82 ; rayon 40 ; XP 3
+COMPORTEMENT=approche à 30 % si distance >780 ; prépare 1,05 s ; charge 0,58 s ; repos 1,25 s.
+DESIGN=sceau orange large, cornes/blocs frontaux.
+
+[marge_harceleuse] ETAT=ACTUEL
+NOM=Marge harceleuse | ROLE=tireur fuyard | CERVEAU=harceleur
+STATS=PV 34 ; vitesse 285 ; dégâts 9 ; distance voulue 620 ; rayon 29 ; XP 3
+COMPORTEMENT=recule sous 446 ; avance au-delà de 794 ; sinon tourne autour et tire.
+ATTAQUE=2 projectiles, éventail 0,18 rad ; recharge 1,45 s ; télégraphe 0,48 s ; vitesse 560 ; portée 1700 ; dégâts 58 %.
+DESIGN=ruban rose vif, silhouette latérale mobile.
+
+[miroir_encre] ETAT=ACTUEL
+NOM=Miroir d'encre | ROLE=onde radiale | CERVEAU=miroir
+STATS=PV 52 ; vitesse 175 ; dégâts 11 ; distance voulue 520 ; rayon 36 ; XP 4
+COMPORTEMENT=avance au-delà de 754 ; ne fuit pas ; pulse toutes les 2,35 s.
+ATTAQUE=8 projectiles en cercle ; télégraphe 0,65 s ; vitesse 390 ; portée 1200 ; dégâts 52 %.
+DESIGN=miroir vert menthe, cadre géométrique et reflet central.
+
+[cachet_phaseur] ETAT=ACTUEL
+NOM=Cachet phaseur | ROLE=téléportation/traversée | CERVEAU=phaseur
+STATS=PV 38 ; vitesse 230 ; dégâts 12 ; distance voulue 470 ; rayon 31 ; XP 3
+COMPORTEMENT=avance au-delà de 682 ; sinon tourne ; toutes les 2,55 s disparaît puis réapparaît de l'autre côté.
+ATTAQUE=6 projectiles en cercle ; télégraphe 0,62 s ; vitesse 520 ; portée 1450 ; dégâts 56 %.
+DESIGN=cachet violet en blocs, alternance visible/invisible.
+
+[fuseau_tisseur] ETAT=ACTUEL
+NOM=Fuseau tisseur | ROLE=fermeture de lignes | CERVEAU=tisseur
+STATS=PV 42 ; vitesse 245 ; dégâts 10 ; distance voulue 560 ; rayon 33 ; XP 3
+COMPORTEMENT=recule sous 347 ; avance au-delà de 773 ; sinon croise ses déplacements et tisse toutes les 1,85 s.
+ATTAQUE=3 lignes parallèles espacées de 82 ; télégraphe 0,52 s ; vitesse 470 ; portée 1500 ; dégâts 62 %.
+DESIGN=fuseau cyan fin avec fils parallèles.
+
+[fiole_volatile] ETAT=ACTUEL
+NOM=Fiole volatile | ROLE=kamikaze de zone | CERVEAU=volatile
+STATS=PV 26 ; vitesse 205 ; dégâts 15 ; rayon 29 ; XP 2
+COMPORTEMENT=avance jusqu'à 205 ; gonfle pendant 0,88 s ; explose sans fuir.
+ATTAQUE=explosion rayon 205 + 9 projectiles en cercle ; vitesse 360 ; portée 720 ; dégâts projectile 45 %.
+DESIGN=fiole jaune qui grossit et clignote avant explosion.
+
+MODELE POUR UN NOUVEAU MONSTRE OU UNE VARIANTE
+----------------------------------------------
+[nouvel_id] ETAT=A_CREER
+NOM= | VARIANTE_DE=aucun | MONDES=
+ROLE= | AGRESSIVITE= | FUIT_SI= | POURSUIT_SI= | DISTANCE_PREFEREE=
+PV= | VITESSE= | DEGATS= | RAYON= | XP=
+ATTAQUE= | CADENCE= | TELEGRAPHE= | PROJECTILES= | VITESSE_PROJECTILE=
+PATTERN_COMPLET=
+DESIGN=silhouette, couleurs, taille, animation, particules
+

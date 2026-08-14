@@ -1,0 +1,79 @@
+PATTERNS DES BOSS
+=================
+
+Tous sont modifiables. DUREE = temps total du motif. PART DEGATS = fraction des
+dégâts du boss par projectile. Les signatures ont un télégraphe commun de 0,42 s.
+
+[barrage_horizontal] DUREE=3,0 | toutes les 0,55 s
+Mur de 7 colonnes vers le bas, une brèche aléatoire ; 6 tirs ; part dégâts 1,00.
+
+[eventail_lent] DUREE=3,2 | toutes les 0,85 s
+5 tirs vers le joueur aux angles -0,50/-0,25/0/+0,25/+0,50 rad ; part 0,80.
+
+[barrage_croise] DUREE=3,4 | toutes les 0,32 s
+3 tirs tournants espacés de 120°, rotation 2,2 rad/s ; part 0,90.
+
+[invocation] DUREE=1,2
+Fait apparaître 3 Encriers pour un miniboss, 4 pour un gros boss, sans dépasser 10 ennemis.
+
+[charge] DUREE=2,6
+Vise sans bouger pendant les 0,6 premières secondes, puis vitesse boss ×2,2 ; dégâts au contact ; rebond après impact.
+
+[spirale] DUREE=3,1
+Un tir tournant à 2,65 rad/s ; intervalle 0,17 s en phase 1, 0,13 s en phase 2 ; part 0,62.
+
+[anneau_breche] DUREE=3,2 | toutes les 0,95 s
+Anneau de 14 directions ; retire 3 tirs autour de la direction du joueur ; part 0,68.
+
+[pluie] DUREE=3,0 | toutes les 0,52 s
+7 voies verticales ; 2 voies sûres se déplacent ; 5 tirs vers le bas ; part 0,58.
+
+[poursuite] DUREE=2,8 | toutes les 0,48 s
+Deux tirs vers le joueur : un direct part 0,76, un oscillant part 0,55.
+
+[pause] DUREE=1,8 phase 1 / 1,4 phase 2
+Boss flotte vers son ancre en haut, sans attaque.
+
+SIGNATURES DES DIX MINIBOSS
+---------------------------
+[griffure] DUREE=2,9 | cadence 0,58 s
+5 colonnes d'origine, une brèche mobile ; 4 diagonales alternées ; part 0,72.
+
+[echo_errata] DUREE=3,0 | cadence 0,72 s
+Deux tirs depuis des fantômes latéraux + un tir central ; parts 0,66/0,82.
+
+[quadrillage] DUREE=3,1 | cadence 0,68 s
+Alterne 6 lignes horizontales et verticales ; 2 lignes sûres ; part 0,66.
+
+[machoire] DUREE=3,0 | cadence 0,76 s
+Deux mâchoires latérales, 3 dents chacune, alignées près de la hauteur du joueur ; part 0,62.
+
+[calligraphie] DUREE=3,1 | cadence 0,15 s
+Deux tirs opposés décrivant une courbe ondulée tournante ; part 0,48.
+
+[indexation] DUREE=2,9 | cadence 0,48 s
+Prédit la position du joueur à +0,28 s en phase 1, +0,40 s en phase 2 ; 3 tirs à ±0,13 rad ; part 0,62.
+
+[onde_marge] DUREE=3,0 | cadence 0,74 s
+Deux vagues opposées sur 7 voies ; 2 voies sûres mobiles ; part 0,52.
+
+[rosace] DUREE=3,1 | cadence 0,88 s
+Rosace ondulée tournante : 10 tirs phase 1, 14 phase 2 ; part 0,54.
+
+[estampille] DUREE=3,0 | cadence 0,82 s
+Anneau de 12 avec brèche de 2 directions + tir direct fort ; parts 0,58/0,84.
+
+[copie_double] DUREE=3,0 | cadence 0,52 s
+Deux origines latérales tirent vers le héros ; phase 2 ajoute deux diagonales ; parts 0,64/0,48.
+
+MODELE NOUVEAU PATTERN
+----------------------
+[nouvel_id] ETAT=A_CREER
+INTENTION=ce que le joueur doit comprendre et esquiver
+DUREE= | TELEGRAPHE= | CADENCE=
+ORIGINE_DES_TIRS= | NOMBRE= | ANGLES= | VITESSE= | PART_DEGATS=
+MOUVEMENT_DU_BOSS=
+ZONE_SURE=
+DESIGN_VISUEL_ET_SONORE=
+DIFFERENCE_PHASE_2=
+

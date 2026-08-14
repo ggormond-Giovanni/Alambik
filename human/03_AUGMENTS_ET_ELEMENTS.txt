@@ -1,0 +1,138 @@
+AMELIORATIONS ET ELEMENTS
+====================
+
+COMPTE ACTUEL = 16 Am?liorations : 6 Projectile, 5 Héros, 5 Phénomène
+OBJECTIF = environ 30
+REGLE ACTUELLE = chaque Am?lioration ne peut être pris qu'une fois.
+
+FAMILLE PROJECTILE
+------------------
+[tir_multiple] ETAT=ACTUEL
+NOM = Tir multiple
+DESCRIPTION = Ajoute un projectile simultané.
+EFFET PRECIS = +1 projectile ; écart latéral 30 ; dégâts de chaque trait ×0,72.
+DESIGN = glyphe éventail ; couleur or pâle RGB 0,98 / 0,82 / 0,42.
+
+[salve] ETAT=ACTUEL
+NOM = Salve
+DESCRIPTION = Chaque attaque devient une salve rapide.
+EFFET PRECIS = 2 tirs espacés de 0,07 s ; dégâts de chaque tir ×0,72.
+DESIGN = triple barre ; orange.
+
+[ricochet] ETAT=ACTUEL
+NOM = Ricochet
+EFFET PRECIS = +1 rebond vers un autre ennemi ; mur = destruction ; -25 % dégâts par rebond.
+DESIGN = zigzag ; bleu clair.
+
+[perforation] ETAT=ACTUEL
+NOM = Perforation
+EFFET PRECIS = traverse +1 ennemi ; -35 % dégâts après chaque traversée.
+DESIGN = lance ; blanc bleuté.
+
+[fragmentation] ETAT=ACTUEL
+NOM = Fragmentation
+EFFET PRECIS = +3 fragments à l'impact ; tir principal ×0,88 ; chaque fragment vaut 28 % du tir et porte 260.
+DESIGN = éclats ; cyan pâle.
+
+[homing] ETAT=ACTUEL
+NOM = Homing
+EFFET PRECIS = le projectile corrige sa trajectoire vers sa cible ; vitesse ×0,88.
+DESIGN = œil ; bleu.
+
+FAMILLE HEROS
+-------------
+[egide] ETAT=ACTUEL
+NOM = Égide
+EFFET PRECIS = annule le premier coup reçu dans chaque salle.
+DESIGN = hexagone ; blanc bleuté.
+
+[regeneration] ETAT=ACTUEL
+NOM = Régénération
+EFFET PRECIS = soigne 6 % des PV max entre chaque salle.
+DESIGN = goutte ; vert.
+
+[avidite] ETAT=ACTUEL
+NOM = Avidité
+EFFET PRECIS = XP de run ×1,20 et Gouttes de la tentative ×1,20.
+DESIGN = fiole ; or.
+
+[courageux] ETAT=ACTUEL
+NOM = Courageux
+EFFET PRECIS = bonus de dégâts linéaire selon les PV perdus ; jusqu'à +70 % à 0 PV.
+DESIGN = flamme ; rouge.
+
+[mannequin] ETAT=ACTUEL
+NOM = Mannequin
+EFFET PRECIS = après 1,20 s immobile : dégâts ×1,35 et cadence ×1,25.
+DESIGN = masse ; brun.
+
+FAMILLE PHENOMENE
+-----------------
+[familier_tireur] ETAT=ACTUEL
+EFFET PRECIS = tire toutes les 0,85 s sur l'ennemi proche ; 42 % des dégâts du héros.
+DESIGN = familier flottant à droite du héros ; glyphe œil ; bleu.
+
+[meteores] ETAT=ACTUEL
+NOM = Météores
+EFFET PRECIS = toutes les 4 s, frappe autour d'une cible ; rayon 150 ; 260 % des dégâts.
+DESIGN = impact orange ; glyphe étoile.
+
+[zone_heros] ETAT=ACTUEL
+NOM = Zone alchimique
+EFFET PRECIS = toutes les 0,45 s, frappe autour du héros ; rayon 145 ; 32 % des dégâts.
+DESIGN = onde verte ; glyphe hexagone.
+
+[familier_gardien] ETAT=ACTUEL
+EFFET PRECIS = attaque de mêlée toutes les 0,75 s à 55 % des dégâts ; 55 PV ; revient après 6 s.
+DESIGN = familier à gauche ; glyphe patte ; violet.
+
+[orbes_chargees] ETAT=ACTUEL
+EFFET PRECIS = gagne 1 orbe toutes les 2 s, maximum 3 ; prochain tir libère chaque orbe à 55 % des dégâts.
+DESIGN = cristaux violets orbitaux.
+
+ELEMENTS ET FUSIONS
+-------------------
+Une run propose trois Éléments distincts parmi six. Une Fusion ajoute l'Élément
+à un Am?lioration sans retirer l'Am?lioration original. Un Am?lioration ne peut être fusionné
+qu'une fois. Actuellement, l'effet dépend de la famille, pas de l'Am?lioration précis.
+
+[FEU]
+Projectile/Phénomène = brûlure cumulative : 18 % des dégâts par seconde pendant 4 s.
+Héros = 3 résurrections à 33 % des PV.
+
+[EAU]
+Projectile/Phénomène = Mouillé : vitesse ×0,45 pendant 2 s et dégâts reçus ×1,35 pendant 4 s.
+Héros = 1 résurrection à 100 % des PV.
+
+[AIR]
+Projectile = vitesse du projectile ×1,35 et dmg x1,20.
+Phénomène = intervalle d'activation ×0,75 et vitesse projectile ×1,35.
+Héros = 1 résurrection à 55 % des PV.
+
+[TERRE]
+Projectile/Phénomène = dégâts ×1,50 ; vitesse ×0,80.
+Héros = 1 résurrection à 50 % ; jusqu'a la fin de la run dégâts reçus ×0,80.
+
+[LUMIERE]
+Projectile/Phénomène = 10 % de chance de récupérer 1pv quand un ennemi est touché par un projectile.
+Héros = 1 résurrection à 55 % ; jusqu'a la fin de la run dégats ×1,50.
+
+[TENEBRES]
+Projectile/Phénomène = 10 % de chance de surcharge à ×5,0 dégâts.
+Héros = dégâts permanents ×1,50, sans résurrection élémentaire.
+
+NOUVEAUX AMELIORATIONS — AJOUTE TES BLOCS ICI
+-----------------------------------------
+[nouvel_id] ETAT=A_CREER
+NOM =
+FAMILLE = Projectile / Héros / Phénomène
+DESCRIPTION =
+EFFET PRECIS =
+DESIGN =
+FUSION FEU =
+FUSION EAU =
+FUSION AIR =
+FUSION TERRE =
+FUSION LUMIERE =
+FUSION TENEBRES =
+

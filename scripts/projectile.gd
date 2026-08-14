@@ -4,17 +4,21 @@ extends Area2D
 # le Tir qu'on lui attache. Une fusion n'est donc jamais du code special
 # disperse dans le combat.
 
-signal fragments_demandes(origine: Vector2, direction: Vector2, tir_source: Tir, hostile: bool)
+signal fragments_demandes(origine: Vector2, direction: Vector2, tir_source: Tir, hostile: bool, cible_exclue: int)
 signal impact_visuel(position: Vector2, couleur: Color, ampleur: float)
 signal soin_demande(montant: float)
 
-const RAYON := 13.0
+const RAYON := Reglages.TIR_RAYON
 const MEMOIRE_TRAINEE := 9
 
 var tir: Tir
 var direction := Vector2.RIGHT
 var hostile := false
 var couleur := Palette.TIR_HALO
+# Cible que ce projectile ne doit jamais toucher. Un eclat nait dans la creature
+# qui vient d'etre percutee : sans cette exclusion il la refrappe a bout portant,
+# ce qui transforme Fragmentation en multiplicateur de degats sur cible unique.
+var cible_exclue := 0
 
 var _facteur_degats := 1.0
 var _distance_parcourue := 0.0
@@ -24,14 +28,18 @@ var _deja_touches: Array[int] = []
 var _trainee: Array[Vector2] = []
 var _age := 0.0
 var _facteur_tenebres := 1.0
+var _dernier_touche := 0
 var _termine := false
 
 func _ready() -> void:
 	# Le rendu suit les positions entre deux ticks physiques, indispensable sur
 	# les projectiles rapides quand l'ecran du telephone rafraichit au-dessus de 60 Hz.
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_ON
+	($CollisionShape2D.shape as CircleShape2D).radius = RAYON
 	_rebonds_restants = tir.rebonds
 	_perforations_restantes = tir.perforations
+	if cible_exclue != 0:
+		_deja_touches.append(cible_exclue)
 	if not hostile and "tenebres" in tir.drapeaux and Jeu.rng.randf() < Reglages.TENEBRES_CHANCE_SURCHARGE:
 		_facteur_tenebres = Reglages.TENEBRES_SURCHARGE_MULT
 	couleur = Palette.TIR_ENNEMI_HALO if hostile else Palette.teinte_du_tir(tir.effets)
@@ -69,6 +77,7 @@ func _sur_contact(corps: Node) -> void:
 	if corps.get_instance_id() in _deja_touches:
 		return
 	_deja_touches.append(corps.get_instance_id())
+	_dernier_touche = corps.get_instance_id()
 
 	if not hostile:
 		Jeu.tirs_touches += 1
@@ -136,8 +145,9 @@ func _finir(creer_fragments := true) -> void:
 		return
 	_termine = true
 	if creer_fragments and tir.fragments > 0:
-		fragments_demandes.emit(global_position, direction, tir, hostile)
+		fragments_demandes.emit(global_position, direction, tir, hostile, _dernier_touche)
 	queue_free()
 
 func _draw() -> void:
-	Retro16.dessiner_projectile(self, _trainee, position, couleur, hostile)
+	Retro16.dessiner_projectile(self, _trainee, position, couleur, hostile,
+		"trait_familier" in tir.drapeaux)

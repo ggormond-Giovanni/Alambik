@@ -1,0 +1,90 @@
+PROMPTS DES ASSETS VISUELS
+==========================
+
+MODE D'EMPLOI
+Modifie les lignes DESCRIPTION, PALETTE, DETAILS ou INTERDITS, puis demande à
+Codex de relire ce fichier et de régénérer uniquement l'asset concerné.
+Toujours conserver : pixel art moderne inspiré du 16-bit, pixels nets, contours
+prune foncé, silhouettes lisibles sur téléphone, fantasy colorée non lugubre.
+Les planches de sprites sont générées sur vert pur #00FF00 puis détourées.
+
+[HERO_ALCHIMISTE] FICHIER=assets/visual/hero_alchimiste.png
+FORMAT=grille exacte 4 colonnes x 2 lignes, 8 poses isolées
+POSES=idle A ; idle B ; marche A ; marche B ; sort A ; sort B ; touché ; vaincu
+DESCRIPTION=jeune alchimiste-mage androgyne ; grand chapeau violet asymétrique ;
+liserés cuivre-or ; fiole turquoise au chapeau ; écharpe turquoise ; manteau de
+voyage violet ; sacoche de potions ; baguette-cornue avec orbe lavande ; yeux ambre
+VUE=trois-quarts vue du dessus, orienté légèrement vers le haut et la droite
+INTERDITS=texte, grille visible, sol, ombre extérieure, changement de costume
+
+[MONSTRES] FICHIER=assets/visual/ennemis.png
+FORMAT=grille 4 x 3 ; cases 1 à 11 utilisées ; case 12 vide
+ORDRE=encrier rampant ; plume sentinelle ; tache véloce ; scribe essaimeur ;
+folio orbiteur ; sceau bélier ; marge harceleuse ; miroir d'encre ; cachet
+phaseur ; fuseau tisseur ; fiole volatile
+DESCRIPTION=créatures d'encre et d'alchimie ; rôle compréhensible par silhouette
+INTERDITS=attaques, projectiles, barres de vie, décor, particules éloignées
+
+[MINIBOSS] FICHIER=assets/visual/miniboss.png
+FORMAT=grille 5 x 2 ; 10 silhouettes, environ 1,7 fois un monstre
+ORDRE=Rature ; Faute vive ; Correcteur ; Reliure affamée ; Virgule noire ;
+Index brisé ; Marge hurlante ; Enlumineur fou ; Signet sanglant ; Copiste aveugle
+DESCRIPTION=manuscrit vivant, cuivre-or et noyaux magiques, menaçant mais familial
+
+[GROS_BOSS] FICHIER=assets/visual/boss.png
+FORMAT=grille 5 x 2 ; V1 en haut, V2 de la même famille juste dessous
+COLONNE_1=Archiscribe des Encres / Choeur infini ; masque-manuscrit couronné
+COLONNE_2=Roi des Braises / Souverain des Ombres ; creuset à deux cornes
+COLONNE_3=Reine du Givre / Gardien des Runes ; monarque cristal/runes
+COLONNE_4=Maître des Orages / Dévoreur du Néant ; moteur à deux ailes
+COLONNE_5=Hydre des Venins / Grand Alambic ; cornue massive à trois chambres
+REGLE=la V2 garde le corps, la hitbox et les proportions de la V1 mais change
+palette, couronne, glyphe et détails élémentaires
+
+[PROJECTILE] FICHIER=assets/visual/projectile.png
+FORMAT=grille 4 x 2 ; boucle exacte de 8 images
+DESCRIPTION=noyau blanc-lavande, anneau de plasma violet rotatif, étincelles
+turquoise et or ; silhouette compacte facile à recolorer selon les éléments
+INTERDITS=longue traînée, décor, ombre, texte
+
+[OBSTACLES] FICHIER=assets/visual/obstacles.png
+FORMAT=grille 3 x 1 ; objets bas et horizontaux
+ORDRE=muret calcaire moussu avec cuivre et fleurs violettes ; jardinière de
+trois buissons magiques ; trois rochers pâles, cristal turquoise et tuyau cuivre
+REGLE=base très lisible correspondant à la collision, perspective trois-quarts
+
+[ARENE_ATELIER_VERDOYANT] FICHIER=assets/visual/arene_atelier_verdoyant_v2.png
+FORMAT=portrait 9:16, décor seul
+DESCRIPTION=jardin d'alchimiste en ruine au-dessus d'une eau turquoise, matin
+doré, dalle calcaire moussue, bordures luxuriantes, fioles, cuivre, lanternes,
+cascades et portail cyan-violet en haut
+REGLE=centre 88 à 90 % ouvert et calme ; bordures fines ; aucun gros élément
+au milieu ; petits décors jouables facultatifs gérés séparément par le code ;
+haut 10 % calme pour le HUD
+INTERDITS=personnage, ennemi, projectile, interface, texte, centre encombré
+
+[MENU_VALLEE] FICHIER=assets/visual/menu_vallee_alambics.png
+FORMAT=portrait 9:16, décor seul
+DESCRIPTION=coucher de soleil sur une académie d'alchimie merveilleuse, pierre
+claire, toits cuivre, énormes cornues de verre, cascades et jardins lumineux ;
+grande dalle alchimique vide au premier plan pour accueillir le héros
+REGLE=haut sombre et calme pour le profil ; côtés calmes pour les commandes ;
+bas moins contrasté pour le bouton Jouer et la navigation
+INTERDITS=personnage, UI, boutons, icônes, texte, chiffres, logo
+
+[FOND_SOUS_MENUS] FICHIER=assets/visual/fond_interface_scriptorium.png
+FORMAT=portrait 9:16, décor seul
+DESCRIPTION=intérieur de scriptorium alchimique bleu-saphir ; étagères, fioles,
+lanternes cuivre et table de laboratoire uniquement sur les bords ; ambiance
+fantasy calme, lumineuse, volontairement moins contrastée que l'accueil
+REGLE=centre 70 % très sombre et très calme pour les listes et statistiques
+INTERDITS=personnage, panneau, bouton, icône, texte, logo, cercle central brillant
+
+[ICONES_INTERFACE] FICHIER=assets/visual/icones_interface_normalisees.png
+FORMAT=atlas transparent exact 5 colonnes x 3 lignes, cases carrées 256 x 256
+ORDRE_LIGNE_1=accueil ; grimoire ; équipement ; maîtrise ; arsenal
+ORDRE_LIGNE_2=mine ; épreuves ; réglages ; essence ; jouer
+ORDRE_LIGNE_3=pause ; nouveau tirage ; alambic ; victoire ; verrouillé
+DESCRIPTION=icônes fantasy alchimiques, cadre bleu-saphir et or, volumes lisibles,
+palette violette/turquoise/cuivre, même lumière et même épaisseur de contour
+INTERDITS=texte, lettres, chiffres, fond opaque extérieur aux cadres

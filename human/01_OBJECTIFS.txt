@@ -1,0 +1,44 @@
+VISION ET OBJECTIFS
+===================
+
+GENRE = Roguelite de tir, vue du dessus, portrait, Android, une main
+UNIVERS = Une alchimiste descend dans un grimoire vivant
+DIRECTION = pixel art moderne fantasy inspiré du 16-bit, grille de 4 pixels
+SESSION = environ 10 minutes (à mesurer et ajuster)
+
+QUANTITES SOUHAITEES
+--------------------
+Am?liorations             : environ 30 souhaités / 16 actuels / 14 à imaginer
+Monstres communs      : environ 30 souhaités / 11 actuels / 19 à imaginer
+Variantes de monstres : autorisées ; préciser ce qui change
+Miniboss              : 10 souhaités / 10 actuels
+Combats de gros boss  : 10 souhaités
+Architectures de boss : 5 souhaitées, chacune déclinée en version 1 et version 2
+Maîtrises             : 30 souhaitées / 30 actuelles
+
+DECISION — GROS BOSS
+--------------------
+ETAT = DECIDE_ET_APPLIQUE_VISUELLEMENT
+Objectif retenu : 5 boss mécaniquement différents, rencontrés chacun en deux
+versions, soit 10 combats. La version 2 peut changer de couleur, de nom, de
+statistiques et de sélection/ordre des patterns, tout en réutilisant le même
+squelette de déplacement, de collision et de design. Cela permet de concentrer
+le réglage sur cinq identités fortes et de tester chaque famille deux fois.
+
+REGLES D'EQUILIBRE DES VERSIONS
+- V1 introduit clairement la mécanique centrale du boss.
+- V2 ajoute au maximum une contrainte principale et accélère certains rythmes.
+- Hitbox et logique fondamentale identiques entre V1 et V2.
+- Télégraphes jamais raccourcis sans mesure sur téléphone.
+- La recoloration doit rester lisible et annoncer la variante avant l'attaque.
+- Les cinq paires sont fixées dans 06_GROS_BOSS.txt et possèdent maintenant
+  cinq architectures visuelles partagées, avec une V1 et une V2 chacune.
+
+PRIORITE DE CONCEPTION
+----------------------
+Chaque ennemi doit pouvoir être réglé sans code sur ces axes :
+- agressivité, distance préférée, fuite, poursuite et mobilité ;
+- attaque, cadence, télégraphe, projectile et dégâts ;
+- phases et enchaînement exact des patterns ;
+- silhouette, palette, taille, animation et effets visuels ;
+- variantes par monde ou par difficulté.

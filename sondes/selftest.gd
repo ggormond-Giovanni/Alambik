@@ -51,7 +51,10 @@ func _fichiers(racine: String, extensions: Array) -> Array[String]:
 func _drapeaux_lus() -> int:
 	var code := 0
 	for d in _valeurs_de_liste("drapeaux"):
-		if d.begins_with("transformation_heros_"):
+		# Ces deux familles de drapeaux sont construites par interpolation depuis
+		# l'identifiant de l'Element : aucune occurrence litterale n'existe dans
+		# les scripts, alors qu'ils sont bien lus.
+		if d.begins_with("transformation_heros_") or d.begins_with("sceau_element_"):
 			continue
 		if not _cite_dans_les_scripts(d):
 			print("ECHEC  le drapeau %s n'est lu par aucun script : la transformation est inerte" % d)
@@ -68,15 +71,15 @@ func _effets_lus() -> int:
 
 func _catalogues_coherents() -> int:
 	var code := 0
-	if CatalogueReactifs.ids().size() != 16:
-		print("ECHEC  le catalogue doit contenir exactement seize Augments")
+	if CatalogueReactifs.ids().size() != 30:
+		print("ECHEC  le catalogue doit contenir exactement trente Améliorations")
 		code = 1
 	if CatalogueElements.ids().size() != 6:
 		print("ECHEC  le catalogue doit contenir exactement six Elements decides")
 		code = 1
 	for id in CatalogueReactifs.ids():
 		if CatalogueReactifs.par_id(id).mods.is_empty():
-			print("ECHEC  l'Augment %s ne porte aucun effet" % id)
+			print("ECHEC  l'Amélioration %s ne porte aucun effet" % id)
 			code = 1
 		for element in CatalogueElements.ids():
 			if CatalogueElements.creer_fusion(element, id) == null:

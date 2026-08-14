@@ -1,5 +1,7 @@
 extends Control
 
+const FOND_PREMIUM := preload("res://assets/visual/recompense_sort_premium.png")
+
 signal termine
 
 var etage_recompense := 1
@@ -23,18 +25,20 @@ func _ready() -> void:
 func _construire() -> void:
 	var marge := MarginContainer.new()
 	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
-	marge.add_theme_constant_override("margin_left", 62)
-	marge.add_theme_constant_override("margin_right", 62)
-	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 90)
+	marge.add_theme_constant_override("margin_left", 104)
+	marge.add_theme_constant_override("margin_right", 104)
+	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 78)
 	add_child(marge)
 	var colonne := VBoxContainer.new()
 	colonne.alignment = BoxContainer.ALIGNMENT_END
 	marge.add_child(colonne)
 	var continuer := Button.new()
 	continuer.text = "CONTINUER LE DÉFI" if etage_recompense < Jeu.salles_du_chapitre() else "TERMINER LE DÉFI"
-	continuer.custom_minimum_size = Vector2(0, 132)
+	continuer.custom_minimum_size = Vector2(0, 174)
 	continuer.add_theme_font_size_override("font_size", 31)
-	StyleInterface.styliser_bouton(continuer, Palette.ESSENCE)
+	continuer.flat = true
+	continuer.add_theme_color_override("font_color", Palette.TEXTE)
+	continuer.add_theme_color_override("font_hover_color", Color.WHITE)
 	continuer.pressed.connect(_quitter)
 	colonne.add_child(continuer)
 
@@ -46,24 +50,24 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	StyleInterface.dessiner_fond(self, size, Palette.ESSENCE, _anim, 0.98)
-	var police := ThemeDB.fallback_font
-	var centre := Vector2(size.x * 0.5, size.y * 0.43)
-	Dessin.halo(self, centre, 300.0, Color(Palette.ESSENCE, 0.36), 7)
-	draw_string(police, Vector2(0, centre.y - 210.0), "MINIBOSS %d / 5 VAINCU" % etage_recompense,
-		HORIZONTAL_ALIGNMENT_CENTER, size.x, 28, Palette.TEXTE_ATTENUE)
+	FondAdaptatif.dessiner_premium(self, FOND_PREMIUM, size, 1120.0, 800.0)
+	var police := Polices.CORPS
+	draw_string(police, Vector2(72.0, size.y * 0.105), "RÉCOMPENSE DU MINIBOSS", HORIZONTAL_ALIGNMENT_CENTER,
+		size.x - 144.0, 37, Palette.TEXTE)
+	draw_string(police, Vector2(72.0, size.y * 0.145), "VICTOIRE %d / 5" % etage_recompense,
+		HORIZONTAL_ALIGNMENT_CENTER, size.x - 144.0, 24, Palette.TEXTE_ATTENUE)
 	if _recompense["type"] == "gouttes":
-		draw_colored_polygon(Dessin.goutte(centre, 92.0 + sin(_anim * 3.0) * 4.0, PI, 1.2), Palette.ESSENCE)
-		draw_string(police, Vector2(0, centre.y + 155.0), "+%d GOUTTES" % int(_recompense["quantite"]),
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, 46, Palette.ESSENCE)
+		draw_string(police, Vector2(82.0, size.y * 0.675), "+%d GOUTTES D'ESSENCE" % int(_recompense["quantite"]),
+			HORIZONTAL_ALIGNMENT_CENTER, size.x - 164.0, 42, Palette.ESSENCE)
+		draw_string(police, Vector2(92.0, size.y * 0.742), "La récompense a été ajoutée à votre réserve.",
+			HORIZONTAL_ALIGNMENT_CENTER, size.x - 184.0, 24, Palette.TEXTE_ATTENUE)
 	else:
 		var donnees := Sorts.donnees(str(_recompense["id"]))
-		draw_colored_polygon(Dessin.etoile(centre, 96.0, 42.0, 7, _anim * 0.25), Palette.OR)
-		draw_string(police, Vector2(0, centre.y + 146.0), str(donnees["nom"]).to_upper(),
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, 42, Palette.OR)
-		draw_string(police, Vector2(90.0, centre.y + 202.0), str(donnees["description"]),
-			HORIZONTAL_ALIGNMENT_CENTER, size.x - 180.0, 25, Palette.TEXTE_ATTENUE)
-		draw_string(police, Vector2(0, centre.y + 262.0), "%s • RANG %d / %d • %d %%" % [
+		draw_string(police, Vector2(82.0, size.y * 0.675), str(donnees["nom"]).to_upper(),
+			HORIZONTAL_ALIGNMENT_CENTER, size.x - 164.0, 42, Palette.OR)
+		draw_string(police, Vector2(92.0, size.y * 0.742), str(donnees["description"]),
+			HORIZONTAL_ALIGNMENT_CENTER, size.x - 184.0, 24, Palette.TEXTE_ATTENUE)
+		draw_string(police, Vector2(82.0, size.y * 0.806), "%s • RANG %d / %d • %d %%" % [
 			str(_recompense["type"]).to_upper(), ReglagesJoueur.rang_sort(str(_recompense["id"])),
 			Reglages.CAPACITE_RANG_MAX, roundi(ReglagesJoueur.efficacite_sort(str(_recompense["id"])) * 100.0)],
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, 25, Palette.ESSENCE)
+			HORIZONTAL_ALIGNMENT_CENTER, size.x - 164.0, 25, Palette.ESSENCE)

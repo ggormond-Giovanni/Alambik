@@ -1,0 +1,20 @@
+ECRAN ALAMBIC
+=============
+
+CONTENU REEL DU JEU
+-------------------
+Elément tiré ; Am?liorations compatibles ; aperçu exact de la Fusion ; Infuser.
+
+COMPOSITION ACTUELLE VALIDEE
+----------------------------
+Centre haut = véritable machine Alambic illustrée avec liquide cyan/violet.
+Bas = Améliorations disponibles sous forme de vraies cartes défilantes.
+Aperçu = Élément, Amélioration choisie et effet exact de la Fusion.
+Action Infuser = grand mécanisme cyan et cuivre, jamais une bulle générique.
+
+TOI > Machine très grande ou plutôt fonctionnelle ?
+TOI > Sélection des Améliorations : cartes / fioles / roue :
+TOI > Aperçu avant-après : côte à côte / superposé / texte seulement :
+TOI > Animation de Fusion souhaitée :
+TOI > Référence précise ou commentaire libre :
+
