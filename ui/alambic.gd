@@ -1,10 +1,7 @@
 extends Control
 
-const FOND_PREMIUM := preload("res://assets/visual/alambic_premium.png")
-
-# L'Alambic genere un Element et l'attache a un Amélioration existant. La fusion
-# ajoute une transformation : elle ne retire ni ne remplace jamais l'original.
-
+# L'Alambic genere un Element et l'attache a une Amélioration existante. Le
+# décor, les cartes et les contrôles sont trois couches indépendantes.
 signal termine
 
 var _liste: VBoxContainer
@@ -22,52 +19,71 @@ func _ready() -> void:
 	_element = Jeu.tirer_element_alambic()
 	_construire()
 	StyleInterface.animer_entree(self)
+	Capture.programmer(self)
 	if Jeu.mode_auto:
 		_jouer_automatiquement()
 
-func _process(delta: float) -> void:
-	_anim += delta
-	queue_redraw()
-
 func _construire() -> void:
+	var teinte := _teinte_element()
 	var marge := MarginContainer.new()
 	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
-	marge.add_theme_constant_override("margin_left", 86)
-	marge.add_theme_constant_override("margin_right", 86)
-	marge.add_theme_constant_override("margin_top", int(Ecran.marge_haute()) + 850)
-	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse()) + 82)
+	InterfaceMobile.appliquer_marges(marge, 0.0, true)
 	add_child(marge)
 
 	var colonne := VBoxContainer.new()
-	colonne.add_theme_constant_override("separation", 12)
+	colonne.add_theme_constant_override("separation", 14)
 	marge.add_child(colonne)
 
-	var defilement := ScrollContainer.new()
-	defilement.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	defilement.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	colonne.add_child(defilement)
+	var entete := PanelContainer.new()
+	entete.add_theme_stylebox_override("panel", InterfaceMobile.panneau(teinte, true))
+	colonne.add_child(entete)
+	var entete_colonne := VBoxContainer.new()
+	entete_colonne.add_theme_constant_override("separation", 6)
+	entete.add_child(entete_colonne)
+	var surtitre := InterfaceMobile.styliser_label(Label.new(), 19, Palette.OR, true)
+	surtitre.text = "TRANSFORMATION ÉLÉMENTAIRE"
+	entete_colonne.add_child(surtitre)
+	var titre := InterfaceMobile.styliser_label(Label.new(), 36, Palette.TEXTE, true)
+	titre.text = "ALAMBIC"
+	entete_colonne.add_child(titre)
+	var element := InterfaceMobile.styliser_label(Label.new(), 28, teinte, true)
+	element.text = str(CatalogueElements.par_id(_element).get("nom", "ÉLÉMENT INCONNU")).to_upper()
+	entete_colonne.add_child(element)
 
+	var illustration := Control.new()
+	illustration.custom_minimum_size.y = 310.0
+	illustration.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	illustration.draw.connect(func() -> void: _dessiner_alambic(illustration, illustration.size * Vector2(0.5, 0.46), teinte))
+	colonne.add_child(illustration)
+
+	var instruction := InterfaceMobile.styliser_label(Label.new(), 21, Palette.TEXTE_ATTENUE, true)
+	instruction.text = "Choisissez une Amélioration à infuser  ·  Soin +%d %%" % roundi(Reglages.SOIN_ALAMBIC * 100.0)
+	instruction.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	instruction.custom_minimum_size.y = 48.0
+	colonne.add_child(instruction)
+
+	var defilement := ScrollContainer.new()
+	defilement.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	defilement.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	colonne.add_child(defilement)
 	_liste = VBoxContainer.new()
-	_liste.add_theme_constant_override("separation", 14)
+	_liste.add_theme_constant_override("separation", 12)
 	_liste.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	defilement.add_child(_liste)
 
-	_apercu = Label.new()
-	_apercu.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_apercu.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var apercu_panneau := PanelContainer.new()
+	apercu_panneau.add_theme_stylebox_override("panel", InterfaceMobile.panneau_leger(teinte))
+	colonne.add_child(apercu_panneau)
+	_apercu = InterfaceMobile.styliser_label(Label.new(), 23, teinte, true)
 	_apercu.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_apercu.add_theme_font_size_override("font_size", 24)
-	_apercu.custom_minimum_size = Vector2(0, 132)
-	colonne.add_child(_apercu)
+	_apercu.custom_minimum_size.y = 108.0
+	apercu_panneau.add_child(_apercu)
 
 	_bouton_fusionner = Button.new()
 	_bouton_fusionner.text = "INFUSER L'AMÉLIORATION"
-	_bouton_fusionner.custom_minimum_size = Vector2(0, 142)
-	_bouton_fusionner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_bouton_fusionner.add_theme_font_size_override("font_size", 30)
+	_bouton_fusionner.custom_minimum_size.y = 106.0
+	InterfaceMobile.styliser_bouton(_bouton_fusionner, teinte, true)
 	_bouton_fusionner.pressed.connect(_sur_fusionner)
-	StyleInterface.styliser_bouton(_bouton_fusionner, _teinte_element())
-	StyleInterface.ajouter_icone(_bouton_fusionner, 12, 66)
 	colonne.add_child(_bouton_fusionner)
 	_construire_cartes()
 
@@ -80,7 +96,7 @@ func _construire_cartes() -> void:
 		var reactif := CatalogueReactifs.par_id(id)
 		var carte := CarteReactif.new()
 		carte.configurer(reactif)
-		carte.custom_minimum_size = Vector2(0, 150)
+		carte.custom_minimum_size = Vector2(0.0, 152.0)
 		carte.selectionnee = id == _selection
 		carte.choisie.connect(_sur_choix)
 		_liste.add_child(carte)
@@ -108,9 +124,9 @@ func _rafraichir() -> void:
 	if donnees.is_empty():
 		_apercu.text = "L'Alambic reste silencieux."
 	elif _cartes.is_empty():
-		_apercu.text = "%s\n\nAucune Amélioration non fusionnée n'est disponible." % donnees["nom"]
+		_apercu.text = "%s\nAucune Amélioration non fusionnée n'est disponible." % donnees["nom"]
 	elif _selection.is_empty():
-		_apercu.text = "%s\n\nChoisissez l'Amélioration à transformer." % donnees["nom"]
+		_apercu.text = "%s\nChoisissez l'Amélioration à transformer." % donnees["nom"]
 	else:
 		var augment := CatalogueReactifs.par_id(_selection)
 		var fusion := CatalogueElements.creer_fusion(_element, _selection)
@@ -127,6 +143,7 @@ func _sur_fusionner() -> void:
 	Sons.jouer("fusion", -8.0)
 	var fusion := CatalogueElements.creer_fusion(_element, _selection)
 	_apercu.text = "%s !\n%s" % [fusion.nom, fusion.description]
+	_bouton_fusionner.disabled = true
 	await get_tree().create_timer(0.85).timeout
 	StyleInterface.sortir_puis(self, func() -> void: termine.emit())
 
@@ -143,41 +160,25 @@ func _teinte_element() -> Color:
 	var donnees := CatalogueElements.par_id(_element)
 	return donnees.get("teinte", Palette.ESSENCE)
 
-func _draw() -> void:
-	var police := Polices.CORPS
-	var teinte := _teinte_element()
-	FondAdaptatif.dessiner_premium(self, FOND_PREMIUM, size, 1180.0, 740.0)
-	var haut := Ecran.marge_haute() + 118.0
-	draw_string(police, Vector2(72.0, haut), "ALAMBIC ÉLÉMENTAIRE", HORIZONTAL_ALIGNMENT_CENTER,
-		size.x - 144.0, 38, Palette.TEXTE)
-	var nom_element := str(CatalogueElements.par_id(_element).get("nom", "Élément inconnu"))
-	draw_string(police, Vector2(80.0, haut + 67.0), nom_element.to_upper(), HORIZONTAL_ALIGNMENT_CENTER,
-		size.x - 160.0, 31, teinte)
-	draw_string(police, Vector2(90.0, haut + 690.0), "Choisissez l'Amélioration à transformer • Soin : +%d %%" % roundi(Reglages.SOIN_ALAMBIC * 100.0),
-		HORIZONTAL_ALIGNMENT_CENTER, size.x - 180.0, 22, Palette.TEXTE_ATTENUE)
+func _process(delta: float) -> void:
+	_anim += delta
+	queue_redraw()
 
-func _dessiner_alambic(centre: Vector2, teinte: Color) -> void:
-	var ballon := centre + Vector2(0, 40.0)
-	Dessin.halo(self, ballon, 170.0, Color(teinte, 0.62), 5)
-	var verre := Color(0.72, 0.80, 0.92, 0.22)
-	draw_circle(ballon, 92.0, verre)
-	draw_arc(ballon, 92.0, 0.0, TAU, 40, Color(0.85, 0.92, 1.0, 0.6), 3.5, true)
-	var liquide := PackedVector2Array()
-	var haut_liquide := ballon.y - 34.0
-	for i in 33:
-		var t := float(i) / 32.0
-		liquide.append(Vector2(lerpf(ballon.x - 86.0, ballon.x + 86.0, t),
-			haut_liquide + sin(t * 9.0 + _anim * 3.0) * 5.0))
-	for i in range(32, -1, -1):
-		var t := float(i) / 32.0
-		liquide.append(Vector2(lerpf(ballon.x - 86.0, ballon.x + 86.0, t), ballon.y + 88.0))
-	draw_colored_polygon(liquide, Color(teinte, 0.78))
-	draw_rect(Rect2(centre.x - 22.0, centre.y - 92.0, 44.0, 96.0), verre)
-	draw_rect(Rect2(centre.x - 30.0, centre.y - 104.0, 60.0, 18.0), Color(0.85, 0.92, 1.0, 0.45))
-	draw_line(Vector2(centre.x + 20.0, centre.y - 56.0), Vector2(centre.x + 132.0, centre.y - 8.0),
-		Color(0.85, 0.92, 1.0, 0.5), 7.0, true)
-	for i in 6:
-		var phase := fmod(_anim * 0.6 + float(i) * 0.17, 1.0)
-		var p := Vector2(ballon.x + sin(float(i) * 2.4 + _anim) * 46.0,
-			ballon.y + 78.0 - 150.0 * phase)
-		draw_circle(p, 5.0 + 4.0 * (1.0 - phase), Color(1, 1, 1, 0.35 * (1.0 - phase)))
+func _draw() -> void:
+	InterfaceMobile.dessiner_fond(self, size, false, _teinte_element(), _anim)
+
+func _dessiner_alambic(canvas: Control, centre: Vector2, teinte: Color) -> void:
+	var ballon := centre + Vector2(0.0, 38.0)
+	Dessin.halo(canvas, ballon, 126.0, Color(teinte, 0.50), 5)
+	canvas.draw_circle(ballon, 76.0, Color(0.72, 0.82, 0.96, 0.18))
+	canvas.draw_arc(ballon, 76.0, 0.0, TAU, 36, Color(0.88, 0.94, 1.0, 0.68), 3.0, true)
+	canvas.draw_circle(ballon + Vector2(0.0, 24.0), 60.0, Color(teinte, 0.70))
+	canvas.draw_rect(Rect2(centre.x - 18.0, centre.y - 76.0, 36.0, 82.0), Color(0.80, 0.90, 1.0, 0.26))
+	canvas.draw_rect(Rect2(centre.x - 25.0, centre.y - 86.0, 50.0, 14.0), Color(0.90, 0.95, 1.0, 0.52))
+	canvas.draw_line(Vector2(centre.x + 16.0, centre.y - 45.0), Vector2(centre.x + 104.0, centre.y - 8.0),
+		Color(0.88, 0.94, 1.0, 0.55), 6.0, true)
+	for index in 5:
+		var phase := fmod(_anim * 0.55 + float(index) * 0.19, 1.0)
+		var p := Vector2(ballon.x + sin(float(index) * 2.2 + _anim) * 38.0,
+			ballon.y + 56.0 - 118.0 * phase)
+		canvas.draw_circle(p, 4.0 + 3.0 * (1.0 - phase), Color(1.0, 1.0, 1.0, 0.30 * (1.0 - phase)))
