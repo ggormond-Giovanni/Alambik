@@ -6,45 +6,19 @@ const SELECTION_GRIMOIRE := preload("res://ui/selection_grimoire.tscn")
 const REGLAGES := preload("res://ui/reglages.tscn")
 const EQUIPEMENT := preload("res://ui/equipement.tscn")
 const TRANSITION := preload("res://ui/transition_grimoire.tscn")
-const ONGLET_MENU := preload("res://ui/onglet_menu.gd")
-const DUREE_INTRO := 1.55
+const HEROS_MENU := preload("res://assets/visual/heros_menu_premium.png")
 const PAGES := ["equipement", "aventure", "maitrises", "sorts"]
 
-# Reperes lus sur la peinture d'accueil, dans sa reference de 1080 de large.
-# Tout passe ensuite par Retro16.rect_menu : le texte, sa zone tactile et le
-# decor partagent donc une seule source. Auparavant les zones etaient posees a
-# une distance fixe du bas de l'ecran pendant que la peinture etirait sa bande
-# centrale, et les libelles flottaient au-dessus de leur plaque.
-const PLAQUE_CAMPAGNE := Rect2(38.0, 506.0, 196.0, 226.0)
-const PLAQUE_MINE := Rect2(38.0, 766.0, 196.0, 226.0)
-const PLAQUE_EPREUVE := Rect2(846.0, 506.0, 196.0, 226.0)
-const PLAQUE_LIVRE := Rect2(846.0, 766.0, 196.0, 226.0)
-# L'en-tete de la peinture affiche un niveau, une barre d'XP et un nombre de
-# Gouttes graves dans l'image : ils ne bougeaient jamais, quel que soit le
-# compte. Ces deux plaques sont recouvertes par les vraies valeurs.
-const PLAQUE_NIVEAU := Rect2(183.0, 108.0, 140.0, 96.0)
-const PLAQUE_GOUTTES := Rect2(848.0, 114.0, 84.0, 56.0)
-const BANDE_CHAPITRE := Rect2(200.0, 1288.0, 680.0, 76.0)
-const PLAQUE_ETAGE := Rect2(390.0, 1502.0, 300.0, 68.0)
-const PLAQUE_JOUER := Rect2(110.0, 1588.0, 860.0, 134.0)
-const PLAQUE_APERCU := Rect2(200.0, 1364.0, 680.0, 140.0)
-
 var _anim := 0.0
-var _temps_intro := 0.0
-var _intro_active := false
-var _particules: Array[Dictionary] = []
 var _conteneur_pages: Control
 var _page_actuelle: Control
 var _navigation: Control
 var _superposition: Control
-var _bouton_jouer: Button
 var _onglets: Array[Button] = []
 var _page := 1
 var _doigt_swipe := -1
 var _depart_swipe := Vector2.ZERO
 var _lancement := false
-
-static var _intro_deja_vue := false
 
 func _ready() -> void:
 	if OS.get_name() == "Android":
@@ -52,34 +26,16 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	Sons.musique_menu()
-	print("Alambic pret")
-	_preparer_particules()
 	_construire_structure()
 	_afficher_page(1, false)
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--page-menu="):
-			var page_capture := PAGES.find(argument.trim_prefix("--page-menu="))
-			if page_capture >= 0:
-				_afficher_page(page_capture, false)
-	_intro_active = not _intro_deja_vue
-	_conteneur_pages.visible = not _intro_active
-	_navigation.visible = not _intro_active
-	if not _intro_active:
-		StyleInterface.animer_entree(_conteneur_pages, 28.0)
+			var index := PAGES.find(argument.trim_prefix("--page-menu="))
+			if index >= 0:
+				_afficher_page(index, false)
 	if "--ouvrir-reglages" in OS.get_cmdline_user_args():
 		call_deferred("_ouvrir_reglages")
 	Capture.programmer(self)
-
-func _preparer_particules() -> void:
-	var alea := RandomNumberGenerator.new()
-	alea.seed = 20260801
-	for i in 28:
-		_particules.append({
-			"position": Vector2(alea.randf_range(0.0, 1080.0), alea.randf_range(160.0, 1540.0)),
-			"vitesse": Vector2(alea.randf_range(-8.0, 8.0), alea.randf_range(-22.0, -7.0)),
-			"rayon": alea.randf_range(2.0, 5.0),
-			"phase": alea.randf() * TAU,
-		})
 
 func _construire_structure() -> void:
 	_conteneur_pages = Control.new()
@@ -92,36 +48,42 @@ func _construire_navigation() -> void:
 	_navigation.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_navigation.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_navigation)
-	var socle := PanelContainer.new()
-	socle.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	socle.offset_left = 14.0
-	socle.offset_right = -14.0
-	socle.offset_top = -214.0 - Ecran.marge_basse()
-	socle.offset_bottom = -10.0 - Ecran.marge_basse()
-	socle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	socle.add_theme_stylebox_override("panel", StyleInterface.panneau(
-		Color(0.018, 0.035, 0.085, 0.98), Color(Palette.OR, 0.62), 10, 12))
-	_navigation.add_child(socle)
+
+	var marge := MarginContainer.new()
+	marge.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	marge.offset_left = 18.0
+	marge.offset_right = -18.0
+	marge.offset_top = -174.0 - Ecran.marge_basse()
+	marge.offset_bottom = -12.0 - Ecran.marge_basse()
+	marge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_navigation.add_child(marge)
+
+	var panneau := PanelContainer.new()
+	panneau.add_theme_stylebox_override("panel", InterfaceMobile.panneau(Palette.OR, true))
+	marge.add_child(panneau)
+
 	var barre := HBoxContainer.new()
-	barre.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	barre.offset_left = 24.0
-	barre.offset_right = -24.0
-	barre.offset_top = -204.0 - Ecran.marge_basse()
-	barre.offset_bottom = -18.0 - Ecran.marge_basse()
 	barre.add_theme_constant_override("separation", 8)
-	_navigation.add_child(barre)
+	panneau.add_child(barre)
 	var donnees := [
-		["stuff", "ÉQUIPEMENT", 2],
-		["aventure", "AVENTURE", 0],
-		["arbre", "MAÎTRISES", 3],
-		["sorts", "SORTS", 4],
+		["ÉQUIPEMENT", 2], ["AVENTURE", 0], ["MAÎTRISES", 3], ["SORTS", 4],
 	]
 	for index in donnees.size():
-		var onglet := OngletMenu.new()
-		onglet.configurer(donnees[index][0], donnees[index][1], donnees[index][2])
-		onglet.pressed.connect(func() -> void: _afficher_page(index))
-		barre.add_child(onglet)
-		_onglets.append(onglet)
+		var bouton := Button.new()
+		bouton.text = str(donnees[index][0])
+		bouton.custom_minimum_size = Vector2(0.0, 112.0)
+		bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bouton.mouse_filter = Control.MOUSE_FILTER_STOP
+		bouton.pressed.connect(func() -> void: _afficher_page(index))
+		barre.add_child(bouton)
+		_onglets.append(bouton)
+	_rafraichir_navigation()
+
+func _rafraichir_navigation() -> void:
+	for index in _onglets.size():
+		var actif := index == _page
+		InterfaceMobile.styliser_bouton(_onglets[index], Palette.OR if actif else Palette.ESSENCE, actif)
+		_onglets[index].add_theme_font_size_override("font_size", 20 if not actif else 22)
 
 func _creer_page(index: int) -> Control:
 	match PAGES[index]:
@@ -148,32 +110,31 @@ func _afficher_page(index: int, anime := true) -> void:
 	var ancienne := _page_actuelle
 	var ancienne_page := _page
 	_page = index
-	# Chaque page premium peint son propre chassis et son onglet actif. La barre
-	# globale reste au-dessus uniquement comme couche tactile persistante.
-	_navigation.modulate.a = 0.02
 	var nouvelle := _creer_page(index)
 	_page_actuelle = nouvelle
 	_conteneur_pages.add_child(nouvelle)
-	for i in _onglets.size():
-		_onglets[i].actif = i == _page
+	move_child(_navigation, get_child_count() - 1)
+	_rafraichir_navigation()
+	queue_redraw()
 	if ancienne == null:
+		StyleInterface.animer_entree(nouvelle, 18.0)
 		return
-	Sons.jouer("choix", -17.0, 1.08)
+	Sons.jouer("choix", -17.0, 1.05)
 	if not anime:
 		ancienne.queue_free()
 		return
 	var direction := 1.0 if index > ancienne_page else -1.0
-	var distance := 32.0 if ReglagesJoueur.effets_reduits else 180.0
+	var distance := 34.0 if ReglagesJoueur.effets_reduits else 150.0
 	nouvelle.position.x = distance * direction
 	nouvelle.modulate.a = 0.0
 	var sortie := ancienne.create_tween().set_parallel(true)
 	sortie.set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_IN_OUT)
-	sortie.tween_property(ancienne, "position:x", -distance * direction, 0.22)
-	sortie.tween_property(ancienne, "modulate:a", 0.0, 0.16)
+	sortie.tween_property(ancienne, "position:x", -distance * direction, 0.20)
+	sortie.tween_property(ancienne, "modulate:a", 0.0, 0.15)
 	var entree := nouvelle.create_tween().set_parallel(true)
 	entree.set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
-	entree.tween_property(nouvelle, "position:x", 0.0, 0.34)
-	entree.tween_property(nouvelle, "modulate:a", 1.0, 0.24)
+	entree.tween_property(nouvelle, "position:x", 0.0, 0.30)
+	entree.tween_property(nouvelle, "modulate:a", 1.0, 0.22)
 	await sortie.finished
 	if is_instance_valid(ancienne):
 		ancienne.queue_free()
@@ -181,40 +142,132 @@ func _afficher_page(index: int, anime := true) -> void:
 func _creer_aventure() -> Control:
 	var page := Control.new()
 	page.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var reglages := StyleInterface.zone_tactile(_ouvrir_reglages)
-	reglages.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	reglages.offset_left = -144.0
-	reglages.offset_right = -28.0
-	reglages.offset_top = Ecran.marge_haute() + 26.0
-	reglages.offset_bottom = reglages.offset_top + 112.0
-	page.add_child(reglages)
-	_ajouter_acces(page, PLAQUE_CAMPAGNE, _ouvrir_campagne)
-	_ajouter_acces(page, PLAQUE_MINE, func() -> void: _lancer_mode("mine", {"nom": "Mine"}))
-	_ajouter_acces(page, PLAQUE_EPREUVE,
+
+	var marge := MarginContainer.new()
+	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
+	InterfaceMobile.appliquer_marges(marge, 184.0, true)
+	page.add_child(marge)
+
+	var defilement := ScrollContainer.new()
+	defilement.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	defilement.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	marge.add_child(defilement)
+
+	var colonne := VBoxContainer.new()
+	colonne.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	colonne.add_theme_constant_override("separation", 18)
+	defilement.add_child(colonne)
+
+	colonne.add_child(_creer_entete_aventure())
+
+	var vitrine := PanelContainer.new()
+	vitrine.custom_minimum_size.y = 450.0
+	vitrine.add_theme_stylebox_override("panel", InterfaceMobile.panneau_leger(Palette.ESSENCE))
+	colonne.add_child(vitrine)
+	var heros := TextureRect.new()
+	heros.texture = HEROS_MENU
+	heros.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	heros.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	heros.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vitrine.add_child(heros)
+
+	var actions := GridContainer.new()
+	actions.columns = 2
+	actions.add_theme_constant_override("h_separation", 14)
+	actions.add_theme_constant_override("v_separation", 14)
+	colonne.add_child(actions)
+	_ajouter_action(actions, "CAMPAGNE", "Choisir un chapitre", Palette.OR, _ouvrir_campagne)
+	_ajouter_action(actions, "MINE", "Horde et ressources", Palette.ESSENCE,
+		func() -> void: _lancer_mode("mine", {"nom": "Mine"}))
+	_ajouter_action(actions, "ÉPREUVE", "Défi alchimique", Retro16.VIOLET,
 		func() -> void: _lancer_mode("epreuve_sorts", {"nom": "Défi alchimique"}))
-	_ajouter_acces(page, PLAQUE_LIVRE, _ouvrir_livre)
-	var chapitre := _ajouter_acces(page, BANDE_CHAPITRE.merge(PLAQUE_APERCU), _ouvrir_campagne)
-	chapitre.tooltip_text = "Changer de monde ou de chapitre"
-	_bouton_jouer = _ajouter_acces(page, PLAQUE_JOUER, _jouer_immediatement)
-	page.resized.connect(func() -> void: _replacer_zones(page))
-	_replacer_zones(page)
+	_ajouter_action(actions, "LIVRE VIVANT", "Chapitres connus", Retro16.VERT, _ouvrir_livre)
+
+	colonne.add_child(_creer_carte_chapitre())
 	return page
 
-func _ajouter_acces(parent: Control, reference: Rect2, action: Callable) -> Button:
-	var bouton := StyleInterface.zone_tactile(action)
-	bouton.set_meta("reference", reference)
-	parent.add_child(bouton)
-	return bouton
+func _creer_entete_aventure() -> Control:
+	var panneau := PanelContainer.new()
+	panneau.add_theme_stylebox_override("panel", InterfaceMobile.panneau(Palette.OR, true))
+	var ligne := HBoxContainer.new()
+	ligne.add_theme_constant_override("separation", 16)
+	panneau.add_child(ligne)
 
-# Les zones suivent la peinture, pas le bord de l'ecran : c'est la seule facon
-# qu'elles restent sur leur plaque quand la bande centrale s'etire.
-func _replacer_zones(parent: Control) -> void:
-	var taille := get_viewport_rect().size
-	for enfant in parent.get_children():
-		if enfant is Button and enfant.has_meta("reference"):
-			var adapte := Retro16.rect_menu(taille, enfant.get_meta("reference"))
-			enfant.position = adapte.position
-			enfant.size = adapte.size
+	var profil := VBoxContainer.new()
+	profil.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var titre := InterfaceMobile.styliser_label(Label.new(), 34, Palette.TEXTE)
+	titre.text = ReglagesJoueur.titre_compte()
+	profil.add_child(titre)
+	var niveau := InterfaceMobile.styliser_label(Label.new(), 22, Palette.OR)
+	niveau.text = "NIVEAU %d" % ReglagesJoueur.niveau_compte_effectif()
+	profil.add_child(niveau)
+	ligne.add_child(profil)
+
+	var essence := InterfaceMobile.styliser_label(Label.new(), 25, Palette.ESSENCE, true)
+	essence.text = "%s\nGOUTTES" % ReglagesJoueur.gouttes_affichees()
+	essence.custom_minimum_size.x = 150.0
+	ligne.add_child(essence)
+
+	var reglages := Button.new()
+	reglages.text = "RÉGLAGES"
+	reglages.custom_minimum_size = Vector2(160.0, 92.0)
+	InterfaceMobile.styliser_bouton(reglages, Palette.ESSENCE, false)
+	reglages.pressed.connect(_ouvrir_reglages)
+	ligne.add_child(reglages)
+	return panneau
+
+func _ajouter_action(parent: GridContainer, titre: String, sous_titre: String,
+		accent: Color, action: Callable) -> void:
+	var bouton := Button.new()
+	bouton.text = "%s\n%s" % [titre, sous_titre]
+	bouton.custom_minimum_size = Vector2(0.0, 124.0)
+	bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bouton.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	InterfaceMobile.styliser_bouton(bouton, accent, false)
+	bouton.add_theme_font_size_override("font_size", 23)
+	bouton.pressed.connect(action)
+	parent.add_child(bouton)
+
+func _creer_carte_chapitre() -> Control:
+	var chapitre := Chapitres.par_index(ReglagesJoueur.chapitre_choisi)
+	var monde: Dictionary = Chapitres.MONDES[int(chapitre["monde"])]
+	var panneau := PanelContainer.new()
+	panneau.add_theme_stylebox_override("panel", InterfaceMobile.panneau(Color(chapitre["teinte"]), true))
+	var colonne := VBoxContainer.new()
+	colonne.add_theme_constant_override("separation", 10)
+	panneau.add_child(colonne)
+
+	var surtitre := InterfaceMobile.styliser_label(Label.new(), 20, Palette.OR, true)
+	surtitre.text = "PROCHAINE DESCENTE"
+	colonne.add_child(surtitre)
+	var titre := InterfaceMobile.styliser_label(Label.new(), 30, Palette.TEXTE, true)
+	titre.text = "MONDE %s — %s  ·  CHAPITRE %d" % [monde["numero"],
+		str(monde["nom"]).to_upper(), int(chapitre["chapitre_monde"])]
+	titre.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	colonne.add_child(titre)
+	var meilleur := ReglagesJoueur.meilleure_du_chapitre(ReglagesJoueur.chapitre_choisi)
+	var progression := InterfaceMobile.styliser_label(Label.new(), 22, Palette.TEXTE_ATTENUE, true)
+	progression.text = "ÉTAGE MAX %d / %d" % [meilleur, int(chapitre["salles"])]
+	colonne.add_child(progression)
+
+	var boutons := HBoxContainer.new()
+	boutons.add_theme_constant_override("separation", 12)
+	colonne.add_child(boutons)
+	var changer := Button.new()
+	changer.text = "CHANGER"
+	changer.custom_minimum_size.y = 102.0
+	changer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	InterfaceMobile.styliser_bouton(changer, Palette.ESSENCE, false)
+	changer.pressed.connect(_ouvrir_campagne)
+	boutons.add_child(changer)
+	var jouer := Button.new()
+	jouer.text = "JOUER"
+	jouer.custom_minimum_size.y = 102.0
+	jouer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	InterfaceMobile.styliser_bouton(jouer, Palette.OR, true)
+	jouer.pressed.connect(_jouer_immediatement)
+	boutons.add_child(jouer)
+	return panneau
 
 func _jouer_immediatement() -> void:
 	var chapitre := Chapitres.par_index(ReglagesJoueur.chapitre_choisi)
@@ -230,6 +283,7 @@ func _lancer_mode(mode: String, destination: Dictionary) -> void:
 	var transition := TRANSITION.instantiate()
 	transition.configurer(destination)
 	add_child(transition)
+	move_child(transition, get_child_count() - 1)
 	transition.terminee.connect(func() -> void:
 		get_tree().change_scene_to_file("res://scenes/run.tscn"))
 
@@ -239,8 +293,6 @@ func _ouvrir_campagne() -> void:
 	_ouvrir_superposition(selection)
 
 func _ouvrir_livre() -> void:
-	# Le Livre vivant présente aujourd'hui les chapitres connus. Il pourra recevoir
-	# le bestiaire et les collections sans changer la navigation principale.
 	_ouvrir_campagne()
 
 func _ouvrir_reglages() -> void:
@@ -262,7 +314,7 @@ func _ouvrir_superposition(panneau: Control) -> void:
 			queue_redraw())
 
 func _input(evenement: InputEvent) -> void:
-	if _intro_active or _superposition != null or _lancement:
+	if _superposition != null or _lancement:
 		return
 	if evenement is InputEventScreenTouch:
 		var toucher := evenement as InputEventScreenTouch
@@ -289,8 +341,10 @@ func _notification(quoi: int) -> void:
 	if _superposition != null and is_instance_valid(_superposition):
 		var cible := _superposition
 		StyleInterface.sortir_puis(cible, func() -> void:
-			if is_instance_valid(cible): cible.queue_free()
-			if _superposition == cible: _superposition = null)
+			if is_instance_valid(cible):
+				cible.queue_free()
+			if _superposition == cible:
+				_superposition = null)
 	elif _page != 1:
 		_afficher_page(1)
 	else:
@@ -298,147 +352,8 @@ func _notification(quoi: int) -> void:
 
 func _process(delta: float) -> void:
 	_anim += delta
-	if _intro_active:
-		_temps_intro += delta
-		if _temps_intro >= DUREE_INTRO:
-			_intro_active = false
-			_intro_deja_vue = true
-			_conteneur_pages.visible = true
-			_navigation.visible = true
-			StyleInterface.animer_entree(_conteneur_pages, 34.0)
-	var hauteur := get_viewport_rect().size.y
-	for p in _particules:
-		p["position"] += p["vitesse"] * delta
-		if p["position"].y < 150.0: p["position"].y = hauteur * 0.76
 	queue_redraw()
 
 func _draw() -> void:
-	var police := Polices.CORPS
-	var taille := get_viewport_rect().size
-	if _page == 1 and not _intro_active:
-		Retro16.dessiner_menu_premium(self, taille, _anim)
-	else:
-		Retro16.dessiner_fond_accueil(self, taille, _anim)
-	if _intro_active:
-		_dessiner_intro(police, taille)
-		return
-	if _page != 1:
-		return
-	# La maquette premium porte le châssis et l'illustration. Les boutons réels
-	# sont des zones tactiles invisibles exactement alignées sur elle.
-	_dessiner_selection_dynamique(police, taille)
-
-func _dessiner_entete(police: Font, taille: Vector2) -> void:
-	var plaque := Retro16.rect_menu(taille, PLAQUE_NIVEAU)
-	_masquer_libelle_peint(plaque)
-	_texte_centre(police, Rect2(plaque.position, Vector2(plaque.size.x, plaque.size.y * 0.42)),
-		"NIVEAU %d" % ReglagesJoueur.niveau_compte_effectif(), 22, Palette.TEXTE)
-	var requis := maxi(1, ReglagesJoueur.experience_compte_requise())
-	var ratio := clampf(float(ReglagesJoueur.experience_compte) / float(requis), 0.0, 1.0)
-	var barre := Rect2(plaque.position.x + 10.0, plaque.get_center().y + 2.0,
-		plaque.size.x - 20.0, 10.0)
-	draw_rect(barre, Color(0.010, 0.014, 0.030, 0.95))
-	draw_rect(Rect2(barre.position, Vector2(barre.size.x * ratio, barre.size.y)), Palette.ESSENCE)
-	draw_rect(barre, Color(Palette.OR, 0.55), false, 2.0)
-	_texte_centre(police, Rect2(plaque.position.x, barre.end.y, plaque.size.x, 26.0),
-		"%d / %d" % [ReglagesJoueur.experience_compte, requis], 18, Palette.TEXTE_ATTENUE)
-
-	var plaque_gouttes := Retro16.rect_menu(taille, PLAQUE_GOUTTES)
-	_masquer_libelle_peint(plaque_gouttes)
-	_texte_centre(police, plaque_gouttes, ReglagesJoueur.gouttes_affichees(), 26, Palette.OR)
-
-func _dessiner_selection_dynamique(police: Font, taille: Vector2) -> void:
-	_dessiner_entete(police, taille)
-	var chapitre := Chapitres.par_index(ReglagesJoueur.chapitre_choisi)
-	var monde: Dictionary = Chapitres.MONDES[int(chapitre["monde"])]
-	var titre := "MONDE %s — %s  ·  CHAPITRE %d" % [monde["numero"],
-		str(monde["nom"]).to_upper(), int(chapitre["chapitre_monde"])]
-	var bande := Retro16.rect_menu(taille, BANDE_CHAPITRE)
-	_masquer_libelle_peint(bande)
-	draw_string(police, Vector2(bande.position.x + 14.0, _ligne_de_base(bande, 25)), "‹",
-		HORIZONTAL_ALIGNMENT_LEFT, 44.0, 25, Palette.OR)
-	draw_string(police, Vector2(bande.end.x - 58.0, _ligne_de_base(bande, 25)), "›",
-		HORIZONTAL_ALIGNMENT_RIGHT, 44.0, 25, Palette.OR)
-	_texte_centre(police, bande.grow_individual(-62.0, 0.0, -62.0, 0.0), titre, 25, Palette.TEXTE)
-
-	var meilleur := ReglagesJoueur.meilleure_du_chapitre(ReglagesJoueur.chapitre_choisi)
-	var monde_termine := true
-	var premier_chapitre := int(chapitre["monde"]) * 3
-	for index in range(premier_chapitre, premier_chapitre + 3):
-		if ReglagesJoueur.meilleure_du_chapitre(index) < Reglages.SALLES_PAR_RUN:
-			monde_termine = false
-			break
-	var progression := "★  MONDE TERMINÉ" if monde_termine else \
-		"ÉTAGE MAX  %d / %d" % [meilleur, int(chapitre["salles"])]
-	var plaque := Retro16.rect_menu(taille, PLAQUE_ETAGE)
-	_masquer_libelle_peint(plaque)
-	_texte_centre(police, plaque, progression, 24,
-		Palette.OR if monde_termine else Palette.TEXTE)
-
-# La peinture porte un libelle d'exemple grave dans l'image : le texte reel doit
-# recouvrir sa plaque, sinon les deux se superposent. Le masque imite le creux
-# des cartouches peints plutot que de poser un rectangle plat sur l'illustration.
-func _masquer_libelle_peint(plaque: Rect2) -> void:
-	var creux := plaque.grow(-4.0)
-	draw_rect(creux, Color(0.030, 0.024, 0.055, 0.98))
-	draw_rect(creux, Color(0.010, 0.008, 0.022, 0.85), false, 3.0)
-	draw_rect(creux.grow(-4.0), Color(Palette.OR, 0.16), false, 2.0)
-
-func _ligne_de_base(zone: Rect2, taille_police: int) -> float:
-	return zone.get_center().y + float(taille_police) * 0.36
-
-func _texte_centre(police: Font, zone: Rect2, texte: String, taille_police: int,
-		couleur: Color) -> void:
-	draw_string(police, Vector2(zone.position.x, _ligne_de_base(zone, taille_police)), texte,
-		HORIZONTAL_ALIGNMENT_CENTER, zone.size.x, taille_police, couleur)
-
-func _dessiner_intro(police: Font, taille: Vector2) -> void:
-	var alpha := clampf(_temps_intro * 4.0, 0.0, 1.0) * clampf((DUREE_INTRO - _temps_intro) * 5.0, 0.0, 1.0)
-	var y := taille.y * 0.46
-	var centre := Vector2(taille.x * 0.5, y - 118.0)
-	Dessin.halo(self, centre, 150.0, Color(Palette.ESSENCE, alpha * 0.32), 6)
-	Dessin.glyphe(self, "fiole", centre, 28.0, Color(Palette.OR, alpha))
-	draw_string(police, Vector2(0.0, y), "ALAMBIC", HORIZONTAL_ALIGNMENT_CENTER, taille.x, 92, Color(Palette.TEXTE, alpha))
-	draw_string(police, Vector2(0.0, y + 72.0), "Le grimoire vivant s'éveille…", HORIZONTAL_ALIGNMENT_CENTER, taille.x, 29, Color(Palette.TEXTE_ATTENUE, alpha))
-
-func _dessiner_profil(police: Font, taille: Vector2) -> void:
-	var haut := Ecran.marge_haute() + 24.0
-	var cadre := Rect2(24.0, haut, taille.x - 188.0, 170.0)
-	draw_rect(cadre, Color(0.020, 0.042, 0.105, 0.94))
-	draw_rect(cadre, Color(Palette.OR, 0.72), false, 4.0)
-	draw_rect(cadre.grow(-9.0), Color(Palette.BORD_PAGE, 0.42), false, 2.0)
-	var portrait := Rect2(42.0, haut + 18.0, 126.0, 126.0)
-	draw_rect(portrait, Color(Retro16.VIOLET, 0.24))
-	draw_rect(portrait, Palette.OR, false, 3.0)
-	draw_set_transform(portrait.get_center() + Vector2(0.0, 34.0), 0.0, Vector2.ONE * 0.72)
-	Retro16.dessiner_heros(self, _anim, false, Vector2.RIGHT, Palette.OR)
-	draw_set_transform(Vector2.ZERO)
-	draw_string(police, Vector2(190.0, haut + 55.0), ReglagesJoueur.titre_compte(), HORIZONTAL_ALIGNMENT_LEFT, 440.0, 32, Palette.TEXTE)
-	draw_string(police, Vector2(190.0, haut + 94.0), "NIVEAU %d" % ReglagesJoueur.niveau_compte_effectif(), HORIZONTAL_ALIGNMENT_LEFT, 260.0, 23, Palette.OR)
-	var progression := float(ReglagesJoueur.experience_compte) / float(maxi(1, ReglagesJoueur.experience_compte_requise()))
-	var barre := Rect2(190.0, haut + 112.0, 390.0, 20.0)
-	draw_rect(barre, Color(0.008, 0.015, 0.040, 0.94))
-	draw_rect(Rect2(barre.position + Vector2(3.0, 3.0), Vector2((barre.size.x - 6.0) * progression, barre.size.y - 6.0)), Palette.OR)
-	draw_rect(barre, Color(Palette.BORD_PAGE, 0.72), false, 2.0)
-	var goutte := Vector2(654.0, haut + 72.0)
-	draw_colored_polygon(Dessin.goutte(goutte, 22.0, PI, 1.2), Palette.ESSENCE)
-	draw_string(police, goutte + Vector2(34.0, 10.0), ReglagesJoueur.gouttes_affichees(), HORIZONTAL_ALIGNMENT_LEFT, 130.0, 28, Palette.TEXTE)
-
-func _dessiner_heros_menu(centre: Vector2) -> void:
-	var flottement := sin(_anim * 2.2) * 7.0
-	Dessin.halo(self, centre + Vector2(0.0, 36.0), 178.0, Color(Palette.ESSENCE, 0.18), 6)
-	draw_set_transform(centre + Vector2(0.0, flottement), 0.0, Vector2.ONE * 2.72)
-	Retro16.dessiner_heros(self, _anim, false, Vector2.RIGHT, Palette.OR)
-	draw_set_transform(Vector2.ZERO)
-
-func _dessiner_chapitre(police: Font, taille: Vector2) -> void:
-	var chapitre := Chapitres.par_index(ReglagesJoueur.chapitre_choisi)
-	var progression := ReglagesJoueur.meilleure_du_chapitre(ReglagesJoueur.chapitre_choisi)
-	var rect := Rect2(134.0, taille.y - Ecran.marge_basse() - 548.0, taille.x - 268.0, 138.0)
-	draw_rect(rect, Color(0.022, 0.050, 0.115, 0.96))
-	draw_rect(rect, Color(chapitre["teinte"], 0.82), false, 4.0)
-	draw_rect(rect.grow(-8.0), Color(Palette.OR, 0.36), false, 2.0)
-	draw_string(police, rect.position + Vector2(22.0, 48.0), "‹", HORIZONTAL_ALIGNMENT_LEFT, 40.0, 30, Palette.OR)
-	draw_string(police, rect.position + Vector2(rect.size.x - 62.0, 48.0), "›", HORIZONTAL_ALIGNMENT_RIGHT, 40.0, 30, Palette.OR)
-	draw_string(police, rect.position + Vector2(64.0, 48.0), chapitre["nom"], HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 128.0, 29, Palette.TEXTE)
-	draw_string(police, rect.position + Vector2(20.0, 91.0), "PROGRESSION  •  %d / %d" % [progression, chapitre["salles"]], HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 40.0, 22, Palette.TEXTE_ATTENUE)
+	InterfaceMobile.dessiner_fond(self, get_viewport_rect().size, _page == 1,
+		Palette.OR if _page == 1 else Palette.ESSENCE, _anim)
