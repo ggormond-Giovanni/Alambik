@@ -57,6 +57,39 @@ jobs:
           GODOT: godot
         run: ./verifier.sh
 
+      - name: Capture UI on common phone ratios
+        continue-on-error: true
+        shell: bash
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri
+          mkdir -p build/screenshots
+
+          capture() {
+            WIDTH="$1"
+            HEIGHT="$2"
+            NAME="$3"
+            timeout 30s xvfb-run -a -s "-screen 0 ${WIDTH}x${HEIGHT}x24" \
+              godot --path . --windowed --resolution "${WIDTH}x${HEIGHT}" \
+              -- --capture="${GITHUB_WORKSPACE}/build/screenshots/${NAME}.png" --capture-apres=2.2
+          }
+
+          capture 1080 1920 menu-1080x1920
+          capture 1080 2340 menu-1080x2340
+          capture 1080 2400 menu-1080x2400
+          capture 1080 2520 menu-1080x2520
+
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alambik-ui-screenshots
+          path: build/screenshots/*.png
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Export debug APK
         run: |
           mkdir -p build
