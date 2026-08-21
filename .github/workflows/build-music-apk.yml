@@ -1,0 +1,62 @@
+name: Build music APK
+
+on:
+  push:
+    branches: ["build/music-apk-2026-08-21"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Android packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "build-tools;35.0.1" "platforms;android-35"
+
+      - name: Godot 4.7.1
+        uses: solarlabyrinth/action-setup-godot@v3
+        with:
+          version: 4.7.1-stable
+          csharp: false
+          export-templates: true
+
+      - name: Import project
+        run: godot --headless --path . --import
+
+      - name: Export debug APK
+        run: |
+          mkdir -p build
+          godot --headless --path . --export-debug "Android" build/alambic.apk
+          test -s build/alambic.apk
+
+      - name: Publish APK on apk-output branch
+        shell: bash
+        run: |
+          git fetch origin apk-output
+          git worktree add /tmp/apk-output origin/apk-output
+          cd /tmp/apk-output
+          git switch -C apk-output
+          cp "$GITHUB_WORKSPACE/build/alambic.apk" alambic.apk
+          printf '%s\n' "$GITHUB_SHA" > source-commit.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add alambic.apk source-commit.txt
+          git commit -m "build: APK for $GITHUB_SHA"
+          git push origin HEAD:apk-output
