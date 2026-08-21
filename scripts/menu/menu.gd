@@ -53,27 +53,26 @@ func _construire_navigation() -> void:
 	marge.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	marge.offset_left = 18.0
 	marge.offset_right = -18.0
-	marge.offset_top = -174.0 - Ecran.marge_basse()
-	marge.offset_bottom = -12.0 - Ecran.marge_basse()
+	marge.offset_top = -132.0 - Ecran.marge_basse()
+	marge.offset_bottom = -10.0 - Ecran.marge_basse()
 	marge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_navigation.add_child(marge)
 
 	var panneau := PanelContainer.new()
-	panneau.add_theme_stylebox_override("panel", InterfaceMobile.panneau(Palette.OR, true))
+	panneau.add_theme_stylebox_override("panel", InterfaceMobile.panneau_leger(Palette.OR))
 	marge.add_child(panneau)
 
 	var barre := HBoxContainer.new()
-	barre.add_theme_constant_override("separation", 8)
+	barre.add_theme_constant_override("separation", 4)
 	panneau.add_child(barre)
-	var donnees := [
-		["ÉQUIPEMENT", 2], ["AVENTURE", 0], ["MAÎTRISES", 3], ["SORTS", 4],
-	]
+	var donnees := ["ÉQUIPEMENT", "AVENTURE", "MAÎTRISES", "SORTS"]
 	for index in donnees.size():
 		var bouton := Button.new()
-		bouton.text = str(donnees[index][0])
-		bouton.custom_minimum_size = Vector2(0.0, 112.0)
+		bouton.text = str(donnees[index])
+		bouton.custom_minimum_size = Vector2(0.0, 84.0)
 		bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bouton.mouse_filter = Control.MOUSE_FILTER_STOP
+		bouton.focus_mode = Control.FOCUS_NONE
 		bouton.pressed.connect(func() -> void: _afficher_page(index))
 		barre.add_child(bouton)
 		_onglets.append(bouton)
@@ -81,9 +80,23 @@ func _construire_navigation() -> void:
 
 func _rafraichir_navigation() -> void:
 	for index in _onglets.size():
+		var bouton := _onglets[index]
 		var actif := index == _page
-		InterfaceMobile.styliser_bouton(_onglets[index], Palette.OR if actif else Palette.ESSENCE, actif)
-		_onglets[index].add_theme_font_size_override("font_size", 20 if not actif else 22)
+		bouton.add_theme_font_size_override("font_size", 18 if not actif else 20)
+		bouton.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE if not actif else Palette.OR)
+		bouton.add_theme_color_override("font_hover_color", Palette.TEXTE)
+		bouton.add_theme_color_override("font_pressed_color", Palette.OR)
+		var normal := StyleBoxFlat.new()
+		normal.bg_color = Color(Palette.OR, 0.14) if actif else Color(0.02, 0.035, 0.085, 0.0)
+		normal.border_color = Color(Palette.OR, 0.58) if actif else Color(Palette.ESSENCE, 0.12)
+		normal.set_border_width_all(1 if actif else 0)
+		normal.set_corner_radius_all(12)
+		var survol := normal.duplicate()
+		survol.bg_color = Color(Palette.OR, 0.12)
+		var appuye := normal.duplicate()
+		appuye.bg_color = Color(Palette.OR, 0.22)
+		for paire in [["normal", normal], ["hover", survol], ["pressed", appuye], ["focus", normal]]:
+			bouton.add_theme_stylebox_override(str(paire[0]), paire[1])
 
 func _creer_page(index: int) -> Control:
 	match PAGES[index]:
@@ -145,86 +158,89 @@ func _creer_aventure() -> Control:
 
 	var marge := MarginContainer.new()
 	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
-	InterfaceMobile.appliquer_marges(marge, 184.0, true)
+	marge.add_theme_constant_override("margin_left", 42)
+	marge.add_theme_constant_override("margin_right", 42)
+	marge.add_theme_constant_override("margin_top", int(Ecran.marge_haute() + 28.0))
+	marge.add_theme_constant_override("margin_bottom", int(Ecran.marge_basse() + 150.0))
 	page.add_child(marge)
-
-	var defilement := ScrollContainer.new()
-	defilement.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	defilement.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	marge.add_child(defilement)
 
 	var colonne := VBoxContainer.new()
 	colonne.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	colonne.add_theme_constant_override("separation", 18)
-	defilement.add_child(colonne)
+	colonne.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	colonne.add_theme_constant_override("separation", 14)
+	marge.add_child(colonne)
 
 	colonne.add_child(_creer_entete_aventure())
 
-	var vitrine := PanelContainer.new()
-	vitrine.custom_minimum_size.y = 450.0
-	vitrine.add_theme_stylebox_override("panel", InterfaceMobile.panneau_leger(Palette.ESSENCE))
-	colonne.add_child(vitrine)
+	# Cette zone absorbe tout surplus de hauteur. Sur un telephone long, le decor
+	# respire autour du personnage au lieu de laisser un trou sous toute l'UI.
+	var scene_heros := CenterContainer.new()
+	scene_heros.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scene_heros.custom_minimum_size.y = 330.0
+	scene_heros.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	colonne.add_child(scene_heros)
+
 	var heros := TextureRect.new()
 	heros.texture = HEROS_MENU
+	heros.custom_minimum_size = Vector2(360.0, 390.0)
 	heros.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	heros.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	heros.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vitrine.add_child(heros)
-
-	var actions := GridContainer.new()
-	actions.columns = 2
-	actions.add_theme_constant_override("h_separation", 14)
-	actions.add_theme_constant_override("v_separation", 14)
-	colonne.add_child(actions)
-	_ajouter_action(actions, "CAMPAGNE", "Choisir un chapitre", Palette.OR, _ouvrir_campagne)
-	_ajouter_action(actions, "MINE", "Horde et ressources", Palette.ESSENCE,
-		func() -> void: _lancer_mode("mine", {"nom": "Mine"}))
-	_ajouter_action(actions, "ÉPREUVE", "Défi alchimique", Retro16.VIOLET,
-		func() -> void: _lancer_mode("epreuve_sorts", {"nom": "Défi alchimique"}))
-	_ajouter_action(actions, "LIVRE VIVANT", "Chapitres connus", Retro16.VERT, _ouvrir_livre)
+	scene_heros.add_child(heros)
 
 	colonne.add_child(_creer_carte_chapitre())
+
+	var actions := GridContainer.new()
+	actions.columns = 3
+	actions.add_theme_constant_override("h_separation", 10)
+	colonne.add_child(actions)
+	_ajouter_action(actions, "MINE", Palette.ESSENCE,
+		func() -> void: _lancer_mode("mine", {"nom": "Mine"}))
+	_ajouter_action(actions, "ÉPREUVE", Retro16.VIOLET,
+		func() -> void: _lancer_mode("epreuve_sorts", {"nom": "Défi alchimique"}))
+	_ajouter_action(actions, "LIVRE", Retro16.VERT, _ouvrir_livre)
 	return page
 
 func _creer_entete_aventure() -> Control:
 	var panneau := PanelContainer.new()
-	panneau.add_theme_stylebox_override("panel", InterfaceMobile.panneau(Palette.OR, true))
+	panneau.custom_minimum_size.y = 86.0
+	panneau.add_theme_stylebox_override("panel", InterfaceMobile.panneau_leger(Palette.OR))
 	var ligne := HBoxContainer.new()
-	ligne.add_theme_constant_override("separation", 16)
+	ligne.add_theme_constant_override("separation", 12)
 	panneau.add_child(ligne)
 
 	var profil := VBoxContainer.new()
 	profil.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var titre := InterfaceMobile.styliser_label(Label.new(), 34, Palette.TEXTE)
+	profil.alignment = BoxContainer.ALIGNMENT_CENTER
+	var titre := InterfaceMobile.styliser_label(Label.new(), 27, Palette.TEXTE)
 	titre.text = ReglagesJoueur.titre_compte()
 	profil.add_child(titre)
-	var niveau := InterfaceMobile.styliser_label(Label.new(), 22, Palette.OR)
+	var niveau := InterfaceMobile.styliser_label(Label.new(), 18, Palette.OR)
 	niveau.text = "NIVEAU %d" % ReglagesJoueur.niveau_compte_effectif()
 	profil.add_child(niveau)
 	ligne.add_child(profil)
 
-	var essence := InterfaceMobile.styliser_label(Label.new(), 25, Palette.ESSENCE, true)
+	var essence := InterfaceMobile.styliser_label(Label.new(), 20, Palette.ESSENCE, true)
 	essence.text = "%s\nGOUTTES" % ReglagesJoueur.gouttes_affichees()
-	essence.custom_minimum_size.x = 150.0
+	essence.custom_minimum_size.x = 130.0
 	ligne.add_child(essence)
 
 	var reglages := Button.new()
 	reglages.text = "RÉGLAGES"
-	reglages.custom_minimum_size = Vector2(160.0, 92.0)
+	reglages.custom_minimum_size = Vector2(145.0, 68.0)
 	InterfaceMobile.styliser_bouton(reglages, Palette.ESSENCE, false)
+	reglages.add_theme_font_size_override("font_size", 19)
 	reglages.pressed.connect(_ouvrir_reglages)
 	ligne.add_child(reglages)
 	return panneau
 
-func _ajouter_action(parent: GridContainer, titre: String, sous_titre: String,
-		accent: Color, action: Callable) -> void:
+func _ajouter_action(parent: GridContainer, titre: String, accent: Color, action: Callable) -> void:
 	var bouton := Button.new()
-	bouton.text = "%s\n%s" % [titre, sous_titre]
-	bouton.custom_minimum_size = Vector2(0.0, 124.0)
+	bouton.text = titre
+	bouton.custom_minimum_size = Vector2(0.0, 78.0)
 	bouton.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bouton.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	InterfaceMobile.styliser_bouton(bouton, accent, false)
-	bouton.add_theme_font_size_override("font_size", 23)
+	bouton.add_theme_font_size_override("font_size", 19)
 	bouton.pressed.connect(action)
 	parent.add_child(bouton)
 
@@ -232,41 +248,54 @@ func _creer_carte_chapitre() -> Control:
 	var chapitre := Chapitres.par_index(ReglagesJoueur.chapitre_choisi)
 	var monde: Dictionary = Chapitres.MONDES[int(chapitre["monde"])]
 	var panneau := PanelContainer.new()
+	panneau.custom_minimum_size.y = 176.0
 	panneau.add_theme_stylebox_override("panel", InterfaceMobile.panneau(Color(chapitre["teinte"]), true))
-	var colonne := VBoxContainer.new()
-	colonne.add_theme_constant_override("separation", 10)
-	panneau.add_child(colonne)
+	var ligne := HBoxContainer.new()
+	ligne.add_theme_constant_override("separation", 16)
+	panneau.add_child(ligne)
 
-	var surtitre := InterfaceMobile.styliser_label(Label.new(), 20, Palette.OR, true)
+	var infos := VBoxContainer.new()
+	infos.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	infos.alignment = BoxContainer.ALIGNMENT_CENTER
+	infos.add_theme_constant_override("separation", 5)
+	ligne.add_child(infos)
+
+	var surtitre := InterfaceMobile.styliser_label(Label.new(), 17, Palette.OR)
 	surtitre.text = "PROCHAINE DESCENTE"
-	colonne.add_child(surtitre)
-	var titre := InterfaceMobile.styliser_label(Label.new(), 30, Palette.TEXTE, true)
-	titre.text = "MONDE %s — %s  ·  CHAPITRE %d" % [monde["numero"],
-		str(monde["nom"]).to_upper(), int(chapitre["chapitre_monde"])]
+	infos.add_child(surtitre)
+	var titre := InterfaceMobile.styliser_label(Label.new(), 27, Palette.TEXTE)
+	titre.text = "MONDE %s — %s" % [monde["numero"], str(monde["nom"]).to_upper()]
 	titre.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	colonne.add_child(titre)
+	infos.add_child(titre)
 	var meilleur := ReglagesJoueur.meilleure_du_chapitre(ReglagesJoueur.chapitre_choisi)
-	var progression := InterfaceMobile.styliser_label(Label.new(), 22, Palette.TEXTE_ATTENUE, true)
-	progression.text = "ÉTAGE MAX %d / %d" % [meilleur, int(chapitre["salles"])]
-	colonne.add_child(progression)
+	var progression := InterfaceMobile.styliser_label(Label.new(), 19, Palette.TEXTE_ATTENUE)
+	progression.text = "CHAPITRE %d   ·   ÉTAGE %d / %d" % [int(chapitre["chapitre_monde"]), meilleur, int(chapitre["salles"])]
+	infos.add_child(progression)
 
-	var boutons := HBoxContainer.new()
-	boutons.add_theme_constant_override("separation", 12)
-	colonne.add_child(boutons)
-	var changer := Button.new()
-	changer.text = "CHANGER"
-	changer.custom_minimum_size.y = 102.0
-	changer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	InterfaceMobile.styliser_bouton(changer, Palette.ESSENCE, false)
-	changer.pressed.connect(_ouvrir_campagne)
-	boutons.add_child(changer)
+	var actions := VBoxContainer.new()
+	actions.custom_minimum_size.x = 250.0
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", 6)
+	ligne.add_child(actions)
+
 	var jouer := Button.new()
 	jouer.text = "JOUER"
-	jouer.custom_minimum_size.y = 102.0
-	jouer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	jouer.custom_minimum_size = Vector2(250.0, 82.0)
 	InterfaceMobile.styliser_bouton(jouer, Palette.OR, true)
+	jouer.add_theme_font_size_override("font_size", 24)
 	jouer.pressed.connect(_jouer_immediatement)
-	boutons.add_child(jouer)
+	actions.add_child(jouer)
+
+	var changer := Button.new()
+	changer.text = "Changer de chapitre"
+	changer.flat = true
+	changer.custom_minimum_size = Vector2(250.0, 42.0)
+	changer.focus_mode = Control.FOCUS_NONE
+	changer.add_theme_font_size_override("font_size", 17)
+	changer.add_theme_color_override("font_color", Palette.TEXTE_ATTENUE)
+	changer.add_theme_color_override("font_hover_color", Palette.TEXTE)
+	changer.pressed.connect(_ouvrir_campagne)
+	actions.add_child(changer)
 	return panneau
 
 func _jouer_immediatement() -> void:
