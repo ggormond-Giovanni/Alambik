@@ -10,7 +10,6 @@ const DUREE_FONDU := 2.2
 const DUREE_BLANC_COMBAT := 0.14
 const BUS_MUSIQUE := "Musique"
 const BUS_EFFETS := "Effets"
-const MUSIQUE_ACCUEIL := preload("res://Accueil.ogg")
 const MUSIQUE_FIRST_ARCADE := preload("res://assets/audio/firstarcade.ogg")
 const MUSIQUE_DYNAMIC_ARCADE := preload("res://assets/audio/dynamic_arcade.ogg")
 
@@ -59,7 +58,7 @@ func _ready() -> void:
 				musique.stream = _creer_flux_combat("first_arcade")
 				_piste_chargee = "first_arcade"
 			else:
-				musique.stream = _creer_flux_accueil()
+				musique.stream = _composer_boucle_menu()
 			musique.volume_db = -80.0
 			add_child(musique)
 			_musiques.append(musique)
@@ -130,11 +129,6 @@ func _appliquer_piste_selectionnee() -> void:
 	# Si les reglages sont ouverts pendant une run, le choix s'entend sans
 	# devoir quitter l'ecran ni recommencer la salle.
 	_musiques[1].volume_db = _volumes_vises[1]
-
-func _creer_flux_accueil() -> AudioStreamOggVorbis:
-	var flux: AudioStreamOggVorbis = MUSIQUE_ACCUEIL.duplicate()
-	flux.loop = true
-	return flux
 
 func _creer_flux_combat(id: String) -> AudioStreamOggVorbis:
 	var source: AudioStreamOggVorbis = MUSIQUE_DYNAMIC_ARCADE \
