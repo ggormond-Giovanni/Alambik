@@ -3,73 +3,102 @@ extends Control
 signal ferme
 signal selection_changee
 
-const FOND := preload("res://assets/visual/campagne_premium.png")
-const HAUT_FIXE := 1580.0
-const BAS_FIXE := 340.0
 const TRANSITION := preload("res://ui/transition_grimoire.tscn")
-const RECTS_CHAPITRES := [Rect2(45, 1082, 310, 150), Rect2(385, 1082, 310, 150), Rect2(725, 1082, 310, 150)]
 
 var selection_seulement := false
 var _monde := 0
 var _chapitre_monde := 0
 var _message := ""
 var _lancement := false
-var _zones_chapitres: Array[Button] = []
+var _anim := 0.0
+var _titre_monde: Label
+var _chapitres: VBoxContainer
+var _details: VBoxContainer
+var _message_label: Label
 var _bouton_selectionner: Button
-var _balayage := BalayagePages.new()
+var _precedent: Button
+var _suivant: Button
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_monde = clampi(ReglagesJoueur.chapitre_choisi / 3, 0, Chapitres.MONDES.size() - 1)
 	_chapitre_monde = posmod(ReglagesJoueur.chapitre_choisi, 3)
-	_construire_zones()
-	resized.connect(_replacer_zones)
-	_replacer_zones()
+	_construire_interface()
 	_rafraichir()
 	StyleInterface.animer_entree(self, 16.0)
 	Capture.programmer(self)
 
-func _construire_zones() -> void:
-	_zone(Rect2(922, 30, 120, 125), _fermer)
-	_zone(Rect2(165, 225, 115, 130), func() -> void: _changer_monde(-1))
-	_zone(Rect2(800, 225, 115, 130), func() -> void: _changer_monde(1))
-	for index in 3:
-		_zones_chapitres.append(_zone(RECTS_CHAPITRES[index], func() -> void: _choisir_chapitre(index)))
-	_bouton_selectionner = _zone(Rect2(145, 1600, 790, 175), _selectionner)
-	_zone(Rect2(315, 1795, 450, 105), _fermer)
+func _construire_interface() -> void:
+	var marge := MarginContainer.new()
+	marge.set_anchors_preset(Control.PRESET_FULL_RECT)
+	InterfaceMobile.appliquer_marges(marge, 0.0, true)
+	add_child(marge)
+	var panneau := PanelContainer.new()
+	panneau.add_theme_stylebox_override("panel", InterfaceMobile.panneau(Palette.OR, true))
+	marge.add_child(panneau)
+	var colonne := VBoxContainer.new()
+	colonne.add_theme_constant_override("separation", 14)
+	panneau.add_child(colonne)
 
-func _zone(reference: Rect2, action: Callable) -> Button:
-	var bouton := StyleInterface.zone_tactile()
-	bouton.set_meta("reference", reference)
-	# Un balayage relache son doigt sur une case : sans ce garde-fou il
-	# choisirait aussi le chapitre ou le geste s'arrete.
-	bouton.pressed.connect(func() -> void:
-		if not _balayage.a_balaye():
-			action.call())
-	add_child(bouton)
-	return bouton
+	var entete := HBoxContainer.new()
+	entete.add_theme_constant_override("separation", 10)
+	colonne.add_child(entete)
+	_precedent = Button.new()
+	_precedent.text = "‹"
+	_precedent.custom_minimum_size = Vector2(92.0, 88.0)
+	InterfaceMobile.styliser_bouton(_precedent, Palette.ESSENCE, false)
+	_precedent.pressed.connect(func() -> void: _changer_monde(-1))
+	entete.add_child(_precedent)
+	var titres := VBoxContainer.new()
+	titres.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	entete.add_child(titres)
+	var surtitre := InterfaceMobile.styliser_label(Label.new(), 19, Palette.OR, true)
+	surtitre.text = "CAMPAGNE DU GRIMOIRE"
+	titres.add_child(surtitre)
+	_titre_monde = InterfaceMobile.styliser_label(Label.new(), 31, Palette.TEXTE, true)
+	titres.add_child(_titre_monde)
+	_suivant = Button.new()
+	_suivant.text = "›"
+	_suivant.custom_minimum_size = Vector2(92.0, 88.0)
+	InterfaceMobile.styliser_bouton(_suivant, Palette.ESSENCE, false)
+	_suivant.pressed.connect(func() -> void: _changer_monde(1))
+	entete.add_child(_suivant)
 
-func _input(evenement: InputEvent) -> void:
-	if not is_visible_in_tree() or _lancement:
-		return
-	if evenement is InputEventScreenTouch:
-		if evenement.pressed:
-			_balayage.appuyer(evenement.position)
-		else:
-			_balayage.relacher()
-	elif evenement is InputEventScreenDrag:
-		var sens := _balayage.deplacer(evenement.position, size.x)
-		if sens != 0:
-			_changer_monde(sens)
+	var defilement := ScrollContainer.new()
+	defilement.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	defilement.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	colonne.add_child(defilement)
+	var contenu := VBoxContainer.new()
+	contenu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	contenu.add_theme_constant_override("separation", 12)
+	defilement.add_child(contenu)
+	_chapitres = VBoxContainer.new()
+	_chapitres.add_theme_constant_override("separation", 10)
+	contenu.add_child(_chapitres)
+	var bloc_details := PanelContainer.new()
+	bloc_details.add_theme_stylebox_override("panel", InterfaceMobile.panneau(Palette.ESSENCE, false))
+	contenu.add_child(bloc_details)
+	_details = VBoxContainer.new()
+	_details.add_theme_constant_override("separation", 10)
+	bloc_details.add_child(_details)
 
-func _replacer_zones() -> void:
-	for enfant in get_children():
-		if enfant is Button and enfant.has_meta("reference"):
-			var r: Rect2 = enfant.get_meta("reference")
-			var adapte := FondAdaptatif.rect(size, FOND, r, HAUT_FIXE, BAS_FIXE)
-			enfant.position = adapte.position
-			enfant.size = adapte.size
+	_message_label = InterfaceMobile.styliser_label(Label.new(), 20, Palette.DANGER.lightened(0.22), true)
+	_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_message_label.custom_minimum_size.y = 44.0
+	colonne.add_child(_message_label)
+	_bouton_selectionner = Button.new()
+	_bouton_selectionner.custom_minimum_size.y = 104.0
+	_bouton_selectionner.text = "CHOISIR CE CHAPITRE" if selection_seulement else "ENTRER DANS LE GRIMOIRE"
+	InterfaceMobile.styliser_bouton(_bouton_selectionner, Palette.OR, true)
+	_bouton_selectionner.pressed.connect(_selectionner)
+	colonne.add_child(_bouton_selectionner)
+	var fermer := Button.new()
+	fermer.text = "RETOUR"
+	fermer.custom_minimum_size.y = 82.0
+	InterfaceMobile.styliser_bouton(fermer, Palette.ESSENCE, false)
+	fermer.pressed.connect(_fermer)
+	colonne.add_child(fermer)
 
 func _index_selectionne() -> int:
 	return _monde * 3 + _chapitre_monde
@@ -80,8 +109,6 @@ func _changer_monde(direction: int) -> void:
 		return
 	_monde = nouveau
 	_message = ""
-	# Conserver le numero de chapitre rend la comparaison entre mondes naturelle.
-	# Si celui-ci est verrouille, la fiche le dit sans modifier le choix en cachette.
 	Sons.jouer("choix", -16.0, 1.0 + float(direction) * 0.04)
 	_rafraichir()
 
@@ -115,6 +142,7 @@ func _lancer_chapitre(index: int) -> void:
 	var transition := TRANSITION.instantiate()
 	transition.configurer(Chapitres.par_index(index))
 	add_child(transition)
+	move_child(transition, get_child_count() - 1)
 	transition.terminee.connect(func() -> void:
 		get_tree().change_scene_to_file("res://scenes/run.tscn"))
 
@@ -125,63 +153,65 @@ func _fermer() -> void:
 	StyleInterface.sortir_puis(self, func() -> void: ferme.emit())
 
 func _rafraichir() -> void:
+	var monde: Dictionary = Chapitres.MONDES[_monde]
+	_titre_monde.text = "MONDE %s — %s" % [monde["numero"], str(monde["nom"]).to_upper()]
+	_precedent.disabled = _monde <= 0
+	_suivant.disabled = _monde >= Chapitres.MONDES.size() - 1
+	_rafraichir_chapitres(monde)
+	_rafraichir_details(monde)
+	_message_label.text = _message
+	_bouton_selectionner.disabled = not ReglagesJoueur.chapitre_debloque(_index_selectionne())
+	InterfaceMobile.styliser_bouton(_bouton_selectionner, Color(monde["teinte"]), not _bouton_selectionner.disabled)
+	queue_redraw()
+
+func _rafraichir_chapitres(monde: Dictionary) -> void:
+	for enfant in _chapitres.get_children():
+		enfant.queue_free()
+	for local in 3:
+		var index_global := _monde * 3 + local
+		var chapitre := Chapitres.par_index(index_global)
+		var ouvert := ReglagesJoueur.chapitre_debloque(index_global)
+		var progression := ReglagesJoueur.meilleure_du_chapitre(index_global)
+		var bouton := Button.new()
+		var etat := "%d / %d SALLES" % [progression, Reglages.SALLES_PAR_RUN] if ouvert else "VERROUILLÉ"
+		bouton.text = "CHAPITRE %d — %s\n%s" % [local + 1, str(chapitre["sous_titre"]), etat]
+		bouton.custom_minimum_size.y = 118.0
+		var selectionne := local == _chapitre_monde
+		InterfaceMobile.styliser_bouton(bouton,
+			Color(monde["teinte"]) if ouvert else Palette.BORD_PAGE, selectionne)
+		bouton.add_theme_font_size_override("font_size", 20)
+		bouton.pressed.connect(func() -> void: _choisir_chapitre(local))
+		_chapitres.add_child(bouton)
+
+func _rafraichir_details(monde: Dictionary) -> void:
+	for enfant in _details.get_children():
+		enfant.queue_free()
 	var index := _index_selectionne()
-	_bouton_selectionner.disabled = not ReglagesJoueur.chapitre_debloque(index)
+	var chapitre := Chapitres.par_index(index)
+	var boss: Dictionary = CatalogueEnnemis.par_id(str(chapitre["boss"]))
+	var titre := InterfaceMobile.styliser_label(Label.new(), 28, Color(monde["teinte"]), true)
+	titre.text = "CHAPITRE %d" % (_chapitre_monde + 1)
+	_details.add_child(titre)
+	var sous_titre := InterfaceMobile.styliser_label(Label.new(), 22, Palette.TEXTE, true)
+	sous_titre.text = str(chapitre["sous_titre"])
+	sous_titre.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_details.add_child(sous_titre)
+	var gardien := InterfaceMobile.styliser_label(Label.new(), 20, Palette.OR, true)
+	gardien.text = "GARDIEN : %s" % str(boss.get("nom", "Inconnu")).to_upper()
+	_details.add_child(gardien)
+	var infos := InterfaceMobile.styliser_label(Label.new(), 20, Palette.TEXTE_ATTENUE, true)
+	infos.text = "Progression %d/%d   ·   3 Alambics   ·   4 Gardiens" % [
+		ReglagesJoueur.meilleure_du_chapitre(index), Reglages.SALLES_PAR_RUN]
+	_details.add_child(infos)
+
+func _notification(quoi: int) -> void:
+	if quoi == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_fermer()
+
+func _process(delta: float) -> void:
+	_anim += delta
 	queue_redraw()
 
 func _draw() -> void:
-	FondAdaptatif.dessiner_premium(self, FOND, size, HAUT_FIXE, BAS_FIXE)
-	var sx := size.x / 1080.0
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * sx)
-	var police := Polices.CORPS
 	var monde: Dictionary = Chapitres.MONDES[_monde]
-	var chapitre := Chapitres.par_index(_index_selectionne())
-	_draw_centre(police, Vector2(290, 306), 500, "MONDE %s — %s" % [monde["numero"], str(monde["nom"]).to_upper()], 29, Palette.TEXTE)
-	if _monde == 0:
-		draw_rect(Rect2(165, 225, 115, 130).grow(-12.0), Color(0, 0, 0, 0.42))
-	if _monde == Chapitres.MONDES.size() - 1:
-		draw_rect(Rect2(800, 225, 115, 130).grow(-12.0), Color(0, 0, 0, 0.42))
-	for local in 3:
-		var index_global := _monde * 3 + local
-		var r: Rect2 = RECTS_CHAPITRES[local]
-		var ouvert := ReglagesJoueur.chapitre_debloque(index_global)
-		if local == _chapitre_monde:
-			draw_rect(r.grow(-9.0), Color(monde["teinte"], 0.16))
-		if not ouvert:
-			draw_rect(r.grow(-9.0), Color(0, 0, 0, 0.50))
-			_draw_centre(police, Vector2(r.position.x, r.position.y + 126), r.size.x, "VERROUILLÉ", 18, Palette.TEXTE_ATTENUE)
-		else:
-			var progression := ReglagesJoueur.meilleure_du_chapitre(index_global)
-			_draw_centre(police, Vector2(r.position.x, r.position.y + 126), r.size.x, "%d / %d SALLES" % [progression, Reglages.SALLES_PAR_RUN], 18, Palette.TEXTE_ATTENUE)
-	_dessiner_details(police, chapitre, monde)
-	if _bouton_selectionner.disabled:
-		var bloque := FondAdaptatif.rect(size, FOND, Rect2(145, 1600, 790, 175),
-			HAUT_FIXE, BAS_FIXE)
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		draw_rect(bloque.grow(-13.0 * sx), Color(0, 0, 0, 0.55))
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * sx)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-func _dessiner_details(police: Font, chapitre: Dictionary, monde: Dictionary) -> void:
-	var index := _index_selectionne()
-	var ouvert := ReglagesJoueur.chapitre_debloque(index)
-	_draw_centre(police, Vector2(72, 1310), 410, "CHAPITRE %d" % (_chapitre_monde + 1), 28, Color(monde["teinte"]))
-	draw_multiline_string(police, Vector2(82, 1365), str(chapitre["sous_titre"]), HORIZONTAL_ALIGNMENT_CENTER, 390, 22, 3, Palette.TEXTE)
-	var boss: Dictionary = CatalogueEnnemis.par_id(str(chapitre["boss"]))
-	_draw_centre(police, Vector2(72, 1495), 410, "GARDIEN : %s" % str(boss.get("nom", "Inconnu")).to_upper(), 19, Palette.TEXTE_ATTENUE)
-	var valeurs := [
-		[1, "%d / %d" % [ReglagesJoueur.meilleure_du_chapitre(index), Reglages.SALLES_PAR_RUN], "PROGRESSION"],
-		[5, "3", "ALAMBICS"],
-		[6, "4", "GARDIENS"],
-	]
-	for i in 3:
-		var centre := Vector2(615 + i * 130, 1380)
-		Retro16.dessiner_icone_interface(self, valeurs[i][0], Rect2(centre - Vector2(42, 42), Vector2(84, 84)), Color.WHITE if ouvert else Color(0.4, 0.4, 0.45))
-		_draw_centre(police, Vector2(centre.x - 58, 1460), 116, str(valeurs[i][1]) if ouvert else "—", 21, Palette.TEXTE)
-		_draw_centre(police, Vector2(centre.x - 60, 1495), 120, str(valeurs[i][2]), 15, Palette.TEXTE_ATTENUE)
-	if not _message.is_empty():
-		_draw_centre(police, Vector2(100, 1570), 880, _message, 20, Palette.DANGER.lightened(0.25))
-
-func _draw_centre(police: Font, position: Vector2, largeur: float, texte: String,
-		taille_police: int, couleur: Color) -> void:
-	draw_string(police, position, texte, HORIZONTAL_ALIGNMENT_CENTER, largeur, taille_police, couleur)
+	InterfaceMobile.dessiner_fond(self, size, false, Color(monde["teinte"]), _anim)
