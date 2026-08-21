@@ -1,48 +1,44 @@
-# Alambic — conventions du dépôt
+# Alambik — guide des agents
 
-Roguelite de tir en vue du dessus, portrait, Android. Godot 4.7.1, GDScript.
-`design.txt` est la source de vérité, `ETAT.md` décrit l'état courant et
-`JOURNAL.md` conserve l'historique des décisions.
+Roguelite de tir portrait Android, Godot 4.7.1, GDScript.
 
-Le dossier `human/` est l'interface d'édition du propriétaire du projet. Quand
-il demande de « lire human » ou d'appliquer ses changements, lire tous ses
-fichiers `.txt`, comparer les entrées marquées à modifier avec les données du
-jeu, puis répercuter les décisions dans le code. Ne jamais écraser une idée
-humaine lors d'une synchronisation depuis le code.
+## Démarrage à faible contexte
 
-## Règles du projet
+1. Lire ce fichier, puis `docs/INDEX.md`.
+2. Lire le `AGENTS.md` le plus proche du dossier modifié.
+3. Ouvrir uniquement les fichiers indiqués par l'index ou trouvés par recherche de symbole.
+4. Pour un gros fichier, chercher d'abord les fonctions/classes concernées (`rg -n '^func|^class_name|^const'`) puis lire une plage ciblée. Ne pas charger le fichier entier par réflexe.
 
-- Utiliser Godot 4.7.1. Sous Windows, l'exécutable local est
-  `C:\Users\giova\Documents\Godot_v4.7.1-stable_win64.exe\Godot_v4.7.1-stable_win64.exe`.
-- Écrire les identifiants et commentaires en français sans accents. Les textes
-  affichés au joueur gardent leurs accents.
-- Les commentaires expliquent pourquoi, pas ce que le code fait déjà.
-- Ne mettre aucune valeur d'équilibrage en dur dans la logique. Les valeurs
-  vivent dans `data/reglages.gd` ou dans les catalogues de `data/`.
-- Après une modification, lancer la vérification complète et contrôler aussi
-  l'absence de `SCRIPT ERROR`.
-- Ne publier aucun chiffre de performance ou d'équilibrage sans mesure.
+Ne pas lire par défaut : `docs/archive/`, `human/`, les `.uid`, les `.import`, les PNG, polices, audio, APK ou autres binaires. Les ouvrir uniquement si la tâche les concerne.
+
+## Sources de vérité
+
+- Design voulu : `docs/design/GAME_DESIGN.md`. Chercher le chapitre pertinent au lieu de tout lire.
+- État de travail court : `docs/CURRENT.md`.
+- Routage code → fichiers : `docs/INDEX.md` puis `scripts/INDEX.md`.
+- Historique : `docs/archive/` ; consultation exceptionnelle seulement.
+- `human/` est l'interface d'édition du propriétaire. Ne la lire que s'il demande de « lire human », d'appliquer ses changements ou si la tâche porte explicitement sur son contenu.
+
+## Invariants
+
+- Godot 4.7.1.
+- Identifiants et commentaires en français sans accents ; textes joueur avec accents.
+- Les commentaires expliquent pourquoi, pas ce que le code dit déjà.
+- Aucune valeur d'équilibrage en dur dans la logique : utiliser `data/reglages.gd` ou les catalogues de `data/`.
 - Ne reprendre aucun nom, texte, icône, sprite ou son d'un autre jeu.
-- Suivre `human/11_DIRECTION_ARTISTIQUE.txt` : pixel art moderne fantasy,
-  grille de quatre pixels, silhouettes lisibles, profondeur et VFX contemporains.
+- Direction artistique : `human/11_DIRECTION_ARTISTIQUE.txt` uniquement quand la tâche visuelle l'exige.
+- Avec `:=`, préférer `lerpf`, `clampf`, `maxf`, `maxi`, `absf` aux fonctions renvoyant un `Variant`.
+- Typer les valeurs provenant des clés de `Dictionary`.
+- Ne pas modifier un tableau pendant son itération.
+- Pour les blocs de salle, utiliser `Geometrie.ligne_libre` plutôt qu'un rayon lancé depuis `_process`.
 
-## Pièges GDScript connus
+## Vérification
 
-- Avec une inférence `:=`, préférer `lerpf`, `clampf`, `maxf`, `maxi` et `absf`
-  aux fonctions qui renvoient un `Variant`.
-- Typer explicitement les valeurs provenant des clés de `Dictionary`.
-- Ne jamais modifier un tableau pendant son itération ; le parcourir à rebours.
-- Une erreur d'exécution interrompt aussi les fonctions appelantes. Le lanceur
-  de tests possède une sécurité pour éviter un processus silencieux.
-- Pour les blocs de salle, utiliser `Geometrie.ligne_libre` plutôt qu'une
-  requête de rayon lancée depuis `_process`.
+Après modification de code ou de données :
 
-## Boucles de travail
+```sh
+./verifier.sh
+./sondes/vingt_runs.sh
+```
 
-- PC Windows : le raccourci `Alambic` du Bureau lance le jeu en 450×800 avec
-  émulation tactile par la souris.
-- Linux : `./lancer.sh` lance la même boucle rapide.
-- Téléphone : `./deploy.sh` exporte et installe l'APK lorsque le SDK Android,
-  ADB et les templates Godot sont configurés.
-- Vérification : `./verifier.sh`, puis `./sondes/vingt_runs.sh`. Toujours lire
-  le détail des runs, pas seulement le code de sortie.
+Lire les erreurs et le détail des runs, pas seulement le code de sortie. Une tâche documentaire seule n'exige pas les vingt runs.
