@@ -27,8 +27,6 @@ func _tout_compile() -> int:
 			print("ECHEC  %s ne se charge pas" % chemin)
 			code = 1
 		elif ressource is Script and not (ressource as Script).can_instantiate():
-			# Un script mal parse revient parfois non nul mais inutilisable :
-			# le test du null seul laisserait passer l'erreur.
 			print("ECHEC  %s ne compile pas" % chemin)
 			code = 1
 	return code
@@ -51,9 +49,6 @@ func _fichiers(racine: String, extensions: Array) -> Array[String]:
 func _drapeaux_lus() -> int:
 	var code := 0
 	for d in _valeurs_de_liste("drapeaux"):
-		# Ces deux familles de drapeaux sont construites par interpolation depuis
-		# l'identifiant de l'Element : aucune occurrence litterale n'existe dans
-		# les scripts, alors qu'ils sont bien lus.
 		if d.begins_with("transformation_heros_") or d.begins_with("sceau_element_"):
 			continue
 		if not _cite_dans_les_scripts(d):
@@ -101,12 +96,13 @@ func _valeurs_de_liste(champ: String) -> Array[String]:
 					trouvees.append(valeur)
 	return trouvees
 
+# Les scripts sont maintenant ranges dans des sous-dossiers. Reutiliser le
+# parcours recursif evite qu'un drapeau paraisse inerte uniquement parce que son
+# lecteur n'est plus directement a la racine de scripts/.
 func _cite_dans_les_scripts(nom: String) -> bool:
 	for dossier in ["res://scripts/", "res://ui/", "res://autoload/"]:
-		for fichier in DirAccess.get_files_at(dossier):
-			if not fichier.ends_with(".gd"):
-				continue
-			var texte := FileAccess.get_file_as_string(dossier + fichier)
+		for chemin in _fichiers(dossier, [".gd"]):
+			var texte := FileAccess.get_file_as_string(chemin)
 			if texte.contains('"%s"' % nom):
 				return true
 	return false
