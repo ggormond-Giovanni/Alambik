@@ -8,8 +8,6 @@ static func dessiner_fond(canvas: CanvasItem, taille: Vector2, accueil := false,
 		accent := Palette.ESSENCE, temps := 0.0) -> void:
 	var texture := FOND_ACCUEIL if accueil else FOND_INTERFACE
 	FondAdaptatif.dessiner_cover(canvas, texture, taille, Color.WHITE, 0.44 if accueil else 0.50)
-	# Voiles continus : le décor reste une couche indépendante et le contenu garde
-	# toujours assez de contraste, quelle que soit la proportion du téléphone.
 	canvas.draw_rect(Rect2(Vector2.ZERO, taille), Color(0.015, 0.028, 0.075, 0.28 if accueil else 0.42))
 	canvas.draw_rect(Rect2(0.0, 0.0, taille.x, minf(taille.y * 0.19, 360.0)),
 		Color(0.008, 0.018, 0.052, 0.46))
@@ -39,7 +37,7 @@ static func panneau(accent := Palette.OR, fort := false) -> StyleBoxFlat:
 	return style
 
 static func panneau_leger(accent := Palette.ESSENCE) -> StyleBoxFlat:
-	var style := panneau(accent, false)
+	var style: StyleBoxFlat = panneau(accent, false)
 	style.bg_color = Color(0.040, 0.070, 0.155, 0.78)
 	style.border_color = Color(accent, 0.34)
 	style.shadow_size = 5
@@ -55,21 +53,23 @@ static func styliser_bouton(bouton: Button, accent := Palette.OR, principal := f
 	bouton.add_theme_color_override("font_disabled_color", Color(Palette.TEXTE_ATTENUE, 0.52))
 	bouton.add_theme_color_override("font_outline_color", Color(0.01, 0.02, 0.06, 0.92))
 	bouton.add_theme_constant_override("outline_size", 3)
-	var normal := panneau(accent, principal)
+	var normal: StyleBoxFlat = panneau(accent, principal)
 	if principal:
 		normal.bg_color = Color(accent.darkened(0.48), 0.97)
 		normal.border_color = Color(accent.lightened(0.12), 0.88)
-	var survol := normal.duplicate()
+	var survol: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
 	survol.bg_color = Color(normal.bg_color.lightened(0.08), normal.bg_color.a)
-	var appuye := normal.duplicate()
+	var appuye: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
 	appuye.bg_color = Color(accent, 0.38)
 	appuye.border_color = accent.lightened(0.24)
 	appuye.shadow_size = 3
-	var desactive := panneau_leger(accent)
+	var desactive: StyleBoxFlat = panneau_leger(accent)
 	desactive.bg_color = Color(0.025, 0.035, 0.070, 0.64)
-	for paire in [["normal", normal], ["hover", survol], ["pressed", appuye],
-			["focus", survol], ["disabled", desactive]]:
-		bouton.add_theme_stylebox_override(str(paire[0]), paire[1])
+	bouton.add_theme_stylebox_override("normal", normal)
+	bouton.add_theme_stylebox_override("hover", survol)
+	bouton.add_theme_stylebox_override("pressed", appuye)
+	bouton.add_theme_stylebox_override("focus", survol)
+	bouton.add_theme_stylebox_override("disabled", desactive)
 
 static func styliser_label(label: Label, taille := 26, accent := Color.TRANSPARENT,
 		centre := false) -> Label:
