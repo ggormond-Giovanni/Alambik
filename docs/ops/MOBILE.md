@@ -2,6 +2,16 @@
 
 Ce guide décrit la configuration Linux de la machine de développement d'origine : Godot 4.7.1, SDK Android, JDK 17 et keystores. Sur un nouveau PC, ces dépendances doivent être configurées avant d'utiliser les scripts `.sh`.
 
+## APK automatique depuis GitHub
+
+Chaque push sur `master` lance `.github/workflows/android-apk.yml` : le projet est importé et vérifié, puis une APK debug Android est construite avec Godot 4.7.1.
+
+Sur téléphone, le chemin le plus simple est : dépôt GitHub → **Releases** → **Alambik - dernière APK de test** → `alambic.apk`. La release `dev-latest` est mise à jour automatiquement après un build réussi.
+
+Le workflow conserve aussi pendant 14 jours un artefact `alambik-apk` et des captures du menu aux formats 1080×1920, 1080×2340, 1080×2400 et 1080×2520. Les captures servent à détecter les régressions d'interface entre différents ratios de téléphone.
+
+L'APK CI est une **APK debug**. Si Android refuse de remplacer une version installée avec une autre signature, désinstaller l'ancienne application puis installer la nouvelle.
+
 ## Préparer le téléphone
 
 1. Réglages ▸ À propos du téléphone — taper sept fois sur *Numéro de build*.
@@ -27,7 +37,7 @@ Sans fil :
 
 Les deux ports sont différents et peuvent changer.
 
-## Installer et lancer
+## Installer et lancer localement
 
 ```sh
 ./deploy.sh
