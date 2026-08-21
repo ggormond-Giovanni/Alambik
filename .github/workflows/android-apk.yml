@@ -1,0 +1,89 @@
+name: Android APK
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Android packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "build-tools;35.0.1" \
+            "platforms;android-35" \
+            "cmdline-tools;latest" \
+            "cmake;3.10.2.4988404" \
+            "ndk;28.1.13356709"
+
+      - name: Godot 4.7.1
+        uses: solarlabyrinth/action-setup-godot@v3
+        with:
+          version: 4.7.1-stable
+          csharp: false
+          export-templates: true
+
+      - name: Import project
+        run: godot --headless --path . --import
+
+      - name: Verify project
+        env:
+          GODOT: godot
+        run: ./verifier.sh
+
+      - name: Export debug APK
+        run: |
+          mkdir -p build
+          godot --headless --path . --export-debug "Android" build/alambic.apk
+          test -s build/alambic.apk
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alambik-apk
+          path: build/alambic.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish latest phone build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          NOTES="APK debug automatique de la branche master. Commit: ${GITHUB_SHA}. Construite avec Godot 4.7.1."
+          if gh release view dev-latest >/dev/null 2>&1; then
+            gh release upload dev-latest build/alambic.apk --clobber
+            gh release edit dev-latest --title "Alambik - dernière APK de test" --notes "$NOTES" --prerelease
+          else
+            gh release create dev-latest build/alambic.apk \
+              --target "$GITHUB_SHA" \
+              --title "Alambik - dernière APK de test" \
+              --notes "$NOTES" \
+              --prerelease
+          fi
