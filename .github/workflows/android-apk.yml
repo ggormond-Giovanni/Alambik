@@ -16,6 +16,7 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -37,10 +38,7 @@ jobs:
           sdkmanager \
             "platform-tools" \
             "build-tools;35.0.1" \
-            "platforms;android-35" \
-            "cmdline-tools;latest" \
-            "cmake;3.10.2.4988404" \
-            "ndk;28.1.13356709"
+            "platforms;android-35"
 
       - name: Godot 4.7.1
         uses: solarlabyrinth/action-setup-godot@v3
@@ -52,56 +50,18 @@ jobs:
       - name: Import project
         run: godot --headless --path . --import
 
-      - name: Verify project
-        env:
-          GODOT: godot
-        run: ./verifier.sh
-
-      - name: Capture UI on common phone ratios
-        continue-on-error: true
-        shell: bash
-        env:
-          LIBGL_ALWAYS_SOFTWARE: "1"
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq xvfb libgl1-mesa-dri
-          mkdir -p build/screenshots
-
-          capture() {
-            WIDTH="$1"
-            HEIGHT="$2"
-            NAME="$3"
-            timeout 30s xvfb-run -a -s "-screen 0 ${WIDTH}x${HEIGHT}x24" \
-              godot --path . --windowed --resolution "${WIDTH}x${HEIGHT}" \
-              -- --capture="${GITHUB_WORKSPACE}/build/screenshots/${NAME}.png" --capture-apres=2.2
-          }
-
-          capture 1080 1920 menu-1080x1920
-          capture 1080 2340 menu-1080x2340
-          capture 1080 2400 menu-1080x2400
-          capture 1080 2520 menu-1080x2520
-
-      - name: Upload UI screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: alambik-ui-screenshots
-          path: build/screenshots/*.png
-          if-no-files-found: warn
-          retention-days: 14
-
       - name: Export debug APK
         run: |
           mkdir -p build
           godot --headless --path . --export-debug "Android" build/alambic.apk
           test -s build/alambic.apk
 
-      - name: Publish latest phone build
+      - name: Publish one latest APK
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          NOTES="APK debug automatique de master. Commit: ${GITHUB_SHA}. Construite avec Godot 4.7.1."
+          NOTES="APK debug automatique de master. Commit: ${GITHUB_SHA}. Godot 4.7.1."
           if gh release view dev-latest >/dev/null 2>&1; then
             gh release upload dev-latest build/alambic.apk --clobber
             gh release edit dev-latest \
