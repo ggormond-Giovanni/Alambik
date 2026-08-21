@@ -10,7 +10,9 @@ La branche `master` construit automatiquement une APK debug après chaque push.
 
 **[Télécharger la dernière APK de test](https://github.com/ggormond-Giovanni/Alambik/releases/tag/dev-latest)**
 
-Si la release n'est pas encore apparue, regarder l'onglet **Actions** : le workflow `Android APK` est probablement encore en cours. Les captures automatiques de l'interface sur plusieurs ratios de téléphone sont également conservées comme artefact du workflow.
+Chaque build porte maintenant le SHA du commit dans son nom (`alambik-xxxxxxx.apk`) et affiche `DEV xxxxxxx` en haut du menu. L'ancienne release est supprimée dès qu'un nouveau build commence : si le lien n'existe temporairement plus, le nouveau build est en cours ou a échoué, et aucune vieille APK ne doit être utilisée par erreur.
+
+Les captures automatiques de l'interface sur plusieurs ratios de téléphone sont également conservées comme artefact du workflow `Android APK`.
 
 ## Commencer ici
 
