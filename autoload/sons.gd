@@ -1,15 +1,15 @@
 extends Node
 
-# Les effets et le menu restent synthetises au demarrage. Toute la run, boss et
-# transitions compris, joue la composition exportee depuis LMMS.
+# Les effets restent synthetises au demarrage. Les musiques sont des pistes OGG
+# embarquees : Accueil pour le menu, et les compositions arcade pour les runs.
 
 const TAUX := 22050
-const TAUX_MUSIQUE := 11025
 const VOIX := 8
 const DUREE_FONDU := 2.2
 const DUREE_BLANC_COMBAT := 0.14
 const BUS_MUSIQUE := "Musique"
 const BUS_EFFETS := "Effets"
+const MUSIQUE_ACCUEIL := preload("res://Accueil.ogg")
 const MUSIQUE_FIRST_ARCADE := preload("res://assets/audio/firstarcade.ogg")
 const MUSIQUE_DYNAMIC_ARCADE := preload("res://assets/audio/dynamic_arcade.ogg")
 
@@ -36,7 +36,7 @@ func _ready() -> void:
 	_banque["tir"] = _souffle(0.07, 900.0, 420.0, 0.35, 0.25)
 	_banque["impact"] = _souffle(0.09, 320.0, 140.0, 0.6, 0.4)
 	_banque["mort"] = _souffle(0.22, 240.0, 60.0, 0.8, 0.55)
-	# Un choc court, grave et granuleux : lisible au haut-parleur d'un téléphone
+	# Un choc court, grave et granuleux : lisible au haut-parleur d'un telephone
 	# sans couvrir la musique ni ressembler au petit impact des projectiles.
 	_banque["degat"] = _impact_heros()
 	_banque["choix"] = _souffle(0.12, 620.0, 900.0, 0.15, 0.45)
@@ -50,7 +50,7 @@ func _ready() -> void:
 		add_child(lecteur)
 		_voix.append(lecteur)
 	if actif:
-		# Une copie locale active la boucle sans modifier la ressource importee.
+		# Des copies locales activent la boucle sans modifier les ressources importees.
 		for ambiance in 2:
 			var musique := AudioStreamPlayer.new()
 			musique.bus = BUS_MUSIQUE
@@ -58,7 +58,7 @@ func _ready() -> void:
 				musique.stream = _creer_flux_combat("first_arcade")
 				_piste_chargee = "first_arcade"
 			else:
-				musique.stream = _composer_boucle_menu()
+				musique.stream = _creer_flux_accueil()
 			musique.volume_db = -80.0
 			add_child(musique)
 			_musiques.append(musique)
@@ -129,6 +129,11 @@ func _appliquer_piste_selectionnee() -> void:
 	# Si les reglages sont ouverts pendant une run, le choix s'entend sans
 	# devoir quitter l'ecran ni recommencer la salle.
 	_musiques[1].volume_db = _volumes_vises[1]
+
+func _creer_flux_accueil() -> AudioStreamOggVorbis:
+	var flux: AudioStreamOggVorbis = MUSIQUE_ACCUEIL.duplicate()
+	flux.loop = true
+	return flux
 
 func _creer_flux_combat(id: String) -> AudioStreamOggVorbis:
 	var source: AudioStreamOggVorbis = MUSIQUE_DYNAMIC_ARCADE \
@@ -204,59 +209,3 @@ func _impact_heros() -> AudioStreamWAV:
 	flux.stereo = false
 	flux.data = donnees
 	return flux
-
-# La piste LMMS est chargee directement plus haut ; seule l'ambiance du menu
-# reste synthetisee pour que le projet ne possede que deux identites musicales.
-func _composer_boucle_menu() -> AudioStreamWAV:
-	var tempo := 96.0
-	var battements := 16.0
-	var duree := battements * 60.0 / tempo
-	var echantillons := int(duree * TAUX_MUSIQUE)
-	var donnees := PackedByteArray()
-	donnees.resize(echantillons * 4)
-	var accords := [
-		[50, 53, 57], [46, 50, 53], [53, 57, 60], [48, 52, 55],
-	]
-	for i in echantillons:
-		var temps := float(i) / float(TAUX_MUSIQUE)
-		var battement := temps * tempo / 60.0
-		var index_accord := int(battement / 4.0) % accords.size()
-		var accord: Array = accords[index_accord]
-		var local := fmod(battement, 1.0)
-		var valeur_g := 0.0
-		var valeur_d := 0.0
-		# Un pad doux et legerement desaccorde evite le timbre de bip pur.
-		for n in accord:
-			var frequence := _frequence(float(n))
-			valeur_g += sin(TAU * frequence * temps) * 0.055
-			valeur_d += sin(TAU * frequence * 1.003 * temps + 0.35) * 0.055
-		var pas_arp := int(battement * 2.0)
-		var note_arp: int = accord[pas_arp % 3] + 12
-		var enveloppe_arp := pow(1.0 - fmod(battement * 2.0, 1.0), 3.0)
-		var arp := sin(TAU * _frequence(note_arp) * temps) * enveloppe_arp * 0.10
-		valeur_g += arp * (0.75 if pas_arp % 2 == 0 else 0.35)
-		valeur_d += arp * (0.35 if pas_arp % 2 == 0 else 0.75)
-		var phrase := fmod(battement, 4.0)
-		var enveloppe_air := pow(sin(PI * clampf(phrase / 4.0, 0.0, 1.0)), 2.0)
-		var note_air: int = accord[2] + 24
-		var air := sin(TAU * _frequence(note_air) * temps + 0.6) * enveloppe_air * 0.035
-		valeur_g += air * 0.55
-		valeur_d += air
-		var fondu_bord := minf(1.0, minf(temps * 30.0, (duree - temps) * 30.0))
-		_ecrire_stereo(donnees, i, valeur_g * fondu_bord, valeur_d * fondu_bord)
-	var flux := AudioStreamWAV.new()
-	flux.format = AudioStreamWAV.FORMAT_16_BITS
-	flux.mix_rate = TAUX_MUSIQUE
-	flux.stereo = true
-	flux.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	flux.loop_begin = 0
-	flux.loop_end = echantillons
-	flux.data = donnees
-	return flux
-
-func _frequence(note: float) -> float:
-	return 440.0 * pow(2.0, (note - 69.0) / 12.0)
-
-func _ecrire_stereo(donnees: PackedByteArray, index: int, gauche: float, droite: float) -> void:
-	donnees.encode_s16(index * 4, int(clampf(gauche, -0.95, 0.95) * 32767.0))
-	donnees.encode_s16(index * 4 + 2, int(clampf(droite, -0.95, 0.95) * 32767.0))
