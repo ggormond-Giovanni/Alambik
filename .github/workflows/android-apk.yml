@@ -21,23 +21,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Identify build
-        shell: bash
-        run: |
-          SHORT_SHA="${GITHUB_SHA::7}"
-          echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_ENV"
-          echo "APK_NAME=alambik-${SHORT_SHA}.apk" >> "$GITHUB_ENV"
-          sed -i "s/DEV LOCAL/DEV ${SHORT_SHA}/" scenes/menu.tscn
-
-      - name: Remove stale phone release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          if gh release view dev-latest >/dev/null 2>&1; then
-            gh release delete dev-latest --yes --cleanup-tag
-          fi
-
       - name: Java 17
         uses: actions/setup-java@v4
         with:
@@ -102,34 +85,33 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: alambik-ui-screenshots-${{ github.sha }}
+          name: alambik-ui-screenshots
           path: build/screenshots/*.png
           if-no-files-found: warn
           retention-days: 14
 
       - name: Export debug APK
-        shell: bash
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" "build/${APK_NAME}"
-          test -s "build/${APK_NAME}"
+          godot --headless --path . --export-debug "Android" build/alambic.apk
+          test -s build/alambic.apk
 
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: alambik-apk-${{ github.sha }}
-          path: build/*.apk
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Publish verified phone build
+      - name: Publish latest phone build
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          NOTES="APK debug vérifiée de la branche master. Commit: ${GITHUB_SHA}. Le menu doit afficher DEV ${SHORT_SHA}. Construite avec Godot 4.7.1."
-          gh release create dev-latest "build/${APK_NAME}" \
-            --target "$GITHUB_SHA" \
-            --title "Alambik - DEV ${SHORT_SHA}" \
-            --notes "$NOTES" \
-            --prerelease
+          NOTES="APK debug automatique de master. Commit: ${GITHUB_SHA}. Construite avec Godot 4.7.1."
+          if gh release view dev-latest >/dev/null 2>&1; then
+            gh release upload dev-latest build/alambic.apk --clobber
+            gh release edit dev-latest \
+              --title "Alambik - dernière APK de test" \
+              --notes "$NOTES" \
+              --prerelease
+          else
+            gh release create dev-latest build/alambic.apk \
+              --target "$GITHUB_SHA" \
+              --title "Alambik - dernière APK de test" \
+              --notes "$NOTES" \
+              --prerelease
+          fi
