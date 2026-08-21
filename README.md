@@ -4,6 +4,14 @@ Roguelite de tir vue de dessus pour Android, en portrait et jouable à une main.
 
 Le projet est sous Godot 4.7.1 / GDScript.
 
+## Tester sur téléphone
+
+La branche `master` construit automatiquement une APK debug après chaque push.
+
+**[Télécharger la dernière APK de test](https://github.com/ggormond-Giovanni/Alambik/releases/tag/dev-latest)**
+
+Si la release n'est pas encore apparue, regarder l'onglet **Actions** : le workflow `Android APK` est probablement encore en cours. Les captures automatiques de l'interface sur plusieurs ratios de téléphone sont également conservées comme artefact du workflow.
+
 ## Commencer ici
 
 Pour comprendre le dépôt sans charger des dizaines de fichiers :
